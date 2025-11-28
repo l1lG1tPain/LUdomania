@@ -1,16 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8" />
     <title>LUdomania</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- Подключение Telegram SDK — позже пригодится -->
+    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
 <div id="app">
     <h1>LUdomania</h1>
-    <button id="login">Авторизоваться через Telegram</button>
+
+    <div id="status" class="status">Не авторизован</div>
+
+    <button id="login" class="btn primary">
+        Авторизоваться через Telegram
+    </button>
+
+    <div id="game" class="game hidden">
+        <div class="stats">
+            <div class="stat-row">
+                <span>Баланс:</span>
+                <span id="balance" class="value">0</span>
+                <span class="unit">LM</span>
+            </div>
+            <div class="stat-row">
+                <span>Сила клика:</span>
+                <span id="clickPower" class="value">1</span>
+            </div>
+            <div class="stat-row">
+                <span>Всего кликов:</span>
+                <span id="totalClicks" class="value">0</span>
+            </div>
+        </div>
+
+        <button id="clickBtn" class="btn big">
+            КЛИК 💥
+        </button>
+
+        <button id="upgradeBtn" class="btn secondary">
+            Улучшить клик (стоимость: <span id="upgradeCost">10</span> LM)
+        </button>
+    </div>
 </div>
 
 <script type="module" src="/src/main.js"></script>
