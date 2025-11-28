@@ -28,6 +28,11 @@ const upgradeCostEl = document.getElementById("upgradeCost");
 const machinesEl    = document.getElementById("machines");
 const inventoryEl   = document.getElementById("inventory");
 
+// 🔹 новый профильный хедер
+const profileAvatarEl = document.getElementById("profileAvatar");
+const profileNameEl   = document.getElementById("profileName");
+const profileIdEl     = document.getElementById("profileId");
+
 let userRef    = null;
 let uid        = null;
 let clickPower = 1;
@@ -57,6 +62,37 @@ function isTelegramWebApp() {
     if (!window.Telegram || !window.Telegram.WebApp) return false;
     const initData = window.Telegram.WebApp.initData;
     return typeof initData === "string" && initData.length > 0;
+}
+
+// аккуратно рендерим профиль
+function renderProfileFromData(data) {
+    if (!profileNameEl || !profileIdEl || !profileAvatarEl) return;
+
+    const name =
+        data.firstName ||
+        data.username ||
+        "Игрок";
+
+    const akulkaId = data.akulkaId || "—";
+
+    profileNameEl.textContent = name;
+    profileIdEl.textContent   = `AkulkaID: ${akulkaId}`;
+
+    // аватар: если есть фото — рисуем картинку, иначе эмоджи
+    const photoUrl = data.photoUrl;
+    profileAvatarEl.innerHTML = "";
+    profileAvatarEl.style.backgroundImage = "";
+    profileAvatarEl.style.backgroundSize  = "";
+    profileAvatarEl.style.backgroundPosition = "";
+
+    if (photoUrl) {
+        const img = document.createElement("img");
+        img.src = photoUrl;
+        img.alt = name;
+        profileAvatarEl.appendChild(img);
+    } else {
+        profileAvatarEl.textContent = "🦈";
+    }
 }
 
 // ==================== РЕНДЕР АВТОМАТОВ ====================
@@ -177,6 +213,7 @@ function subscribeToUser(userUid) {
         if (totalClicksEl) totalClicksEl.textContent = totalClicks;
 
         updateUpgradeUI();
+        renderProfileFromData(data);
     });
 }
 
@@ -331,15 +368,10 @@ async function sellItem(item) {
 async function afterFirebaseLogin(userUid, tgUser) {
     uid = userUid;
 
-    await ensureGameFields(uid, tgUser);
-
-    const name =
-        tgUser?.first_name ??
-        tgUser?.username ??
-        "игрок";
+    await ensureGameFields(uid, tgUser || null);
 
     if (statusEl) {
-        statusEl.textContent = `Авторизован как ${name}`;
+        statusEl.textContent = "Онлайн";
     }
     if (loginBtn) {
         loginBtn.classList.add("hidden");
@@ -390,7 +422,6 @@ async function pollBrowserAuth(code) {
 }
 
 async function loginInBrowserViaCode() {
-    // 1) Запрашиваем код у бэка
     const resp = await fetch(`${API_BASE}/auth/browser/start`, {
         method: "POST",
     });
@@ -404,23 +435,18 @@ async function loginInBrowserViaCode() {
         throw new Error("No code from backend");
     }
 
-    // 2) Сразу открываем бота в новой вкладке с этим кодом
-    //    Страница при этом остаётся открытой и продолжает поллить
     window.open(`https://t.me/${BOT_USERNAME}?start=${code}`, "_blank");
 
-    // Немного подскажем в интерфейсе, без алертов
     if (statusEl) {
         statusEl.textContent = "Открылся Telegram, нажми Start в боте…";
     }
 
-    // 3) Ждём, пока бот подтвердит код
     await pollBrowserAuth(code);
 
     if (statusEl) {
         statusEl.textContent = "Авторизация выполнена ✔️";
     }
 }
-
 
 // ==================== MINIAPP ФЛОУ ====================
 async function loginInsideMiniApp() {
@@ -454,7 +480,7 @@ async function loginInsideMiniApp() {
         const { token } = await resp.json();
 
         const cred = await signInWithCustomToken(auth, token);
-        await afterFirebaseLogin(cred.user.uid, unsafe?.user);
+        await afterFirebaseLogin(cred.user.uid, unsafe?.user || null);
 
         window.Telegram.WebApp.ready();
     } catch (err) {
@@ -493,7 +519,6 @@ if (upgradeBtn) upgradeBtn.addEventListener("click", handleUpgrade);
 onAuthStateChanged(auth, async (user) => {
     if (!user) return;
 
-    // если уже инициализировано для этого uid — ничего не делаем
     if (uid === user.uid && userRef) return;
 
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;

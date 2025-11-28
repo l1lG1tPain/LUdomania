@@ -15,6 +15,12 @@ function generateCode(length = 6) {
     return res;
 }
 
+// ==== AkulkaID: глобальный идентификатор пользователя во вселенной Акулки ====
+function makeAkulkaId(telegramId) {
+    // можно усложнить в будущем (hash, base36 и т.п.)
+    return `AKU-${telegramId}`;
+}
+
 const app = express();
 app.use(express.json());
 
@@ -46,9 +52,9 @@ admin.initializeApp({
 const firestore = admin.firestore();
 
 // ==== Config ====
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const BOT_TOKEN           = process.env.TELEGRAM_BOT_TOKEN;
 const BROWSER_AUTH_SECRET = process.env.BROWSER_AUTH_SECRET;
-const PORT = process.env.PORT || 3000;
+const PORT                = process.env.PORT || 3000;
 
 if (!BOT_TOKEN) {
     console.warn('⚠️ TELEGRAM_BOT_TOKEN не задан в .env');
@@ -97,7 +103,7 @@ app.post('/auth/telegram', async (req, res) => {
             return res.status(401).json({ error: 'Invalid Telegram auth data' });
         }
 
-        const params = new URLSearchParams(initData);
+        const params    = new URLSearchParams(initData);
         const userParam = params.get('user');
         if (!userParam) {
             return res.status(400).json({ error: 'No user data in initData' });
@@ -106,17 +112,19 @@ app.post('/auth/telegram', async (req, res) => {
         const tgUser = JSON.parse(userParam);
 
         const telegramId = tgUser.id;
-        const uid = `tg_${telegramId}`;
-        const now = admin.firestore.FieldValue.serverTimestamp();
+        const uid        = `tg_${telegramId}`;
+        const akulkaId   = makeAkulkaId(telegramId);
+        const now        = admin.firestore.FieldValue.serverTimestamp();
 
         const userRef = firestore.collection('users').doc(uid);
 
         await userRef.set(
             {
                 telegram_id: telegramId,
-                username: tgUser.username || null,
+                akulkaId,                                // 🟢 наш глобальный ID
+                username:  tgUser.username || null,
                 firstName: tgUser.first_name || '',
-                photoUrl: tgUser.photo_url || null,
+                photoUrl:  tgUser.photo_url || null,
                 lastLogin: now,
                 createdAt: now,
             },
@@ -125,6 +133,7 @@ app.post('/auth/telegram', async (req, res) => {
 
         const customToken = await admin.auth().createCustomToken(uid, {
             telegram_id: telegramId,
+            akulkaId,                                // 🟢 кидаем в клеймы
             username: tgUser.username || null,
         });
 
@@ -190,17 +199,19 @@ app.post('/auth/browser/confirm', async (req, res) => {
         }
 
         const telegramId = user.id;
-        const uid = `tg_${telegramId}`;
-        const username = user.username || null;
-        const firstName = user.first_name || '';
-        const photoUrl = user.photo_url || null;
+        const uid        = `tg_${telegramId}`;
+        const akulkaId   = makeAkulkaId(telegramId);
+        const username   = user.username || null;
+        const firstName  = user.first_name || '';
+        const photoUrl   = user.photo_url || null;
 
-        const now = admin.firestore.FieldValue.serverTimestamp();
+        const now     = admin.firestore.FieldValue.serverTimestamp();
         const userRef = firestore.collection('users').doc(uid);
 
         await userRef.set(
             {
                 telegram_id: telegramId,
+                akulkaId,
                 username,
                 firstName,
                 photoUrl,
@@ -212,6 +223,7 @@ app.post('/auth/browser/confirm', async (req, res) => {
 
         const customToken = await admin.auth().createCustomToken(uid, {
             telegram_id: telegramId,
+            akulkaId,
             username,
         });
 
@@ -231,19 +243,20 @@ app.post('/auth/browser/confirm', async (req, res) => {
     }
 });
 
-// Бот регистрирует пользователя без браузерного логина
-app.post("/auth/bot/register", async (req, res) => {
+// 2.2.1 Бот регистрирует пользователя без браузерного логина (простой /start)
+app.post('/auth/bot/register', async (req, res) => {
     try {
         const { user, secret } = req.body;
         if (!user || !secret) {
-            return res.status(400).json({ error: "user and secret are required" });
+            return res.status(400).json({ error: 'user and secret are required' });
         }
         if (!BROWSER_AUTH_SECRET || secret !== BROWSER_AUTH_SECRET) {
-            return res.status(403).json({ error: "invalid secret" });
+            return res.status(403).json({ error: 'invalid secret' });
         }
 
         const telegramId = user.id;
         const uid        = `tg_${telegramId}`;
+        const akulkaId   = makeAkulkaId(telegramId);
         const username   = user.username || null;
         const firstName  = user.first_name || "";
         const photoUrl   = user.photo_url || null;
@@ -254,6 +267,7 @@ app.post("/auth/bot/register", async (req, res) => {
         await userRef.set(
             {
                 telegram_id: telegramId,
+                akulkaId,
                 username,
                 firstName,
                 photoUrl,
@@ -269,8 +283,6 @@ app.post("/auth/bot/register", async (req, res) => {
         return res.status(500).json({ error: "Internal error" });
     }
 });
-
-
 
 // 2.3. Браузер опрашивает статус кода
 // GET /auth/browser/poll?code=XXXX

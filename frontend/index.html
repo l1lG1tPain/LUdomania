@@ -12,13 +12,26 @@
 </head>
 <body>
 <div id="app">
-    <h1>LUdomania</h1>
 
+    <!-- 🔹 Профильный хедер -->
+    <header class="app-header">
+        <div class="profile-left">
+            <div id="profileAvatar" class="profile-avatar">
+                🦈
+            </div>
+            <div class="profile-text">
+                <div id="profileName" class="profile-name">Гость</div>
+                <div id="profileId" class="profile-id">AkulkaID: —</div>
+            </div>
+        </div>
+
+    </header>
+
+        <button id="login" class="btn primary">
+            Авторизоваться через Telegram
+        </button>
+    <!-- Статус можно оставить, но без "Авторизован как" -->
     <div id="status" class="status">Не авторизован</div>
-
-    <button id="login" class="btn primary">
-        Авторизоваться через Telegram
-    </button>
 
     <div id="game" class="game hidden">
         <div class="stats">
