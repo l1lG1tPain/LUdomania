@@ -231,6 +231,46 @@ app.post('/auth/browser/confirm', async (req, res) => {
     }
 });
 
+// Бот регистрирует пользователя без браузерного логина
+app.post("/auth/bot/register", async (req, res) => {
+    try {
+        const { user, secret } = req.body;
+        if (!user || !secret) {
+            return res.status(400).json({ error: "user and secret are required" });
+        }
+        if (!BROWSER_AUTH_SECRET || secret !== BROWSER_AUTH_SECRET) {
+            return res.status(403).json({ error: "invalid secret" });
+        }
+
+        const telegramId = user.id;
+        const uid = `tg_${telegramId}`;
+        const username = user.username || null;
+        const firstName = user.first_name || "";
+        const photoUrl = user.photo_url || null;
+
+        const now = admin.firestore.FieldValue.serverTimestamp();
+        const userRef = firestore.collection("users").doc(uid);
+
+        await userRef.set(
+            {
+                telegram_id: telegramId,
+                username,
+                firstName,
+                photoUrl,
+                lastLogin: now,
+                createdAt: now,
+            },
+            { merge: true }
+        );
+
+        res.json({ ok: true });
+    } catch (err) {
+        console.error("bot/register error", err);
+        res.status(500).json({ error: "Internal error" });
+    }
+});
+
+
 // 2.3. Браузер опрашивает статус кода
 // GET /auth/browser/poll?code=XXXX
 app.get('/auth/browser/poll', async (req, res) => {

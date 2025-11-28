@@ -404,18 +404,23 @@ async function loginInBrowserViaCode() {
         throw new Error("No code from backend");
     }
 
-    // 2) Показываем пользователю код и открываем бота с этим кодом
-    alert(
-        `Мы сгенерировали код для привязки:\n\n` +
-        `${code}\n\n` +
-        `Мы уже открыли бота LUdomania — просто нажми "Start".`
-    );
-
+    // 2) Сразу открываем бота в новой вкладке с этим кодом
+    //    Страница при этом остаётся открытой и продолжает поллить
     window.open(`https://t.me/${BOT_USERNAME}?start=${code}`, "_blank");
+
+    // Немного подскажем в интерфейсе, без алертов
+    if (statusEl) {
+        statusEl.textContent = "Открылся Telegram, нажми Start в боте…";
+    }
 
     // 3) Ждём, пока бот подтвердит код
     await pollBrowserAuth(code);
+
+    if (statusEl) {
+        statusEl.textContent = "Авторизация выполнена ✔️";
+    }
 }
+
 
 // ==================== MINIAPP ФЛОУ ====================
 async function loginInsideMiniApp() {

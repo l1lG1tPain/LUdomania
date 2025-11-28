@@ -35,7 +35,7 @@ async function confirmBrowserLogin(code, user) {
 // Команда /start (поддержка ?start=code)
 // ==============================
 bot.start(async (ctx) => {
-    const startPayload = ctx.startPayload; // вот тут будет код, если запустили t.me/bot?start=XXXX
+    const startPayload = ctx.startPayload;
 
     if (startPayload) {
         const code = startPayload.trim();
@@ -50,14 +50,24 @@ bot.start(async (ctx) => {
         }
     }
 
-    // если старт без кода — просто показываем кнопку для мини-аппа
+    // ⬇️ регистрируем юзера просто по факту /start
+    try {
+        await axios.post(`${BACKEND_URL}/auth/bot/register`, {
+            user: ctx.from,
+            secret: SECRET,
+        });
+    } catch (e) {
+        console.error("bot register error", e.response?.data || e);
+    }
+
     return ctx.reply(
-        'Добро пожаловать в LUdomania!',
+        "Добро пожаловать в LUdomania!",
         Markup.inlineKeyboard([
-            Markup.button.webApp('🎮 Играть', WEBAPP_URL)
+            Markup.button.webApp("🎮 Играть", WEBAPP_URL),
         ])
     );
 });
+
 
 // ==============================
 // Альтернативная команда: /login CODE
