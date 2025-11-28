@@ -1,1 +1,11 @@
+# глобально
+node_modules
+dist
+
+# backend секции
+backend/.env
+backend/serviceAccountKey.json
+
+# OS/IDE
+.DS_Store
 .idea
