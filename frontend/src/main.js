@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { MACHINES, PRIZES, randomFrom } from "./gameConfig.js";
 
-// DOM элементы
+// ==================== КОНСТАНТЫ ====================
 const loginBtn      = document.getElementById("login");
 const statusEl      = document.getElementById("status");
 const gameEl        = document.getElementById("game");
@@ -34,19 +34,35 @@ let clickPower = 1;
 let balance    = 0;
 let authInProgress = false;
 
-// === Утилиты ===
+const BOT_USERNAME = "LUdomania_app_bot";
+
+// базовый URL для бэка (локалка / прод)
+const API_BASE =
+    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "http://localhost:3000"
+        : "https://ludomania.onrender.com";
+
+// ==================== УТИЛИТЫ ====================
 function getUpgradeCost(power) {
     return Math.round(10 * Math.pow(power, 1.5));
 }
 
 function updateUpgradeUI() {
     const cost = getUpgradeCost(clickPower);
-    upgradeCostEl.textContent = cost;
-    upgradeBtn.disabled = balance < cost;
+    if (upgradeCostEl) upgradeCostEl.textContent = cost;
+    if (upgradeBtn)    upgradeBtn.disabled = balance < cost;
 }
 
-// === Рендер автоматов ===
+function isTelegramWebApp() {
+    if (!window.Telegram || !window.Telegram.WebApp) return false;
+    const initData = window.Telegram.WebApp.initData;
+    return typeof initData === "string" && initData.length > 0;
+}
+
+// ==================== РЕНДЕР АВТОМАТОВ ====================
 function renderMachines() {
+    if (!machinesEl) return;
+
     machinesEl.innerHTML = "";
 
     MACHINES.forEach((m) => {
@@ -68,16 +84,18 @@ function renderMachines() {
         machinesEl.appendChild(div);
     });
 
-    machinesEl.addEventListener("click", (e) => {
+    machinesEl.onclick = (e) => {
         const btn = e.target.closest(".machine-play");
         if (!btn) return;
         const id = btn.dataset.id;
         playMachine(id);
-    });
+    };
 }
 
-// === Инвентарь ===
+// ==================== ИНВЕНТАРЬ ====================
 function renderInventory(items) {
+    if (!inventoryEl) return;
+
     inventoryEl.innerHTML = "";
 
     if (items.length === 0) {
@@ -85,16 +103,16 @@ function renderInventory(items) {
         return;
     }
 
+    const rarityLabels = {
+        common: "Обычный",
+        rare: "Редкий",
+        epic: "Эпический",
+        legendary: "Легендарный",
+    };
+
     items.forEach((item) => {
         const div = document.createElement("div");
         div.className = "inv-item";
-
-        const rarityLabels = {
-            common: "Обычный",
-            rare: "Редкий",
-            epic: "Эпический",
-            legendary: "Легендарный",
-        };
 
         div.innerHTML = `
       <div class="inv-main">
@@ -116,7 +134,7 @@ function renderInventory(items) {
         inventoryEl.appendChild(div);
     });
 
-    inventoryEl.addEventListener("click", async (e) => {
+    inventoryEl.onclick = async (e) => {
         const btn = e.target.closest(".inv-sell");
         if (!btn) return;
 
@@ -130,12 +148,11 @@ function renderInventory(items) {
         if (!confirmSell) return;
 
         await sellItem(item);
-    });
+    };
 }
 
-// Подписка на инвентарь
-function subscribeToInventory(uid) {
-    const invCol = collection(db, "users", uid, "inventory");
+function subscribeToInventory(userUid) {
+    const invCol = collection(db, "users", userUid, "inventory");
 
     onSnapshot(invCol, (snap) => {
         const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -143,9 +160,29 @@ function subscribeToInventory(uid) {
     });
 }
 
-// === Гарантируем игровые поля ===
-async function ensureGameFields(uid, telegramInfo) {
-    const ref  = doc(db, "users", uid);
+// ==================== ПОДПИСКА НА ЮЗЕРА ====================
+function subscribeToUser(userUid) {
+    userRef = doc(db, "users", userUid);
+
+    onSnapshot(userRef, (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+
+        balance    = data.balance     ?? 0;
+        clickPower = data.clickPower  ?? 1;
+        const totalClicks = data.totalClicks ?? 0;
+
+        if (balanceEl)     balanceEl.textContent     = balance;
+        if (clickPowerEl)  clickPowerEl.textContent  = clickPower;
+        if (totalClicksEl) totalClicksEl.textContent = totalClicks;
+
+        updateUpgradeUI();
+    });
+}
+
+// ==================== ГАРАНТИЯ ПОЛЕЙ В БД ====================
+async function ensureGameFields(userUid, telegramInfo) {
+    const ref  = doc(db, "users", userUid);
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
@@ -177,10 +214,10 @@ async function ensureGameFields(uid, telegramInfo) {
     }
 }
 
-// === Кликер ===
+// ==================== КЛИКЕР ====================
 async function handleClick() {
     if (!userRef) return;
-    clickBtn.disabled = true;
+    if (clickBtn) clickBtn.disabled = true;
     try {
         await updateDoc(userRef, {
             balance:     increment(clickPower),
@@ -190,11 +227,10 @@ async function handleClick() {
     } catch (e) {
         console.error("click error", e);
     } finally {
-        clickBtn.disabled = false;
+        if (clickBtn) clickBtn.disabled = false;
     }
 }
 
-// === Апгрейд ===
 async function handleUpgrade() {
     if (!userRef) return;
 
@@ -204,7 +240,7 @@ async function handleUpgrade() {
         return;
     }
 
-    upgradeBtn.disabled = true;
+    if (upgradeBtn) upgradeBtn.disabled = true;
 
     try {
         await updateDoc(userRef, {
@@ -215,11 +251,11 @@ async function handleUpgrade() {
     } catch (e) {
         console.error("upgrade error", e);
     } finally {
-        upgradeBtn.disabled = false;
+        if (upgradeBtn) upgradeBtn.disabled = false;
     }
 }
 
-// === Играть в автомат ===
+// ==================== АВТОМАТЫ ====================
 async function playMachine(machineId) {
     if (!userRef) return;
 
@@ -231,7 +267,6 @@ async function playMachine(machineId) {
         return;
     }
 
-    // Списываем ставку
     try {
         await updateDoc(userRef, {
             balance:    increment(-machine.price),
@@ -242,7 +277,6 @@ async function playMachine(machineId) {
         return;
     }
 
-    // Рандом: выигрыш/проигрыш
     const roll = Math.random();
     const win  = roll < machine.winChance;
 
@@ -251,8 +285,7 @@ async function playMachine(machineId) {
         return;
     }
 
-    // Выбираем случайный приз из пула автомата
-    const prizeId = randomFrom(machine.prizePool);
+    const prizeId       = randomFrom(machine.prizePool);
     const prizeTemplate = PRIZES[prizeId];
 
     if (!prizeTemplate) {
@@ -264,11 +297,11 @@ async function playMachine(machineId) {
 
     try {
         await addDoc(invCol, {
-            prizeId: prizeTemplate.id,
-            name: prizeTemplate.name,
-            emoji: prizeTemplate.emoji,
-            rarity: prizeTemplate.rarity,
-            value: prizeTemplate.value,
+            prizeId:   prizeTemplate.id,
+            name:      prizeTemplate.name,
+            emoji:     prizeTemplate.emoji,
+            rarity:    prizeTemplate.rarity,
+            value:     prizeTemplate.value,
             createdAt: serverTimestamp(),
         });
 
@@ -278,7 +311,6 @@ async function playMachine(machineId) {
     }
 }
 
-// === Продажа предмета ===
 async function sellItem(item) {
     if (!userRef || !uid) return;
 
@@ -287,7 +319,7 @@ async function sellItem(item) {
     try {
         await deleteDoc(invDocRef);
         await updateDoc(userRef, {
-            balance:    increment(item.value),
+            balance:     increment(item.value),
             totalEarned: increment(item.value),
         });
     } catch (e) {
@@ -295,20 +327,101 @@ async function sellItem(item) {
     }
 }
 
-// === Авторизация через Telegram ===
-async function loginWithTelegram() {
-    if (authInProgress) return;
-    authInProgress = true;
+// ==================== ОБЩИЙ ПОСТ-ЛОГИН ====================
+async function afterFirebaseLogin(userUid, tgUser) {
+    uid = userUid;
 
+    await ensureGameFields(uid, tgUser);
+
+    const name =
+        tgUser?.first_name ??
+        tgUser?.username ??
+        "игрок";
+
+    if (statusEl) {
+        statusEl.textContent = `Авторизован как ${name}`;
+    }
+    if (loginBtn) {
+        loginBtn.classList.add("hidden");
+    }
+    if (gameEl) {
+        gameEl.classList.remove("hidden");
+    }
+
+    userRef = doc(db, "users", uid);
+    subscribeToUser(uid);
+    subscribeToInventory(uid);
+    renderMachines();
+}
+
+// ==================== БРАУЗЕРНЫЙ ФЛОУ (код) ====================
+async function pollBrowserAuth(code) {
+    return new Promise((resolve, reject) => {
+        let tries = 0;
+        const maxTries = 60; // 60 * 2с = 2 минуты
+
+        const timer = setInterval(async () => {
+            tries++;
+            if (tries > maxTries) {
+                clearInterval(timer);
+                reject(new Error("timeout"));
+                return;
+            }
+
+            try {
+                const resp = await fetch(
+                    `${API_BASE}/auth/browser/poll?code=${encodeURIComponent(code)}`
+                );
+                const data = await resp.json();
+
+                if (data.status === "linked" && data.token) {
+                    clearInterval(timer);
+
+                    const cred = await signInWithCustomToken(auth, data.token);
+                    await afterFirebaseLogin(cred.user.uid, null);
+
+                    resolve();
+                }
+            } catch (e) {
+                console.error("poll error", e);
+            }
+        }, 2000);
+    });
+}
+
+async function loginInBrowserViaCode() {
+    // 1) Запрашиваем код у бэка
+    const resp = await fetch(`${API_BASE}/auth/browser/start`, {
+        method: "POST",
+    });
+
+    if (!resp.ok) {
+        throw new Error("Failed to start browser auth");
+    }
+
+    const { code } = await resp.json();
+    if (!code) {
+        throw new Error("No code from backend");
+    }
+
+    // 2) Показываем пользователю код и открываем бота с этим кодом
+    alert(
+        `Мы сгенерировали код для привязки:\n\n` +
+        `${code}\n\n` +
+        `Мы уже открыли бота LUdomania — просто нажми "Start".`
+    );
+
+    window.open(`https://t.me/${BOT_USERNAME}?start=${code}`, "_blank");
+
+    // 3) Ждём, пока бот подтвердит код
+    await pollBrowserAuth(code);
+}
+
+// ==================== MINIAPP ФЛОУ ====================
+async function loginInsideMiniApp() {
     try {
-        if (!window.Telegram || !window.Telegram.WebApp) {
-            alert("Эта авторизация работает внутри Telegram miniapp 🧩");
-            authInProgress = false;
-            return;
-        }
-
-        loginBtn.disabled = true;
-        statusEl.textContent = "Авторизация...";
+        if (loginBtn) loginBtn.disabled = true;
+        if (statusEl) statusEl.textContent = "Авторизация...";
 
         const tg       = window.Telegram.WebApp;
         const initData = tg.initData;
@@ -316,12 +429,11 @@ async function loginWithTelegram() {
 
         if (!initData) {
             alert("Telegram не передал initData");
-            loginBtn.disabled = false;
-            authInProgress = false;
+            if (loginBtn) loginBtn.disabled = false;
             return;
         }
 
-        const resp = await fetch("https://ludomania.onrender.com/auth/telegram", {
+        const resp = await fetch(`${API_BASE}/auth/telegram`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ initData }),
@@ -330,61 +442,62 @@ async function loginWithTelegram() {
         if (!resp.ok) {
             console.error("Auth error:", await resp.text());
             alert("Ошибка авторизации");
-            loginBtn.disabled = false;
-            authInProgress = false;
+            if (loginBtn) loginBtn.disabled = false;
             return;
         }
 
         const { token } = await resp.json();
 
         const cred = await signInWithCustomToken(auth, token);
-        uid        = cred.user.uid;
-
-        await ensureGameFields(uid, unsafe?.user);
-
-        statusEl.textContent = `Авторизован как ${unsafe?.user?.first_name ?? "игрок"}`;
-        loginBtn.classList.add("hidden");
-        gameEl.classList.remove("hidden");
-
-        userRef = doc(db, "users", uid);
-
-        // Подписки
-        subscribeToUser(uid);
-        subscribeToInventory(uid);
-
-        renderMachines();
+        await afterFirebaseLogin(cred.user.uid, unsafe?.user);
 
         window.Telegram.WebApp.ready();
     } catch (err) {
         console.error("Auth exception:", err);
         alert("Что-то пошло не так");
-        loginBtn.disabled = false;
+    } finally {
+        if (loginBtn) loginBtn.disabled = false;
+    }
+}
+
+// ==================== ОБЩАЯ КНОПКА ЛОГИНА ====================
+async function loginWithTelegram() {
+    if (authInProgress) return;
+    authInProgress = true;
+
+    try {
+        if (isTelegramWebApp()) {
+            await loginInsideMiniApp();
+        } else {
+            await loginInBrowserViaCode();
+        }
+    } catch (e) {
+        console.error("loginWithTelegram error", e);
+        alert("Не удалось выполнить авторизацию");
     } finally {
         authInProgress = false;
     }
 }
 
-loginBtn.addEventListener("click", loginWithTelegram);
-clickBtn.addEventListener("click", handleClick);
-upgradeBtn.addEventListener("click", handleUpgrade);
+// ==================== ЛИСНЕРЫ ====================
+if (loginBtn)   loginBtn.addEventListener("click", loginWithTelegram);
+if (clickBtn)   clickBtn.addEventListener("click", handleClick);
+if (upgradeBtn) upgradeBtn.addEventListener("click", handleUpgrade);
 
+// ==================== onAuthStateChanged ====================
 onAuthStateChanged(auth, async (user) => {
     if (!user) return;
-    uid = user.uid;
+
+    // если уже инициализировано для этого uid — ничего не делаем
+    if (uid === user.uid && userRef) return;
+
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-
-    await ensureGameFields(uid, tgUser);
-    statusEl.textContent = `Авторизован как ${tgUser?.first_name ?? "игрок"}`;
-    loginBtn.classList.add("hidden");
-    gameEl.classList.remove("hidden");
-
-    userRef = doc(db, "users", uid);
-    subscribeToUser(uid);
-    subscribeToInventory(uid);
-    renderMachines();
+    await afterFirebaseLogin(user.uid, tgUser || null);
 });
 
-// авто-логин в миниаппе
-if (window.Telegram && window.Telegram.WebApp) {
-    loginWithTelegram();
+// автологин только внутри миниаппа
+if (isTelegramWebApp()) {
+    loginInsideMiniApp().catch((e) =>
+        console.error("auto miniapp login error", e)
+    );
 }
