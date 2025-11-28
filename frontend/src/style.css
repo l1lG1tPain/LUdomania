@@ -103,3 +103,89 @@ h1 {
 .hidden {
     display: none !important;
 }
+
+h2 {
+    margin: 18px 0 8px;
+    font-size: 18px;
+}
+
+.machines {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.machine-card {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 14px;
+}
+
+.machine-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.machine-name {
+    font-weight: 600;
+}
+
+.machine-meta {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.machine-card .btn {
+    margin-top: 8px;
+    font-size: 14px;
+    padding: 6px 10px;
+    width: auto;
+}
+
+.inventory {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 40px;
+}
+
+.inv-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 14px;
+}
+
+.inv-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inv-emoji {
+    font-size: 20px;
+}
+
+.inv-name {
+    font-weight: 500;
+}
+
+.inv-rarity {
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.inv-actions .btn {
+    margin: 0;
+    padding: 4px 8px;
+    font-size: 12px;
+    width: auto;
+}
