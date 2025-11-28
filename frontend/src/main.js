@@ -12,7 +12,7 @@ loginBtn.addEventListener("click", async () => {
     try {
         const initData = window.Telegram.WebApp.initData;
 
-        const resp = await fetch("https://ТВОЙ-РЕНДЕР-ДОМЕН.onrender.com/auth/telegram", {
+        const resp = await fetch("https://https://ludomania.onrender.com/auth/telegram", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ initData })
