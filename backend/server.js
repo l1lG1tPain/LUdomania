@@ -17,8 +17,16 @@ function generateCode(length = 6) {
 
 // ==== AkulkaID: глобальный идентификатор пользователя во вселенной Акулки ====
 function makeAkulkaId(telegramId) {
-    // можно усложнить в будущем (hash, base36 и т.п.)
-    return `AKU-${telegramId}`;
+    // Детеминированный, но непрозрачный ID
+    const raw = crypto
+        .createHmac('sha256', AKULKA_ID_SECRET)
+        .update(String(telegramId))
+        .digest('base64url'); // буквы, цифры, _ и -
+
+    // Оставляем только буквы/цифры и режем до 6 символов
+    const clean = raw.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+    return clean.slice(0, 6) || 'akulka'; // на всякий пожарный fallback
 }
 
 const app = express();
@@ -54,6 +62,7 @@ const firestore = admin.firestore();
 // ==== Config ====
 const BOT_TOKEN           = process.env.TELEGRAM_BOT_TOKEN;
 const BROWSER_AUTH_SECRET = process.env.BROWSER_AUTH_SECRET;
+const AKULKA_ID_SECRET    = process.env.AKULKA_ID_SECRET || 'fallback-secret';
 const PORT                = process.env.PORT || 3000;
 
 if (!BOT_TOKEN) {

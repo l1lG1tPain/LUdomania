@@ -370,15 +370,15 @@ async function afterFirebaseLogin(userUid, tgUser) {
 
     await ensureGameFields(uid, tgUser || null);
 
-    if (statusEl) {
-        statusEl.textContent = "Онлайн";
-    }
-    if (loginBtn) {
-        loginBtn.classList.add("hidden");
-    }
-    if (gameEl) {
-        gameEl.classList.remove("hidden");
-    }
+    // убираем текст статуса
+    if (statusEl) statusEl.textContent = "";
+
+    // показываем зелёный индикатор
+    const onlineDot = document.getElementById("onlineDot");
+    if (onlineDot) onlineDot.classList.remove("hidden");
+
+    if (loginBtn) loginBtn.classList.add("hidden");
+    if (gameEl) gameEl.classList.remove("hidden");
 
     userRef = doc(db, "users", uid);
     subscribeToUser(uid);
