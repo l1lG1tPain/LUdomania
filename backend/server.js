@@ -243,12 +243,12 @@ app.post("/auth/bot/register", async (req, res) => {
         }
 
         const telegramId = user.id;
-        const uid = `tg_${telegramId}`;
-        const username = user.username || null;
-        const firstName = user.first_name || "";
-        const photoUrl = user.photo_url || null;
+        const uid        = `tg_${telegramId}`;
+        const username   = user.username || null;
+        const firstName  = user.first_name || "";
+        const photoUrl   = user.photo_url || null;
 
-        const now = admin.firestore.FieldValue.serverTimestamp();
+        const now     = admin.firestore.FieldValue.serverTimestamp();
         const userRef = firestore.collection("users").doc(uid);
 
         await userRef.set(
@@ -263,12 +263,13 @@ app.post("/auth/bot/register", async (req, res) => {
             { merge: true }
         );
 
-        res.json({ ok: true });
+        return res.json({ ok: true });
     } catch (err) {
         console.error("bot/register error", err);
-        res.status(500).json({ error: "Internal error" });
+        return res.status(500).json({ error: "Internal error" });
     }
 });
+
 
 
 // 2.3. Браузер опрашивает статус кода

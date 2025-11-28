@@ -1,20 +1,27 @@
 // backend/bot.js
-const { Telegraf, Markup } = require('telegraf');
-const axios = require('axios');
-require('dotenv').config();
+const { Telegraf, Markup } = require("telegraf");
+const axios = require("axios");              // <- обязательно, поэтому нужен npm i axios
+require("dotenv").config();
 
-const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+const BOT_TOKEN   = process.env.TELEGRAM_BOT_TOKEN;
+const BACKEND_URL = process.env.BACKEND_URL || "https://ludomania.onrender.com";
+const SECRET      = process.env.BROWSER_AUTH_SECRET;
 
 // URL фронта (миниапп + веб)
 const WEBAPP_URL = "https://ludomania-app.vercel.app";
 
-// URL бекенда (Render)
-const BACKEND_URL = "https://ludomania.onrender.com";   // 🔥 поменяй на свой актуальный URL
+if (!BOT_TOKEN) {
+    console.error("❌ TELEGRAM_BOT_TOKEN не задан");
+    process.exit(1);
+}
+if (!SECRET) {
+    console.warn("⚠️ BROWSER_AUTH_SECRET не задан — browser login работать не будет");
+}
 
-const SECRET = process.env.BROWSER_AUTH_SECRET;
+const bot = new Telegraf(BOT_TOKEN);
 
 // ==============================
-// Функция подтверждения кода
+// Вспомогалки
 // ==============================
 async function confirmBrowserLogin(code, user) {
     try {
@@ -26,39 +33,52 @@ async function confirmBrowserLogin(code, user) {
 
         return resp.data?.ok === true;
     } catch (err) {
-        console.error("confirmBrowserLogin error:", err.response?.data || err);
+        console.error(
+            "confirmBrowserLogin error:",
+            err.response?.data || err.message || err
+        );
         return false;
     }
 }
 
+async function registerUserInBackend(user) {
+    if (!SECRET) return;
+
+    try {
+        await axios.post(`${BACKEND_URL}/auth/bot/register`, {
+            user,
+            secret: SECRET,
+        });
+    } catch (err) {
+        console.error(
+            "bot/register error:",
+            err.response?.data || err.message || err
+        );
+    }
+}
+
 // ==============================
-// Команда /start (поддержка ?start=code)
+// /start
 // ==============================
 bot.start(async (ctx) => {
-    const startPayload = ctx.startPayload;
+    const payload = ctx.startPayload; // если открыли с ?start=CODE
 
-    if (startPayload) {
-        const code = startPayload.trim();
+    // 1) если есть код из браузера → подтверждаем его
+    if (payload) {
+        const code = payload.trim();
         const ok = await confirmBrowserLogin(code, ctx.from);
 
         if (ok) {
             return ctx.reply(
-                "✅ Браузер успешно авторизован!\nТеперь вернись на сайт, чтобы продолжить игру 🎮"
+                "✅ Браузер успешно авторизован!\nВернись на сайт и продолжай игру 🎮"
             );
         } else {
-            return ctx.reply("❌ Неверный или просроченный код.");
+            return ctx.reply("❌ Неверный или просроченный код. Попробуй ещё раз из браузера.");
         }
     }
 
-    // ⬇️ регистрируем юзера просто по факту /start
-    try {
-        await axios.post(`${BACKEND_URL}/auth/bot/register`, {
-            user: ctx.from,
-            secret: SECRET,
-        });
-    } catch (e) {
-        console.error("bot register error", e.response?.data || e);
-    }
+    // 2) обычный /start без кода → просто регистрируем юзера и показываем кнопку
+    await registerUserInBackend(ctx.from);
 
     return ctx.reply(
         "Добро пожаловать в LUdomania!",
@@ -68,34 +88,30 @@ bot.start(async (ctx) => {
     );
 });
 
-
 // ==============================
-// Альтернативная команда: /login CODE
+// /login CODE — запасной вариант
 // ==============================
 bot.command("login", async (ctx) => {
     const parts = ctx.message.text.trim().split(/\s+/);
     if (parts.length < 2) {
-        return ctx.reply("Используй: /login CODE");
+        return ctx.reply("Используй: /login КОД_ИЗ_БРАУЗЕРА");
     }
 
-    const code = parts[1];
-
+    const code = parts[1].trim();
     const ok = await confirmBrowserLogin(code, ctx.from);
 
     if (ok) {
         return ctx.reply("✅ Код подтверждён! Возвращайся в браузер 🔥");
     }
-
-    ctx.reply("❌ Неверный или просроченный код.");
+    return ctx.reply("❌ Неверный или просроченный код.");
 });
 
 // ==============================
-// Запуск бота
+// Запуск
 // ==============================
 bot.launch().then(() => {
     console.log("🤖 LUdomania bot is running");
 });
 
-// Безопасное завершение
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
