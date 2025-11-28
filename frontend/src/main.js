@@ -22,14 +22,13 @@ const clickBtn      = document.getElementById("clickBtn");
 const upgradeBtn    = document.getElementById("upgradeBtn");
 const upgradeCostEl = document.getElementById("upgradeCost");
 
-let userRef   = null;
+let userRef    = null;
 let clickPower = 1;
 let balance    = 0;
+let authInProgress = false;
 
 // Простая формула стоимости апгрейда
 function getUpgradeCost(power) {
-    // чем выше сила клика, тем дороже:
-    // cost = 10 * power^1.5 (пример)
     return Math.round(10 * Math.pow(power, 1.5));
 }
 
@@ -59,7 +58,7 @@ function subscribeToUser(uid) {
     });
 }
 
-// Гарантируем, что у юзера есть игровые поля (если backend создал только профиль)
+// Гарантируем, что у юзера есть игровые поля
 async function ensureGameFields(uid, telegramInfo) {
     const ref  = doc(db, "users", uid);
     const snap = await getDoc(ref);
@@ -67,25 +66,25 @@ async function ensureGameFields(uid, telegramInfo) {
     if (!snap.exists()) {
         await setDoc(ref, {
             telegram_id: telegramInfo?.id ?? null,
-            username: telegramInfo?.username ?? null,
-            firstName: telegramInfo?.first_name ?? "",
-            photoUrl: telegramInfo?.photo_url ?? null,
-            createdAt: serverTimestamp(),
-            lastLogin: serverTimestamp(),
-            balance: 0,
-            clickPower: 1,
+            username:    telegramInfo?.username ?? null,
+            firstName:   telegramInfo?.first_name ?? "",
+            photoUrl:    telegramInfo?.photo_url ?? null,
+            createdAt:   serverTimestamp(),
+            lastLogin:   serverTimestamp(),
+            balance:     0,
+            clickPower:  1,
             totalClicks: 0,
             totalEarned: 0,
-            totalSpent: 0,
+            totalSpent:  0,
         });
     } else {
         const data = snap.data();
         const patch = {};
-        if (data.balance === undefined)    patch.balance    = 0;
-        if (data.clickPower === undefined) patch.clickPower = 1;
-        if (data.totalClicks === undefined) patch.totalClicks = 0;
-        if (data.totalEarned === undefined) patch.totalEarned = 0;
-        if (data.totalSpent === undefined) patch.totalSpent = 0;
+        if (data.balance      === undefined) patch.balance      = 0;
+        if (data.clickPower   === undefined) patch.clickPower   = 1;
+        if (data.totalClicks  === undefined) patch.totalClicks  = 0;
+        if (data.totalEarned  === undefined) patch.totalEarned  = 0;
+        if (data.totalSpent   === undefined) patch.totalSpent   = 0;
 
         if (Object.keys(patch).length > 0) {
             await updateDoc(ref, patch);
@@ -124,9 +123,9 @@ async function handleUpgrade() {
 
     try {
         await updateDoc(userRef, {
-            balance:     increment(-cost),
-            clickPower:  increment(1),
-            totalSpent:  increment(cost),
+            balance:    increment(-cost),
+            clickPower: increment(1),
+            totalSpent: increment(cost),
         });
     } catch (e) {
         console.error("upgrade error", e);
@@ -135,24 +134,29 @@ async function handleUpgrade() {
     }
 }
 
-// Авторизация через Telegram WebApp + backend + Firebase
-loginBtn.addEventListener("click", async () => {
-    if (!window.Telegram || !window.Telegram.WebApp) {
-        alert("Эта авторизация работает внутри Telegram miniapp 🧩");
-        return;
-    }
+// ==== Авторизация через Telegram WebApp + backend + Firebase ====
+async function loginWithTelegram() {
+    if (authInProgress) return;
+    authInProgress = true;
 
     try {
+        if (!window.Telegram || !window.Telegram.WebApp) {
+            alert("Эта авторизация работает внутри Telegram miniapp 🧩");
+            authInProgress = false;
+            return;
+        }
+
         loginBtn.disabled = true;
         statusEl.textContent = "Авторизация...";
 
-        const tg = window.Telegram.WebApp;
+        const tg       = window.Telegram.WebApp;
         const initData = tg.initData;
         const unsafe   = tg.initDataUnsafe;
 
         if (!initData) {
             alert("Telegram не передал initData");
             loginBtn.disabled = false;
+            authInProgress = false;
             return;
         }
 
@@ -166,6 +170,7 @@ loginBtn.addEventListener("click", async () => {
             console.error("Auth error:", await resp.text());
             alert("Ошибка авторизации");
             loginBtn.disabled = false;
+            authInProgress = false;
             return;
         }
 
@@ -174,7 +179,6 @@ loginBtn.addEventListener("click", async () => {
         const cred = await signInWithCustomToken(auth, token);
         const uid  = cred.user.uid;
 
-        // Обновляем / создаём игровые поля
         await ensureGameFields(uid, unsafe?.user);
 
         statusEl.textContent = `Авторизован как ${unsafe?.user?.first_name ?? "игрок"}`;
@@ -187,14 +191,19 @@ loginBtn.addEventListener("click", async () => {
         console.error("Auth exception:", err);
         alert("Что-то пошло не так");
         loginBtn.disabled = false;
+    } finally {
+        authInProgress = false;
     }
-});
+}
 
-// Лиснеры для кнопок игры
+// Кнопка — просто ручной триггер (в браузере или если авто-логин не сработал)
+loginBtn.addEventListener("click", loginWithTelegram);
+
+// Кнопки игры
 clickBtn.addEventListener("click", handleClick);
 upgradeBtn.addEventListener("click", handleUpgrade);
 
-// Если вдруг уже залогинен (например, страница обновилась внутри WebApp)
+// Уже залогинен? (например, перезапуск миниаппа)
 onAuthStateChanged(auth, async (user) => {
     if (!user) return;
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -205,3 +214,8 @@ onAuthStateChanged(auth, async (user) => {
     gameEl.classList.remove("hidden");
     subscribeToUser(user.uid);
 });
+
+// Авто-логин, если уже внутри Telegram WebApp
+if (window.Telegram && window.Telegram.WebApp) {
+    loginWithTelegram();
+}
