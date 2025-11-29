@@ -632,8 +632,7 @@ async function playMachine(machineId) {
         console.error("machine stats error", e);
     }
 
-    // 4) персональная статистика юзера по этому автомату
-    // 4) персональная статистика юзера по этому автомату
+   // 4) персональная статистика юзера по этому автомату
     try {
         const userMachineRef = doc(db, "user_machine_stats", uid, "machines", machineId);
         await setDoc(userMachineRef, {
@@ -644,6 +643,7 @@ async function playMachine(machineId) {
     } catch (e) {
         console.error("user machine stats error", e);
     }
+
 
     // 5) если не выиграл — просто тостер и выходим
     if (!win) {
