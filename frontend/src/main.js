@@ -258,26 +258,25 @@ function renderStatsFromState(levelStateOverride) {
         )}`;
     }
 
-    // 🔥 добавляем подсказку по уровню/лиге
-    const levelHintEl = document.getElementById("levelHint");
-    if (levelHintEl) {
-        const league        = getLeagueForLevel(ls.level);
-        const leagueProg    = getLeagueProgress(totalClicks);
-        const leftClicks    = leagueProg.clicksToNext;
-        const percentToNext = Math.round((leagueProg.progressToNext || 0) * 100);
+    // 🏅 текст под прогресс-баром: лига + сколько кликов до следующего уровня
+    const league   = getLeagueForLevel(ls.level);
+    const leagueEl = document.getElementById("farm-league-text");
 
-        if (leagueProg.isMax) {
-            levelHintEl.textContent =
-                `${league.emoji} ${league.name}: максимальная лига`;
-        } else {
-            levelHintEl.innerHTML =
-                `${league.emoji} <span class="league-name">${league.name}</span> • `
-                + `до следующего уровня: ${leftClicks} кликов (${percentToNext}%)`;
-        }
+    if (leagueEl && league) {
+        const leftClicks    = Math.max(0, (ls.required ?? 0) - (ls.current ?? 0));
+        const percentToNext = Math.round((ls.progress || 0) * 100);
+
+        const clicksText = leftClicks > 0
+            ? `${leftClicks} кликов`
+            : "уровень максимум";
+
+        leagueEl.textContent =
+            `${league.emoji} ${league.name} — до следующего уровня: ${clicksText} (${percentToNext}%)`;
     }
 
     updateUpgradeUI();
 }
+
 
 
 // ==================== Левел-ап ====================
