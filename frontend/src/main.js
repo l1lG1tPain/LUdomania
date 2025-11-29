@@ -26,7 +26,7 @@ import {
     buildProfileViewModel,
     renderProfileFromUserDoc,
 } from "./profileLogic.js";
-import { getLeagueForLevel } from "./leagueLogic.js";
+import { getLeagueForLevel, getLeagueProgress } from "./leagueLogic.js";
 
 
 // ====== ШАНСЫ ВЫПАДЕНИЯ ПРИЗОВ (по редкости) ======
