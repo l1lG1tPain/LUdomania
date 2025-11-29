@@ -10,15 +10,15 @@ import {
     increment,
     serverTimestamp,
     collection,
-    addDoc,
     deleteDoc,
 } from "firebase/firestore";
 import {
     MACHINES,
     PRIZES,
-    randomFrom,
-    calculateLevelState,
+    COLLECTIONS,
     RARITY_META,
+    calculateLevelState,
+    randomFrom,
 } from "./gameConfig.js";
 
 // ==================== DOM-элементы ====================
@@ -39,6 +39,7 @@ const clickPowerEl = document.getElementById("clickPower");
 const totalClicksEl = document.getElementById("totalClicks");
 const playerLevelEl = document.getElementById("playerLevel");
 const levelProgressBar = document.getElementById("levelProgressBar");
+const multiplierEl = document.getElementById("multiplier");
 
 // Игровые элементы
 const bigClickArea = document.getElementById("bigClickArea");
@@ -61,6 +62,8 @@ let clickPower = 1;
 let balance = 0;
 let totalClicks = 0;
 let currentLevel = 0;
+
+let clickMultiplier = 1; // множитель от коллекций (x1, x2, ...)
 let authInProgress = false;
 
 const BOT_USERNAME = "LUdomania_app_bot";
@@ -99,7 +102,6 @@ function getMaxClickPower(level) {
     return 1 + (level + 1) * 3;
 }
 
-// красивый тост
 function showToast(message) {
     const toast = document.createElement("div");
     toast.className = "toast";
@@ -109,7 +111,6 @@ function showToast(message) {
     setTimeout(() => toast.remove(), 2100);
 }
 
-// модалка выигрыша
 function showPrizeModal(prize) {
     const backdrop = document.createElement("div");
     backdrop.className = "modal-backdrop";
@@ -175,30 +176,6 @@ function renderProfileFromData(data) {
     }
 }
 
-// обновление всех цифр/прогресса из текущего state
-function renderStatsFromState() {
-    const levelState = calculateLevelState(totalClicks);
-    currentLevel = levelState.level;
-
-    if (balanceEl) balanceEl.textContent = formatLM(balance);
-    if (clickPowerEl) clickPowerEl.textContent = clickPower;
-    if (totalClicksEl) totalClicksEl.textContent = totalClicks;
-
-    if (playerLevelEl) playerLevelEl.textContent = levelState.level;
-    if (headerLevelEl) headerLevelEl.textContent = levelState.level;
-    if (headerBalanceEl) headerBalanceEl.textContent = formatLM(balance);
-
-    if (levelProgressBar) {
-        levelProgressBar.style.width = `${Math.round(
-            (levelState.progress || 0) * 100
-        )}%`;
-    }
-
-    updateUpgradeUI();
-    // автоматы завязаны на уровне → перерендер
-    renderMachines();
-}
-
 // ==================== Навигация между страницами ====================
 
 function setActivePage(targetId) {
@@ -233,6 +210,34 @@ function updateUpgradeUI() {
     if (upgradeBtn) upgradeBtn.disabled = balance < cost || !uid;
 }
 
+// Полный пересчёт статы из текущего состояния
+function renderStatsFromState() {
+    const levelState = calculateLevelState(totalClicks);
+    currentLevel = levelState.level;
+
+    if (balanceEl) balanceEl.textContent = formatLM(balance);
+    if (clickPowerEl) clickPowerEl.textContent = clickPower;
+    if (totalClicksEl) totalClicksEl.textContent = totalClicks;
+
+    if (playerLevelEl) playerLevelEl.textContent = levelState.level;
+    if (headerLevelEl) headerLevelEl.textContent = levelState.level;
+    if (headerBalanceEl) headerBalanceEl.textContent = formatLM(balance);
+
+    if (levelProgressBar) {
+        levelProgressBar.style.width = `${Math.round(
+            (levelState.progress || 0) * 100
+        )}%`;
+    }
+
+    if (multiplierEl) {
+        multiplierEl.textContent = `x${clickMultiplier.toFixed(
+            clickMultiplier % 1 === 0 ? 0 : 1
+        )}`;
+    }
+
+    updateUpgradeUI();
+}
+
 // ==================== Рендер автоматов ====================
 
 function renderMachines() {
@@ -241,26 +246,24 @@ function renderMachines() {
     machinesEl.innerHTML = "";
 
     MACHINES.forEach((m) => {
+        // блокируем автоматы по уровню, если minLevel есть
+        const locked = currentLevel < (m.minLevel ?? 0);
+
         const div = document.createElement("div");
         div.className = "machine-card";
-
-        const locked = currentLevel < (m.minLevel ?? 0);
 
         div.innerHTML = `
       <div class="machine-name">${m.name}</div>
       <div class="machine-meta">${m.price} LM / попытка</div>
       <div class="machine-meta">Шанс: ${(m.winChance * 100).toFixed(0)}%</div>
-      ${
-            m.minLevel != null
-                ? `<div class="machine-meta">Доступно с уровня ${m.minLevel}</div>`
-                : ""
-        }
       <div class="machine-meta">${m.description}</div>
-      <button class="btn secondary machine-play" data-id="${m.id}" ${
-            locked ? "disabled" : ""
-        }>
-        ${locked ? "Недоступно" : "Крутить"}
-      </button>
+      ${
+            locked
+                ? `<div class="machine-meta" style="color:#ffb74d;">Доступно с уровня ${m.minLevel}</div>`
+                : `<button class="btn secondary machine-play" data-id="${m.id}">
+               Крутить
+             </button>`
+        }
     `;
 
         machinesEl.appendChild(div);
@@ -268,13 +271,50 @@ function renderMachines() {
 
     machinesEl.onclick = (e) => {
         const btn = e.target.closest(".machine-play");
-        if (!btn || btn.disabled) return;
+        if (!btn) return;
         const id = btn.dataset.id;
         playMachine(id);
     };
 }
 
-// ==================== Инвентарь ====================
+// ==================== Коллекции и бонусы ====================
+
+function recomputeCollectionsAndBonuses(items) {
+    // items: [{ id, prizeId, count, ... }]
+    let newClickMultiplier = 1;
+
+    const itemByPrizeId = new Map();
+    items.forEach((it) => {
+        const prizeId = it.prizeId || it.id;
+        itemByPrizeId.set(prizeId, it);
+    });
+
+    Object.values(COLLECTIONS).forEach((collection) => {
+        const required = collection.requiredPrizeIds || [];
+        const hasAll = required.every((prizeId) => {
+            const item = itemByPrizeId.get(prizeId);
+            return item && (item.count ?? 0) > 0;
+        });
+
+        if (!hasAll) return;
+
+        const bonus = collection.bonus;
+        if (!bonus) return;
+
+        if (bonus.type === "clickMultiplier") {
+            // value ожидаем как множитель (1.1, 1.2, 2.0 и т.д.)
+            const value = bonus.value ?? 1;
+            newClickMultiplier *= value;
+        }
+
+        // остальные бонусы пока оставим на будущее:
+        // machineWinBonus, sellBonus, upgradeDiscount
+    });
+
+    clickMultiplier = newClickMultiplier;
+}
+
+// ==================== Инвентарь (СТАКИ) ====================
 
 function renderInventory(items) {
     if (!inventoryEl) return;
@@ -283,29 +323,53 @@ function renderInventory(items) {
 
     if (items.length === 0) {
         inventoryEl.textContent = "Пока пусто. Выбей что-нибудь из автомата 🎰";
+        clickMultiplier = 1;
+        renderStatsFromState();
         return;
     }
+
+    // пересчёт бонусов от коллекций
+    recomputeCollectionsAndBonuses(items);
+    renderStatsFromState();
 
     items.forEach((item) => {
         const div = document.createElement("div");
         div.className = "inv-card";
 
-        const rarityMeta = RARITY_META[item.rarity] || null;
-        if (rarityMeta) {
-            div.style.border = `1px solid ${rarityMeta.color}`;
+        const prizeId = item.prizeId || item.id;
+        const cfg = PRIZES[prizeId] || {};
+
+        const rarityKey = item.rarity || cfg.rarity || "common";
+        const rarityMeta = RARITY_META[rarityKey] || {
+            label: rarityKey,
+            color: "#888",
+        };
+
+        const count = item.count ?? 1;
+        const maxGlobal =
+            item.maxCopiesGlobal ?? cfg.maxCopiesGlobal ?? 0;
+
+        let percent = 0;
+        if (maxGlobal > 0) {
+            percent = Math.min(100, Math.round((count / maxGlobal) * 100));
         }
 
-        const rarityLabel =
-            rarityMeta?.label ?? item.rarity ?? "Неизвестная редкость";
-
         div.innerHTML = `
-      <div class="inv-emoji">${item.emoji}</div>
-      <div class="inv-name">${item.name}</div>
+      <div class="inv-emoji">${item.emoji || cfg.emoji || "🎁"}</div>
+      <div class="inv-name">${item.name || cfg.name || "Неизвестный приз"}</div>
       <div class="inv-progress">
-        ${rarityLabel} • ${item.value} LM
+        <div style="color:${rarityMeta.color}">
+          ${rarityMeta.label} • ${(item.value ?? cfg.value) || 0} LM
+        </div>
+        <div class="inv-progress-bar">
+          <div class="inv-progress-fill" style="width:${percent}%"></div>
+        </div>
+        <div class="inv-progress-text">
+          ${count} / ${maxGlobal || "∞"}
+        </div>
       </div>
       <button class="btn secondary inv-sell" data-id="${item.id}">
-        Продать
+        Продать 1
       </button>
     `;
 
@@ -325,7 +389,9 @@ function renderInventory(items) {
         if (!item) return;
 
         const confirmSell = confirm(
-            `Продать "${item.name}" за ${item.value} ЛудоМани?`
+            `Продать 1 шт "${item.name}" за ${
+                item.value ?? PRIZES[item.prizeId || item.id]?.value ?? 0
+            } ЛудоМани?`
         );
         if (!confirmSell) return;
 
@@ -400,7 +466,7 @@ async function ensureGameFields(userUid, telegramInfo) {
     }
 }
 
-// ==================== Кликер ====================
+// ==================== Кликер (с мультиплеером и быстрым откликом) ====================
 
 async function handleClick() {
     if (!uid || !userRef) {
@@ -408,25 +474,25 @@ async function handleClick() {
         return;
     }
 
-    // ⚡ моментальный отклик на клиенте
-    balance += clickPower;
-    totalClicks += 1;
-    renderStatsFromState(); // локально обновляем цифры/прогресс
+    const gain = clickPower * clickMultiplier;
 
-    // быстрый визуальный "пульс"
+    // ⚡ моментальный отклик на клиенте
+    balance += gain;
+    totalClicks += 1;
+    renderStatsFromState();
+
     if (bigClickArea) {
         bigClickArea.classList.add("pulsing");
         setTimeout(() => bigClickArea.classList.remove("pulsing"), 80);
     }
 
-    // асинхронно шлём инкременты в Firestore, не блокируя клики
+    // асинхронное обновление Firestore
     updateDoc(userRef, {
-        balance: increment(clickPower),
+        balance: increment(gain),
         totalClicks: increment(1),
-        totalEarned: increment(clickPower),
+        totalEarned: increment(gain),
     }).catch((e) => {
         console.error("click error", e);
-        showToast("Ошибка сохранения клика");
     });
 }
 
@@ -466,7 +532,7 @@ async function handleUpgrade() {
     }
 }
 
-// ==================== Автоматы ====================
+// ==================== Автоматы (СТАКИ) ====================
 
 async function playMachine(machineId) {
     if (!uid || !userRef) {
@@ -476,11 +542,6 @@ async function playMachine(machineId) {
 
     const machine = MACHINES.find((m) => m.id === machineId);
     if (!machine) return;
-
-    if (currentLevel < (machine.minLevel ?? 0)) {
-        showToast(`Автомат доступен с уровня ${machine.minLevel}`);
-        return;
-    }
 
     if (balance < machine.price) {
         showToast("Не хватает ЛудоМани для этого автомата 🪙");
@@ -513,17 +574,25 @@ async function playMachine(machineId) {
         return;
     }
 
-    const invCol = collection(db, "users", uid, "inventory");
+    // ❗ один документ на тип приза, с полем count
+    const invDocRef = doc(db, "users", uid, "inventory", prizeTemplate.id);
 
     try {
-        await addDoc(invCol, {
-            prizeId: prizeTemplate.id,
-            name: prizeTemplate.name,
-            emoji: prizeTemplate.emoji,
-            rarity: prizeTemplate.rarity,
-            value: prizeTemplate.value,
-            createdAt: serverTimestamp(),
-        });
+        await setDoc(
+            invDocRef,
+            {
+                prizeId: prizeTemplate.id,
+                name: prizeTemplate.name,
+                emoji: prizeTemplate.emoji,
+                rarity: prizeTemplate.rarity,
+                value: prizeTemplate.value,
+                collectionId: prizeTemplate.collectionId || null,
+                maxCopiesGlobal: prizeTemplate.maxCopiesGlobal || null,
+                count: increment(1),
+                createdAt: serverTimestamp(),
+            },
+            { merge: true }
+        );
 
         showPrizeModal(prizeTemplate);
     } catch (e) {
@@ -531,18 +600,29 @@ async function playMachine(machineId) {
     }
 }
 
-// ==================== Продажа предмета ====================
+// ==================== Продажа предмета (−1 из стека) ====================
 
 async function sellItem(item) {
     if (!userRef || !uid) return;
 
     const invDocRef = doc(db, "users", uid, "inventory", item.id);
+    const count = item.count ?? 1;
+    const prizeId = item.prizeId || item.id;
+    const cfg = PRIZES[prizeId] || {};
+    const baseValue = item.value ?? cfg.value ?? 0;
 
     try {
-        await deleteDoc(invDocRef);
+        if (count <= 1) {
+            await deleteDoc(invDocRef);
+        } else {
+            await updateDoc(invDocRef, {
+                count: increment(-1),
+            });
+        }
+
         await updateDoc(userRef, {
-            balance: increment(item.value),
-            totalEarned: increment(item.value),
+            balance: increment(baseValue),
+            totalEarned: increment(baseValue),
         });
     } catch (e) {
         console.error("sell error", e);
