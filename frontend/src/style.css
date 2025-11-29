@@ -178,10 +178,10 @@ img {
 
 /* большая зона клика */
 
-.big-click-area {
+.big-click-area img {
     margin: 22px auto 12px;
-    width: 300px;
-    height: 300px;
+    width: 350px;
+    height: 350px;
     border-radius: 999px;
     background: radial-gradient(circle, #282828 0%, #141414 65%, #050505 100%);
     display: flex;
@@ -193,8 +193,8 @@ img {
     transition: transform 0.06s ease-out, box-shadow 0.06s ease-out;
 }
 
-.big-click-area:active {
-    transform: scale(0.9);
+.big-click-area img:active {
+    transform: scale(0.8);
     box-shadow: 0 0 5px rgba(255,200,30,0.25);
 }
 

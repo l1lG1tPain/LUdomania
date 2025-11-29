@@ -11,7 +11,7 @@ import {
     serverTimestamp,
     collection,
     deleteDoc,
-    addDoc,
+    addDoc, // пусть лежит, вдруг пригодится далее
 } from "firebase/firestore";
 import {
     MACHINES,
@@ -70,7 +70,6 @@ function pickRandomPrize(machine) {
     }
     return weights[weights.length - 1].id;
 }
-
 
 // ==================== DOM-элементы ====================
 
@@ -565,9 +564,13 @@ async function handleClick() {
     totalClicks += 1;
     renderStatsFromState();
 
-    if (bigClickArea) {
-        bigClickArea.classList.add("pulsing");
-        setTimeout(() => bigClickArea.classList.remove("pulsing"), 80);
+    // 🔥 пульсуем картинку, а не контейнер
+    const bigClickImg = document.getElementById("bigClick");
+    const pulseTarget = bigClickImg || bigClickArea;
+
+    if (pulseTarget) {
+        pulseTarget.classList.add("pulsing");
+        setTimeout(() => pulseTarget.classList.remove("pulsing"), 80);
     }
 
     updateDoc(userRef, {
@@ -578,6 +581,7 @@ async function handleClick() {
         console.error("click error", e);
     });
 }
+
 
 // ==================== Апгрейд ====================
 
@@ -730,7 +734,7 @@ function renderMachines() {
             card.className  = "machine-card";
             card.dataset.id = m.id;
 
-            const imgSrc = m.image || "/assets/machine.png";
+            const imgSrc = m.image || "assets/machine.png";
 
             card.innerHTML = `
                 <div class="machine-image">
@@ -823,7 +827,6 @@ async function spinMachine(machineId) {
         return { outcome: "lose" };
     }
 
-    // приз — с теми же весами, что и в UI
     // 🎁 выбираем приз с учётом редкости
     const prizeId = pickRandomPrize(machine);
     if (!prizeId) {
@@ -832,19 +835,36 @@ async function spinMachine(machineId) {
     }
 
     const prizeTemplate = PRIZES[prizeId];
+    if (!prizeTemplate) {
+        console.error("Unknown prizeId", prizeId);
+        return { outcome: "error" };
+    }
 
-
-    // пишем в инвентарь: users/{uid}/inventory/{itemId}
+    // 📦 пишем в инвентарь: СТАК по prizeId
     try {
-        const invCol = collection(db, "users", uid, "inventory");
-        await addDoc(invCol, {
-            prizeId:   prizeTemplate.id,
-            name:      prizeTemplate.name,
-            emoji:     prizeTemplate.emoji,
-            rarity:    prizeTemplate.rarity,
-            value:     prizeTemplate.value,
-            createdAt: serverTimestamp(),
-        });
+        const stackRef = doc(db, "users", uid, "inventory", prizeTemplate.id);
+        const stackSnap = await getDoc(stackRef);
+
+        if (stackSnap.exists()) {
+            // уже есть такой приз → увеличиваем count
+            await updateDoc(stackRef, {
+                count:     increment(1),
+                lastDropAt: serverTimestamp(),
+            });
+        } else {
+            // создаём новый стак
+            await setDoc(stackRef, {
+                prizeId:        prizeTemplate.id,
+                name:           prizeTemplate.name,
+                emoji:          prizeTemplate.emoji,
+                rarity:         prizeTemplate.rarity,
+                value:          prizeTemplate.value,
+                maxCopiesGlobal: prizeTemplate.maxCopiesGlobal ?? null,
+                count:          1,
+                createdAt:      serverTimestamp(),
+                lastDropAt:     serverTimestamp(),
+            });
+        }
     } catch (e) {
         console.error("add prize error", e);
     }
@@ -946,7 +966,6 @@ async function handleMachinePlayClick() {
 
     try {
         await new Promise((r) => setTimeout(r, 450));
-
 
         const result = await spinMachine(currentMachineId);
 
@@ -1151,7 +1170,6 @@ if (machineOverlayEl) {
         }
     });
 }
-
 
 if (machineCloseBtn) machineCloseBtn.addEventListener("click", closeMachineOverlay);
 if (machinePlayBtn)  machinePlayBtn.addEventListener("click", handleMachinePlayClick);
