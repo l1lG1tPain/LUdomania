@@ -11,6 +11,7 @@ import {
     serverTimestamp,
     collection,
     deleteDoc,
+    addDoc,           // 🔥 добавлен addDoc
 } from "firebase/firestore";
 import {
     MACHINES,
@@ -31,7 +32,7 @@ const profileAvatarEl = document.getElementById("profileAvatar");
 const profileNameEl   = document.getElementById("profileName");
 const profileIdEl     = document.getElementById("profileId");
 const headerBalanceEl = document.getElementById("headerBalance");
-const headerLevelEl   = document.getElementById("headerLevel");
+const headerLevelEl   = document.getElementElementById?.("headerLevel") || document.getElementById("headerLevel");
 
 // Статистика FARM
 const balanceEl        = document.getElementById("balance");
@@ -68,9 +69,6 @@ const machineResultTextEl   = document.getElementById("machineResultText");
 let currentMachineId   = null;
 let machineSpinRunning = false;
 
-
-
-
 // ==================== Состояние ====================
 
 let uid            = null;
@@ -84,9 +82,8 @@ let authInProgress = false;
 let clickMultiplier = 1; // множитель от коллекций
 
 // статистика автоматов
-// простые кэши для статистики
-let globalMachineStats = {};   // { machineId: { totalSpins, totalWins } }
-let userMachineStats   = {};   // { machineId: { spins, wins } }
+let globalMachineStats = {}; // { machineId: { totalSpins, totalWins } }
+let userMachineStats   = {}; // { machineId: { spins, wins } }
 
 const BOT_USERNAME = "LUdomania_app_bot";
 
@@ -157,7 +154,7 @@ function spawnClickBubble(x, y, gain) {
 function renderProfileFromData(data) {
     if (!profileNameEl || !profileIdEl || !profileAvatarEl) return;
 
-    const name = data.firstName || data.username || "Игрок";
+    const name     = data.firstName || data.username || "Игрок";
     const akulkaId = data.akulkaId || "—";
 
     profileNameEl.textContent = name;
@@ -220,7 +217,8 @@ function renderStatsFromState(levelStateOverride) {
     if (playerLevelEl)    playerLevelEl.textContent    = ls.level;
     if (headerLevelEl)    headerLevelEl.textContent    = ls.level;
     if (headerBalanceEl)  headerBalanceEl.textContent  = formatLM(balance);
-    if (levelProgressBar) levelProgressBar.style.width = `${Math.round((ls.progress || 0) * 100)}%`;
+    if (levelProgressBar) levelProgressBar.style.width =
+        `${Math.round((ls.progress || 0) * 100)}%`;
 
     if (multiplierEl) {
         multiplierEl.textContent = `x${clickMultiplier.toFixed(
@@ -269,29 +267,38 @@ function subscribeGlobalMachineStats() {
     globalStatsSubscribed = true;
 
     const statsCol = collection(db, "machine_stats");
-    onSnapshot(statsCol, (snap) => {
-        snap.docChanges().forEach((change) => {
-            const docId = change.doc.id;
-            if (change.type === "removed") {
-                delete globalMachineStats[docId];
-            } else {
-                globalMachineStats[docId] = change.doc.data();
-            }
-        });
-        renderMachines();
-    });
+    onSnapshot(
+        statsCol,
+        (snap) => {
+            snap.docChanges().forEach((change) => {
+                const docId = change.doc.id;
+                if (change.type === "removed") {
+                    delete globalMachineStats[docId];
+                } else {
+                    globalMachineStats[docId] = change.doc.data();
+                }
+            });
+            renderMachines();
+        },
+        (err) => console.error("machine_stats subscribe error", err)
+    );
 }
 
+// 🔥 единственная подписка на "твои" статы
 function subscribeUserMachineStats(userUid) {
-    const colRef = collection(db, "users", userUid, "machineStats");
-    onSnapshot(colRef, (snap) => {
-        const map = {};
-        snap.forEach((d) => {
-            map[d.id] = d.data();
-        });
-        userMachineStats = map;
-        renderMachines();
-    });
+    const colRef = collection(db, "user_machine_stats", userUid, "machines");
+    onSnapshot(
+        colRef,
+        (snap) => {
+            const map = {};
+            snap.forEach((d) => {
+                map[d.id] = d.data();
+            });
+            userMachineStats = map;
+            renderMachines();
+        },
+        (err) => console.error("user_machine_stats subscribe error", err)
+    );
 }
 
 // ==================== Коллекции и бонусы ====================
@@ -321,7 +328,6 @@ function recomputeCollectionsAndBonuses(items) {
             const value = bonus.value ?? 1;
             newClickMultiplier *= value;
         }
-        // остальные типы бонусов пока не трогаем
     });
 
     clickMultiplier = newClickMultiplier;
@@ -349,9 +355,9 @@ function renderInventory(items) {
         div.className = "inv-card";
 
         const prizeId = item.prizeId || item.id;
-        const cfg = PRIZES[prizeId] || {};
+        const cfg     = PRIZES[prizeId] || {};
 
-        const rarityKey = item.rarity || cfg.rarity || "common";
+        const rarityKey  = item.rarity || cfg.rarity || "common";
         const rarityMeta = RARITY_META[rarityKey] || {
             label: rarityKey,
             color: "#888",
@@ -423,29 +429,6 @@ function subscribeToInventory(userUid) {
     });
 }
 
-function subscribeToMachineStats() {
-    const colRef = collection(db, "machine_stats");
-    onSnapshot(colRef, (snap) => {
-        globalMachineStats = {};
-        snap.forEach((d) => {
-            globalMachineStats[d.id] = d.data();
-        });
-        renderMachines();
-    }, (err) => console.error("machine stats error", err));
-}
-
-function subscribeToUserMachineStats(userUid) {
-    const colRef = collection(db, "user_machine_stats", userUid, "machines");
-    onSnapshot(colRef, (snap) => {
-        userMachineStats = {};
-        snap.forEach((d) => {
-            userMachineStats[d.id] = d.data();
-        });
-        renderMachines();
-    }, (err) => console.error("user machine stats error", err));
-}
-
-
 // ==================== Подписка на пользователя ====================
 
 function subscribeToUser(userUid) {
@@ -462,10 +445,8 @@ function subscribeToUser(userUid) {
         const storedLevel = data.level ?? 0;
         const levelState  = calculateLevelState(totalClicks);
 
-        // Левелап только когда реальный уровень > сохранённого
         if (levelState.level > storedLevel) {
             onLevelChange(storedLevel, levelState.level, levelState);
-            // один раз записываем новый уровень
             updateDoc(userRef, { level: levelState.level }).catch((e) =>
                 console.error("update level error", e)
             );
@@ -529,7 +510,6 @@ async function handleClick() {
 
     const gain = clickPower * clickMultiplier;
 
-    // моментальный отклик
     balance     += gain;
     totalClicks += 1;
     renderStatsFromState();
@@ -592,22 +572,24 @@ function renderMachines() {
     machinesEl.innerHTML = "";
 
     MACHINES.forEach((m) => {
-        // статистика
         const g = globalMachineStats[m.id] || {};
         const u = userMachineStats[m.id] || {};
+
         const totalSpins = g.totalSpins || 0;
-        const userSpins  = u.spins || 0;
+        const userSpins  = u.spins      || 0;
 
         const card = document.createElement("div");
         card.className = "machine-card";
         card.dataset.id = m.id;
 
+        const userPart = uid ? ` • Твоих: ${userSpins}` : "";
+
         card.innerHTML = `
-          <div class="machine-name">${m.name}</div>
-          <div class="machine-meta">${m.price} LM / игра • доступен с ${m.minLevel}-го уровня</div>
-          <div class="machine-meta">Шанс: ${(m.winChance * 100).toFixed(0)}%</div>
-          <div class="machine-meta">Всего игр: ${totalSpins} • Твоих: ${userSpins}</div>
-        `;
+      <div class="machine-name">${m.name}</div>
+      <div class="machine-meta">${m.price} LM / игра • доступен с ${m.minLevel}-го уровня</div>
+      <div class="machine-meta">Шанс: ${(m.winChance * 100).toFixed(0)}%</div>
+      <div class="machine-meta">Всего игр: ${totalSpins}${userPart}</div>
+    `;
 
         machinesEl.appendChild(card);
     });
@@ -640,7 +622,6 @@ async function spinMachine(machineId) {
         return { outcome: "no-money" };
     }
 
-    // Списываем стоимость
     try {
         await updateDoc(userRef, {
             balance:    increment(-machine.price),
@@ -651,33 +632,44 @@ async function spinMachine(machineId) {
         return { outcome: "error" };
     }
 
-    // Рандом
     const roll = Math.random();
     const win  = roll < machine.winChance;
 
-    // Обновляем общую статистику автомата
     try {
         const globalRef = doc(db, "machine_stats", machineId);
-        await setDoc(globalRef, {
-            totalSpins: increment(1),
-            totalWins:  win ? increment(1) : increment(0),
-        }, { merge: true });
+        await setDoc(
+            globalRef,
+            {
+                totalSpins: increment(1),
+                totalWins:  win ? increment(1) : increment(0),
+            },
+            { merge: true }
+        );
 
-        const userStatRef = doc(db, "user_machine_stats", uid, "machines", machineId);
-        await setDoc(userStatRef, {
-            spins: increment(1),
-            wins:  win ? increment(1) : increment(0),
-        }, { merge: true });
+        // 🔥 твоя стата — в user_machine_stats
+        const userStatRef = doc(
+            db,
+            "user_machine_stats",
+            uid,
+            "machines",
+            machineId
+        );
+        await setDoc(
+            userStatRef,
+            {
+                spins: increment(1),
+                wins:  win ? increment(1) : increment(0),
+            },
+            { merge: true }
+        );
     } catch (e) {
         console.error("machine stats error", e);
     }
 
     if (!win) {
-        // проигрыш
         return { outcome: "lose" };
     }
 
-    // Выбираем приз
     const prizeId       = randomFrom(machine.prizePool);
     const prizeTemplate = PRIZES[prizeId];
     if (!prizeTemplate) {
@@ -685,7 +677,6 @@ async function spinMachine(machineId) {
         return { outcome: "error" };
     }
 
-    // Записываем в инвентарь
     try {
         const invCol = collection(db, "users", uid, "inventory");
         await addDoc(invCol, {
@@ -716,10 +707,10 @@ function fillMachinePrizeStrip(machineId) {
         const pill = document.createElement("div");
         pill.className = "machine-prize-pill";
         pill.innerHTML = `
-          <span>${p.emoji}</span>
-          <span>${p.name}</span>
-          <span style="font-size:10px;opacity:.7;">${p.value} LM</span>
-        `;
+      <span>${p.emoji}</span>
+      <span>${p.name}</span>
+      <span style="font-size:10px;opacity:.7;">${p.value} LM</span>
+    `;
         machinePrizeStripEl.appendChild(pill);
     });
 }
@@ -731,7 +722,6 @@ function openMachineOverlay(machineId) {
     currentMachineId   = machineId;
     machineSpinRunning = false;
 
-    // прячем прошлый результат
     if (machineResultEl) {
         machineResultEl.classList.add("hidden");
     }
@@ -742,7 +732,6 @@ function openMachineOverlay(machineId) {
 
     fillMachinePrizeStrip(machineId);
 
-    // ✨ вот тут главное:
     machineOverlayEl.classList.remove("hidden");
     machineOverlayEl.classList.add("active");
 }
@@ -751,15 +740,13 @@ function closeMachineOverlay() {
     if (!machineOverlayEl || machineSpinRunning) return;
 
     machineOverlayEl.classList.remove("active");
-    machineOverlayEl.classList.add("hidden"); // обратно прячем
+    machineOverlayEl.classList.add("hidden");
     currentMachineId = null;
 }
-
 
 async function handleMachinePlayClick() {
     if (!currentMachineId || !machineOverlayEl || machineSpinRunning) return;
 
-    // Проверим деньги и доступность до запуска анимации
     const machine = MACHINES.find((m) => m.id === currentMachineId);
     if (!machine) return;
     if (currentLevel < (machine.minLevel || 0)) {
@@ -776,12 +763,10 @@ async function handleMachinePlayClick() {
     machineResultEl?.classList.add("hidden");
 
     try {
-        // даём когтю красиво опуститься
         await new Promise((r) => setTimeout(r, 450));
 
         const result = await spinMachine(currentMachineId);
 
-        // поднимаем коготь
         await new Promise((r) => setTimeout(r, 350));
         machineOverlayEl.classList.remove("spinning");
 
@@ -796,15 +781,14 @@ async function handleMachinePlayClick() {
             machineResultEl.classList.remove("hidden");
         } else if (result.outcome === "lose") {
             machineResultEmojiEl.textContent = "😢";
-            machineResultTextEl.textContent  = "Коготь пустой — коробка выскользнула.";
+            machineResultTextEl.textContent  =
+                "Коготь пустой — коробка выскользнула.";
             machineResultEl.classList.remove("hidden");
         }
-        // остальные исходы (no-money, locked, error) уже показали тостером
     } finally {
         machineSpinRunning = false;
     }
 }
-
 
 // ==================== Продажа предмета ====================
 
@@ -848,8 +832,7 @@ async function afterFirebaseLogin(userUid, tgUser) {
 
     subscribeToUser(uid);
     subscribeToInventory(uid);
-    subscribeToMachineStats();
-    subscribeToUserMachineStats(uid);
+    subscribeUserMachineStats(uid); // 🔥 подписка на "Твоих"
     renderMachines();
 }
 
@@ -976,14 +959,13 @@ async function loginWithTelegram() {
 }
 
 // ==================== Лиснеры ====================
+
 if (machineCloseBtn) machineCloseBtn.addEventListener("click", closeMachineOverlay);
 if (machinePlayBtn)  machinePlayBtn.addEventListener("click", handleMachinePlayClick);
-
 
 if (loginBtn)   loginBtn.addEventListener("click", loginWithTelegram);
 if (upgradeBtn) upgradeBtn.addEventListener("click", handleUpgrade);
 
-// клики с мультитачем и +N
 if (bigClickArea) {
     bigClickArea.addEventListener("click", (e) => {
         const gain = clickPower * clickMultiplier;
