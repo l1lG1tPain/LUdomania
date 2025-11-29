@@ -102,16 +102,24 @@ img {
     font-size: 12px;
     flex-wrap: nowrap;
     display: flex;
-    gap: 15px;
+    gap: 21px;
 }
 
 .header-balance {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .header-balance span {
     color: #ffd52e;
+}
+
+.header-balance img {
+    height: 25px;
+    width: auto;
 }
 
 .header-level {
@@ -193,10 +201,24 @@ img {
     transition: transform 0.06s ease-out, box-shadow 0.06s ease-out;
 }
 
+/* короткий "тап" по картинке */
 .big-click-area img:active {
     transform: scale(0.8);
     box-shadow: 0 0 5px rgba(255,200,30,0.25);
 }
+
+/* 🔥 пульс от JS — класс на картинке */
+.big-click-area img.pulsing {
+    transform: scale(0.9);
+    box-shadow: 0 0 20px rgba(255,200,30,0.4);
+}
+
+/* можно вообще удалить или оставить про запас */
+.big-click-area.pulsing {
+    transform: scale(0.95);
+    transition: transform 0.08s ease-out;
+}
+
 
 /* ======== INVENTORY ======== */
 
@@ -633,11 +655,7 @@ img {
 
 
 
-/* быстрый пульс клика */
-.big-click-area.pulsing {
-    transform: scale(0.95);
-    transition: transform 0.08s ease-out;
-}
+
 
 /* +N при клике */
 .click-bubble {
