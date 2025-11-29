@@ -9,8 +9,9 @@
  * Формула: 800 × 1.35^level → красиво, плавно и долгоиграюще
  */
 export function getRequiredClicksForLevel(level) {
-    // Math.round + небольшой фикс, чтобы числа были всегда красивыми и предсказуемыми
-    return Math.round(800 * Math.pow(1.35, level) * 800);
+    const base   = 800;   // базовый порог
+    const growth = 1.35;  // коэффициент роста
+    return Math.round(base * Math.pow(growth, level));
 }
 
 /**
