@@ -1100,7 +1100,7 @@ async function handleMachinePlayClick() {
     }
 }
 
-// ==================== Продажа предмета ====================
+/// ==================== Продажа предмета ====================
 
 async function sellItem(item) {
     if (!userRef || !uid) return;
@@ -1112,6 +1112,7 @@ async function sellItem(item) {
     const baseValue = item.value ?? cfg.value ?? 0;
 
     try {
+        // 🧳 1) Обновляем инвентарь юзера (как и раньше)
         if (count <= 1) {
             await deleteDoc(invDocRef);
         } else {
@@ -1120,14 +1121,37 @@ async function sellItem(item) {
             });
         }
 
+        // 💰 2) Начисляем деньги пользователю
         await updateDoc(userRef, {
             balance:     increment(baseValue),
             totalEarned: increment(baseValue),
+        });
+
+        // 🌍 3) Возвращаем приз в глобальный пул (уменьшаем prize_counters)
+        const counterRef = doc(db, "prize_counters", prizeId);
+
+        await runTransaction(db, async (tx) => {
+            const snap = await tx.get(counterRef);
+            if (!snap.exists()) {
+                // на всякий случай – если счётчика нет, просто выходим
+                return;
+            }
+
+            const data    = snap.data() || {};
+            const current = data.count ?? 0;
+            const next    = current > 0 ? current - 1 : 0;
+
+            tx.set(
+                counterRef,
+                { count: next },
+                { merge: true }
+            );
         });
     } catch (e) {
         console.error("sell error", e);
     }
 }
+
 
 // ==================== Общий пост-логин ====================
 
