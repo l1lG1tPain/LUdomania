@@ -258,8 +258,27 @@ function renderStatsFromState(levelStateOverride) {
         )}`;
     }
 
+    // 🔥 добавляем подсказку по уровню/лиге
+    const levelHintEl = document.getElementById("levelHint");
+    if (levelHintEl) {
+        const league        = getLeagueForLevel(ls.level);
+        const leagueProg    = getLeagueProgress(totalClicks);
+        const leftClicks    = leagueProg.clicksToNext;
+        const percentToNext = Math.round((leagueProg.progressToNext || 0) * 100);
+
+        if (leagueProg.isMax) {
+            levelHintEl.textContent =
+                `${league.emoji} ${league.name}: максимальная лига`;
+        } else {
+            levelHintEl.innerHTML =
+                `${league.emoji} <span class="league-name">${league.name}</span> • `
+                + `до следующего уровня: ${leftClicks} кликов (${percentToNext}%)`;
+        }
+    }
+
     updateUpgradeUI();
 }
+
 
 // ==================== Левел-ап ====================
 
@@ -489,7 +508,18 @@ function subscribeToUser(userUid) {
         }
 
         renderStatsFromState(levelState);
-        renderProfileFromUserDoc(data, currentLevel, balance);
+
+        // 🔥 новый профильный рендер
+        const league      = getLeagueForLevel(levelState.level);
+        const leagueState = getLeagueProgress(totalClicks);
+
+        renderProfileFromUserDoc(data, {
+            level:  levelState.level,
+            league,
+            leagueState,
+            balance,
+            totalClicks,
+        });
 
         const onlineDot = document.getElementById("onlineDot");
         if (onlineDot) onlineDot.classList.remove("hidden");

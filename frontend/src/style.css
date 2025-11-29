@@ -801,5 +801,17 @@ img {
     opacity: 0.8;
 }
 
+.level-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    opacity: 0.85;
+    text-align: right;
+    color: #f5f5f5;
+}
+
+.level-hint .league-name {
+    font-weight: 600;
+}
+
 
 
