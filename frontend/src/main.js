@@ -11,7 +11,7 @@ import {
     serverTimestamp,
     collection,
     deleteDoc,
-    addDoc,           // 🔥 добавлен addDoc
+    addDoc, // 🔥 нужно для добавления призов в инвентарь
 } from "firebase/firestore";
 import {
     MACHINES,
@@ -32,7 +32,7 @@ const profileAvatarEl = document.getElementById("profileAvatar");
 const profileNameEl   = document.getElementById("profileName");
 const profileIdEl     = document.getElementById("profileId");
 const headerBalanceEl = document.getElementById("headerBalance");
-const headerLevelEl   = document.getElementElementById?.("headerLevel") || document.getElementById("headerLevel");
+const headerLevelEl   = document.getElementById("headerLevel");
 
 // Статистика FARM
 const balanceEl        = document.getElementById("balance");
@@ -262,6 +262,7 @@ function onLevelChange(oldLevel, newLevel, levelState) {
 
 let globalStatsSubscribed = false;
 
+// 🌍 глобальная стата /machine_stats/{machineId}
 function subscribeGlobalMachineStats() {
     if (globalStatsSubscribed) return;
     globalStatsSubscribed = true;
@@ -271,11 +272,11 @@ function subscribeGlobalMachineStats() {
         statsCol,
         (snap) => {
             snap.docChanges().forEach((change) => {
-                const docId = change.doc.id;
+                const id = change.doc.id;
                 if (change.type === "removed") {
-                    delete globalMachineStats[docId];
+                    delete globalMachineStats[id];
                 } else {
-                    globalMachineStats[docId] = change.doc.data();
+                    globalMachineStats[id] = change.doc.data();
                 }
             });
             renderMachines();
@@ -284,9 +285,9 @@ function subscribeGlobalMachineStats() {
     );
 }
 
-// 🔥 единственная подписка на "твои" статы
+// 👤 персональная стата users/{uid}/machineStats/{machineId}
 function subscribeUserMachineStats(userUid) {
-    const colRef = collection(db, "user_machine_stats", userUid, "machines");
+    const colRef = collection(db, "users", userUid, "machineStats");
     onSnapshot(
         colRef,
         (snap) => {
@@ -297,7 +298,7 @@ function subscribeUserMachineStats(userUid) {
             userMachineStats = map;
             renderMachines();
         },
-        (err) => console.error("user_machine_stats subscribe error", err)
+        (err) => console.error("user machineStats subscribe error", err)
     );
 }
 
@@ -602,7 +603,7 @@ function renderMachines() {
     };
 }
 
-// Чистая логика спина автомата: пишет в Firestore и возвращает результат
+// Чистая логика спина автомата
 async function spinMachine(machineId) {
     if (!uid || !userRef) {
         showToast("Сначала авторизуйся через Telegram");
@@ -622,6 +623,7 @@ async function spinMachine(machineId) {
         return { outcome: "no-money" };
     }
 
+    // списываем стоимость
     try {
         await updateDoc(userRef, {
             balance:    increment(-machine.price),
@@ -635,7 +637,9 @@ async function spinMachine(machineId) {
     const roll = Math.random();
     const win  = roll < machine.winChance;
 
+    // обновляем статы
     try {
+        // глобальная
         const globalRef = doc(db, "machine_stats", machineId);
         await setDoc(
             globalRef,
@@ -646,12 +650,12 @@ async function spinMachine(machineId) {
             { merge: true }
         );
 
-        // 🔥 твоя стата — в user_machine_stats
+        // персональная: users/{uid}/machineStats/{machineId}
         const userStatRef = doc(
             db,
-            "user_machine_stats",
+            "users",
             uid,
-            "machines",
+            "machineStats",
             machineId
         );
         await setDoc(
@@ -670,6 +674,7 @@ async function spinMachine(machineId) {
         return { outcome: "lose" };
     }
 
+    // приз
     const prizeId       = randomFrom(machine.prizePool);
     const prizeTemplate = PRIZES[prizeId];
     if (!prizeTemplate) {
@@ -677,6 +682,7 @@ async function spinMachine(machineId) {
         return { outcome: "error" };
     }
 
+    // пишем в инвентарь: users/{uid}/inventory/{itemId}
     try {
         const invCol = collection(db, "users", uid, "inventory");
         await addDoc(invCol, {
@@ -832,7 +838,7 @@ async function afterFirebaseLogin(userUid, tgUser) {
 
     subscribeToUser(uid);
     subscribeToInventory(uid);
-    subscribeUserMachineStats(uid); // 🔥 подписка на "Твоих"
+    subscribeUserMachineStats(uid); // 💾 "Твоих"
     renderMachines();
 }
 
@@ -1001,7 +1007,7 @@ onAuthStateChanged(auth, async (user) => {
 
 // ==================== Стартовые подписки ====================
 
-subscribeGlobalMachineStats();
+subscribeGlobalMachineStats(); // глобальные "Всего игр"
 
 if (isTelegramWebApp()) {
     loginInsideMiniApp().catch((e) =>
