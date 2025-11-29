@@ -606,6 +606,7 @@ async function playMachine(machineId) {
     }
 
     try {
+        // 1) списываем цену
         await updateDoc(userRef, {
             balance:    increment(-machine.price),
             totalSpent: increment(machine.price),
@@ -615,34 +616,41 @@ async function playMachine(machineId) {
         return;
     }
 
-    const globalStatsRef = doc(db, "machine_stats", machineId);
-    const userStatsRef   = doc(db, "users", uid, "machineStats", machineId);
+    // 2) рассчитываем победу
+    const roll = Math.random();
+    const win  = roll < machine.winChance;
 
+    // 3) глобальная статистика автомата
     try {
-        await Promise.all([
-            setDoc(
-                globalStatsRef,
-                { totalSpins: increment(1) },
-                { merge: true }
-            ),
-            setDoc(
-                userStatsRef,
-                { spins: increment(1) },
-                { merge: true }
-            ),
-        ]);
+        const globalRef = doc(db, "machine_stats", machineId);
+        await setDoc(globalRef, {
+            totalSpins: increment(1),
+            totalWins:  increment(win ? 1 : 0),
+            updatedAt:  serverTimestamp(),
+        }, { merge: true });
     } catch (e) {
         console.error("machine stats error", e);
     }
 
-    const roll = Math.random();
-    const win  = roll < machine.winChance;
+    // 4) персональная статистика юзера по этому автомату
+    try {
+        const userMachineRef = doc(db, "user_machine_stats", uid, machineId);
+        await setDoc(userMachineRef, {
+            spins:      increment(1),
+            wins:       increment(win ? 1 : 0),
+            lastPlayed: serverTimestamp(),
+        }, { merge: true });
+    } catch (e) {
+        console.error("user machine stats error", e);
+    }
 
+    // 5) если не выиграл — просто тостер и выходим
     if (!win) {
         showToast("Игрушка выскользнула из лапы 😢");
         return;
     }
 
+    // 6) выбираем приз и кладём в инвентарь
     const prizeId       = randomFrom(machine.prizePool);
     const prizeTemplate = PRIZES[prizeId];
 
@@ -651,26 +659,21 @@ async function playMachine(machineId) {
         return;
     }
 
-    const invDocRef = doc(db, "users", uid, "inventory", prizeTemplate.id);
+    const invCol = collection(db, "users", uid, "inventory");
 
     try {
-        await setDoc(
-            invDocRef,
-            {
-                prizeId:         prizeTemplate.id,
-                name:            prizeTemplate.name,
-                emoji:           prizeTemplate.emoji,
-                rarity:          prizeTemplate.rarity,
-                value:           prizeTemplate.value,
-                collectionId:    prizeTemplate.collectionId || null,
-                maxCopiesGlobal: prizeTemplate.maxCopiesGlobal || null,
-                count:           increment(1),
-                createdAt:       serverTimestamp(),
-            },
-            { merge: true }
-        );
+        await addDoc(invCol, {
+            prizeId:   prizeTemplate.id,
+            name:      prizeTemplate.name,
+            emoji:     prizeTemplate.emoji,
+            rarity:    prizeTemplate.rarity,
+            value:     prizeTemplate.value,
+            collectionId: prizeTemplate.collectionId || null,
+            createdAt: serverTimestamp(),
+        });
 
-        showToast(`Выбил ${prizeTemplate.emoji} ${prizeTemplate.name}!`);
+        // красивый тостер вместо модалки
+        showToast(`Выигрыш: ${prizeTemplate.emoji} ${prizeTemplate.name}!`);
     } catch (e) {
         console.error("add prize error", e);
     }
