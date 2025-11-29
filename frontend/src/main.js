@@ -754,8 +754,23 @@ async function grantPrizeWithGlobalLimit(machine) {
     if (!pool.length) return { outcome: "no-prize" };
 
     return await runTransaction(db, async (tx) => {
-        const tried = new Set();
-        let chosenPrize = null;
+        // 1️⃣ СНАЧАЛА ВСЕ ЧТЕНИЯ
+
+        // читаем все глобальные счётчики призов
+        const counterSnaps = await Promise.all(
+            pool.map((id) => tx.get(doc(db, "prize_counters", id)))
+        );
+
+        const globalCounts = {};
+        counterSnaps.forEach((snap, idx) => {
+            const id = pool[idx];
+            globalCounts[id] = snap.exists() ? (snap.data().count ?? 0) : 0;
+        });
+
+        // выбираем приз с учётом лимитов
+        const tried       = new Set();
+        let chosenPrize   = null;
+        let chosenPrizeId = null;
 
         while (tried.size < pool.length && !chosenPrize) {
             const candidateId = pickRandomPrize(machine); // наш весовой рандом
@@ -766,55 +781,51 @@ async function grantPrizeWithGlobalLimit(machine) {
             if (!cfg) continue;
 
             const maxGlobal = cfg.maxCopiesGlobal ?? Infinity;
+            const used      = globalCounts[candidateId] ?? 0;
 
-            // безлимитный приз — не проверяем глобальный лимит
-            if (!Number.isFinite(maxGlobal)) {
-                chosenPrize = cfg;
-                break;
-            }
-
-            const counterRef  = doc(db, "prize_counters", candidateId);
-            const counterSnap = await tx.get(counterRef);
-            const current     = counterSnap.exists()
-                ? (counterSnap.data().count ?? 0)
-                : 0;
-
-            if (current >= maxGlobal) {
-                // этот приз закончился, пробуем другой
+            // если приз закончился глобально — пропускаем
+            if (Number.isFinite(maxGlobal) && used >= maxGlobal) {
                 continue;
             }
 
-            // резервируем глобально
-            tx.set(
-                counterRef,
-                { count: current + 1 },
-                { merge: true }
-            );
-
-            chosenPrize = cfg;
-            break;
+            chosenPrize   = cfg;
+            chosenPrizeId = candidateId;
         }
 
-        if (!chosenPrize) {
-            return { outcome: "no-prize" }; // все призы в пуле закончились
+        if (!chosenPrize || !chosenPrizeId) {
+            // все призы в пуле закончились
+            return { outcome: "no-prize" };
         }
 
-        // 🔹 здесь ВАЖНО: один документ на prizeId, стэкаем count
+        // читаем документ инвентаря для этого приза (тоже до любых write)
         const invDocRef = doc(db, "users", uid, "inventory", chosenPrize.id);
         const invSnap   = await tx.get(invDocRef);
         const prevData  = invSnap.exists() ? invSnap.data() : {};
         const prevCount = prevData.count ?? 0;
 
+        // 2️⃣ ТЕПЕРЬ ПИШЕМ
+
+        // обновляем глобальный счётчик
+        const counterRef = doc(db, "prize_counters", chosenPrizeId);
+        const current    = globalCounts[chosenPrizeId] ?? 0;
+
+        tx.set(
+            counterRef,
+            { count: current + 1 },
+            { merge: true }
+        );
+
+        // стэкаем предмет в инвентаре пользователя
         tx.set(
             invDocRef,
             {
-                prizeId:  chosenPrize.id,
-                name:     chosenPrize.name,
-                emoji:    chosenPrize.emoji,
-                rarity:   chosenPrize.rarity,
-                value:    chosenPrize.value,
+                prizeId:   chosenPrize.id,
+                name:      chosenPrize.name,
+                emoji:     chosenPrize.emoji,
+                rarity:    chosenPrize.rarity,
+                value:     chosenPrize.value,
                 createdAt: prevData.createdAt || serverTimestamp(),
-                count:    prevCount + 1,          // <-- увеличиваем стэк
+                count:     prevCount + 1, // 🔥 тут и есть стэк
             },
             { merge: true }
         );
@@ -825,6 +836,7 @@ async function grantPrizeWithGlobalLimit(machine) {
         };
     });
 }
+
 
 
 
