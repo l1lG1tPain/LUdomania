@@ -12,6 +12,7 @@ import {
     collection,
     deleteDoc,
     runTransaction,
+    getDocs,
 } from "firebase/firestore";
 
 import {
@@ -774,6 +775,45 @@ function renderMachines() {
     };
 }
 
+// ==================== Кэш глобальных счётчиков призов ====================
+
+let prizeCountersCache = {};           // { prizeId: count }
+let prizeCountersLoaded = false;
+let prizeCountersLoadingPromise = null;
+
+async function ensurePrizeCountersCache() {
+    if (prizeCountersLoaded) return;
+
+    if (prizeCountersLoadingPromise) {
+        // если уже грузим — просто дождёмся
+        return prizeCountersLoadingPromise;
+    }
+
+    const colRef = collection(db, "prize_counters");
+
+    prizeCountersLoadingPromise = getDocs(colRef)
+        .then((snap) => {
+            const map = {};
+            snap.forEach((docSnap) => {
+                const data = docSnap.data() || {};
+                map[docSnap.id] = data.count ?? 0;
+            });
+            prizeCountersCache = map;
+            prizeCountersLoaded = true;
+        })
+        .catch((e) => {
+            console.error("ensurePrizeCountersCache error", e);
+            // если не получилось — в следующий раз попробуем ещё раз
+            prizeCountersLoaded = false;
+        })
+        .finally(() => {
+            prizeCountersLoadingPromise = null;
+        });
+
+    return prizeCountersLoadingPromise;
+}
+
+
 // ==================== Призы с глобальным лимитом (со стэками) ====================
 
 async function grantPrizeWithGlobalLimit(machine) {
@@ -864,6 +904,17 @@ async function grantPrizeWithGlobalLimit(machine) {
             prize: chosenPrize,
         };
     });
+
+    // 🔁 обновляем локальный кэш, если загрузили его раньше
+    if (txResult.outcome === "win" && txResult.prize) {
+        const id = txResult.prize.id;
+        if (prizeCountersLoaded) {
+            const prev = prizeCountersCache[id] ?? 0;
+            prizeCountersCache[id] = prev + 1;
+        }
+    }
+
+    return txResult;
 }
 
 
@@ -971,16 +1022,11 @@ async function fillMachinePrizeStrip(machineId) {
     // берём только валидные призы
     const prizeIds = (machine.prizePool || []).filter((id) => PRIZES[id]);
 
-    // читаем глобальные счётчики для всех призов параллельно
-    const snaps = await Promise.all(
-        prizeIds.map((id) => getDoc(doc(db, "prize_counters", id)))
-    );
+    // ✅ один общий запрос (или кэш, если уже есть)
+    await ensurePrizeCountersCache();
 
-    const globalUsedMap = {};
-    snaps.forEach((snap, idx) => {
-        const id = prizeIds[idx];
-        globalUsedMap[id] = snap.exists() ? (snap.data().count ?? 0) : 0;
-    });
+    const globalUsedMap = prizeCountersCache || {};
+
 
     prizeIds.forEach((id) => {
         const p = PRIZES[id];
@@ -1178,6 +1224,12 @@ async function sellItem(item) {
         });
     } catch (e) {
         console.error("sell error", e);
+    } finally {
+        // 🔁 если кэш загружен — вернём 1 штуку в локальном состоянии
+        if (prizeCountersLoaded) {
+            const prev = prizeCountersCache[prizeId] ?? 0;
+            prizeCountersCache[prizeId] = prev > 0 ? prev - 1 : 0;
+        }
     }
 }
 
