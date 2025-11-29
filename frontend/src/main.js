@@ -11,7 +11,7 @@ import {
     serverTimestamp,
     collection,
     deleteDoc,
-    addDoc, // 🔥 нужно для добавления призов в инвентарь
+    addDoc,
 } from "firebase/firestore";
 import {
     MACHINES,
@@ -19,8 +19,58 @@ import {
     COLLECTIONS,
     RARITY_META,
     calculateLevelState,
-    randomFrom,
+    randomFrom, // пока оставим, вдруг ещё пригодится
 } from "./gameConfig.js";
+
+// ====== ШАНСЫ ВЫПАДЕНИЯ ПРИЗОВ (по редкости) ======
+const RARITY_WEIGHTS = {
+    common: 1,
+    rare: 0.5,
+    epic: 0.25,
+    legendary: 0.1,
+};
+
+function getPrizeWeightsForMachine(machine) {
+    const weights = [];
+    let total = 0;
+
+    (machine.prizePool || []).forEach((id) => {
+        const cfg = PRIZES[id];
+        if (!cfg) return;
+
+        const rarity = cfg.rarity || "common";
+        const w      = RARITY_WEIGHTS[rarity] ?? 1;
+
+        weights.push({ id, weight: w });
+        total += w;
+    });
+
+    return { weights, total };
+}
+
+function getPrizeChancesForMachine(machine) {
+    const { weights, total } = getPrizeWeightsForMachine(machine);
+    if (total <= 0) return {};
+
+    const map = {};
+    weights.forEach(({ id, weight }) => {
+        map[id] = weight / total; // 0..1
+    });
+    return map;
+}
+
+function pickRandomPrize(machine) {
+    const { weights, total } = getPrizeWeightsForMachine(machine);
+    if (total <= 0 || !weights.length) return null;
+
+    let r = Math.random() * total;
+    for (const { id, weight } of weights) {
+        if (r <= weight) return id;
+        r -= weight;
+    }
+    return weights[weights.length - 1].id;
+}
+
 
 // ==================== DOM-элементы ====================
 
@@ -566,35 +616,140 @@ async function handleUpgrade() {
     }
 }
 
+// ==================== Весовые шансы призов ====================
+
+// вес для конкретного приза
+function getPrizeWeight(prizeId) {
+    const prize = PRIZES[prizeId];
+    if (!prize) return 1;
+
+    // если захотим — можно добавить prize.dropWeight и переопределять
+    if (typeof prize.dropWeight === "number" && prize.dropWeight > 0) {
+        return prize.dropWeight;
+    }
+
+    const rarityKey  = prize.rarity || "common";
+    const rarityMeta = RARITY_META[rarityKey] || {};
+    if (typeof rarityMeta.weight === "number" && rarityMeta.weight > 0) {
+        return rarityMeta.weight;
+    }
+
+    return 1;
+}
+
+// шансы для всех призов автомата
+function getMachinePrizeChances(machine) {
+    if (!machine || !Array.isArray(machine.prizePool)) return [];
+
+    const weights = machine.prizePool.map((id) => getPrizeWeight(id));
+    const total   = weights.reduce((sum, w) => sum + w, 0);
+
+    if (!total) return [];
+
+    return machine.prizePool.map((id, idx) => {
+        const prize = PRIZES[id];
+        const w     = weights[idx];
+        const chance = w / total; // 0..1
+
+        return {
+            id,
+            prize,
+            weight: w,
+            chance,
+        };
+    });
+}
+
+// выбор приза по весам (соответствует getMachinePrizeChances)
+function rollPrizeForMachine(machine) {
+    if (!machine || !Array.isArray(machine.prizePool) || machine.prizePool.length === 0) {
+        return null;
+    }
+
+    const entries = machine.prizePool.map((id) => ({
+        id,
+        weight: getPrizeWeight(id),
+    })).filter((e) => e.weight > 0);
+
+    const total = entries.reduce((sum, e) => sum + e.weight, 0);
+    if (!total) return randomFrom(machine.prizePool); // fallback
+
+    let r = Math.random() * total;
+    for (const e of entries) {
+        if (r < e.weight) {
+            return e.id;
+        }
+        r -= e.weight;
+    }
+
+    // на всякий случай
+    return entries[entries.length - 1].id;
+}
+
 // ==================== Автоматы ====================
 
 function renderMachines() {
     if (!machinesEl) return;
     machinesEl.innerHTML = "";
 
-    MACHINES.forEach((m) => {
-        const g = globalMachineStats[m.id] || {};
-        const u = userMachineStats[m.id] || {};
+    // красивые заголовки по уровням
+    const levelLabels = {
+        0: "⭐ Стартовые автоматы",
+        1: "📈 Уровень 1 — Улица",
+        2: "🎰 Уровень 2 — Казино",
+        3: "💎 Уровень 3 — VIP",
+        5: "🦈 Уровень 5 — Джекпоты",
+    };
 
-        const totalSpins = g.totalSpins || 0;
-        const userSpins  = u.spins      || 0;
+    const levelsInUse = [...new Set(MACHINES.map(m => m.minLevel ?? 0))].sort((a, b) => a - b);
 
-        const card = document.createElement("div");
-        card.className = "machine-card";
-        card.dataset.id = m.id;
+    levelsInUse.forEach((level) => {
+        const machinesAtLevel = MACHINES.filter(m => (m.minLevel ?? 0) === level);
+        if (!machinesAtLevel.length) return;
 
-        const userPart = uid ? ` • Твоих: ${userSpins}` : "";
+        const block = document.createElement("div");
+        block.className = "machine-level-block";
 
-        card.innerHTML = `
-      <div class="machine-name">${m.name}</div>
-      <div class="machine-meta">${m.price} LM / игра • доступен с ${m.minLevel}-го уровня</div>
-      <div class="machine-meta">Шанс: ${(m.winChance * 100).toFixed(0)}%</div>
-      <div class="machine-meta">Всего игр: ${totalSpins}${userPart}</div>
-    `;
+        const title = document.createElement("div");
+        title.className = "machine-level-title";
+        title.textContent = levelLabels[level] || `Уровень ${level}`;
+        block.appendChild(title);
 
-        machinesEl.appendChild(card);
+        const grid = document.createElement("div");
+        grid.className = "machine-grid";
+
+        machinesAtLevel.forEach((m) => {
+            const g = globalMachineStats[m.id] || {};
+            const u = userMachineStats[m.id] || {};
+
+            const totalSpins = g.totalSpins || 0;
+            const userSpins  = u.spins      || 0;
+            const userPart   = uid ? ` • Твоих: ${userSpins}` : "";
+
+            const card = document.createElement("div");
+            card.className  = "machine-card";
+            card.dataset.id = m.id;
+
+            const imgSrc = m.image || "/assets/machine.png";
+
+            card.innerHTML = `
+                <div class="machine-image">
+                    <img src="${imgSrc}" alt="${m.name}">
+                </div>
+                <div class="machine-name">${m.name}</div>
+                <div class="machine-meta">${m.price} LM / игра • доступен с ${m.minLevel}-го уровня</div>
+                <div class="machine-meta">Шанс выигрыша: ${(m.winChance * 100).toFixed(0)}%</div>
+                <div class="machine-meta">Всего игр: ${totalSpins}${userPart}</div>
+            `;
+
+            grid.appendChild(card);
+        });
+
+        block.appendChild(grid);
+        machinesEl.appendChild(block);
     });
 
+    // делегирование кликов по карточкам
     machinesEl.onclick = (e) => {
         const card = e.target.closest(".machine-card");
         if (!card) return;
@@ -651,13 +806,7 @@ async function spinMachine(machineId) {
         );
 
         // персональная: users/{uid}/machineStats/{machineId}
-        const userStatRef = doc(
-            db,
-            "users",
-            uid,
-            "machineStats",
-            machineId
-        );
+        const userStatRef = doc(db, "users", uid, "machineStats", machineId);
         await setDoc(
             userStatRef,
             {
@@ -674,13 +823,16 @@ async function spinMachine(machineId) {
         return { outcome: "lose" };
     }
 
-    // приз
-    const prizeId       = randomFrom(machine.prizePool);
-    const prizeTemplate = PRIZES[prizeId];
-    if (!prizeTemplate) {
-        console.error("Unknown prizeId", prizeId);
+    // приз — с теми же весами, что и в UI
+    // 🎁 выбираем приз с учётом редкости
+    const prizeId = pickRandomPrize(machine);
+    if (!prizeId) {
+        console.error("No prize available for machine", machineId);
         return { outcome: "error" };
     }
+
+    const prizeTemplate = PRIZES[prizeId];
+
 
     // пишем в инвентарь: users/{uid}/inventory/{itemId}
     try {
@@ -707,16 +859,40 @@ function fillMachinePrizeStrip(machineId) {
     const machine = MACHINES.find((m) => m.id === machineId);
     if (!machine) return;
 
+    const chanceMap = getPrizeChancesForMachine(machine); // { prizeId: 0..1 }
+
     machine.prizePool.forEach((id) => {
         const p = PRIZES[id];
         if (!p) return;
+
+        const rarityKey  = p.rarity || "common";
+        const rarityMeta = RARITY_META[rarityKey] || {
+            label: rarityKey,
+            color: "#888",
+        };
+
+        const chance = chanceMap[id] || 0;
+        let chanceStr;
+        const pct = chance * 100;
+
+        if (pct <= 0)        chanceStr = "—";
+        else if (pct < 1)    chanceStr = "< 1%";
+        else if (pct < 10)   chanceStr = `${pct.toFixed(1)}%`;
+        else                 chanceStr = `${pct.toFixed(0)}%`;
+
         const pill = document.createElement("div");
         pill.className = "machine-prize-pill";
         pill.innerHTML = `
-      <span>${p.emoji}</span>
-      <span>${p.name}</span>
-      <span style="font-size:10px;opacity:.7;">${p.value} LM</span>
-    `;
+            <span class="pill-emoji">${p.emoji}</span>
+            <div class="pill-text">
+              <div class="pill-name">${p.name}</div>
+              <div class="pill-meta" style="color:${rarityMeta.color}">
+                ${rarityMeta.label} • ${chanceStr}
+              </div>
+            </div>
+            <span class="pill-value">${p.value} LM</span>
+        `;
+
         machinePrizeStripEl.appendChild(pill);
     });
 }
@@ -770,6 +946,7 @@ async function handleMachinePlayClick() {
 
     try {
         await new Promise((r) => setTimeout(r, 450));
+
 
         const result = await spinMachine(currentMachineId);
 
@@ -965,6 +1142,16 @@ async function loginWithTelegram() {
 }
 
 // ==================== Лиснеры ====================
+
+if (machineOverlayEl) {
+    machineOverlayEl.addEventListener("click", (e) => {
+        // клик строго по фону (не по карточке автомата)
+        if (e.target === machineOverlayEl) {
+            closeMachineOverlay();
+        }
+    });
+}
+
 
 if (machineCloseBtn) machineCloseBtn.addEventListener("click", closeMachineOverlay);
 if (machinePlayBtn)  machinePlayBtn.addEventListener("click", handleMachinePlayClick);

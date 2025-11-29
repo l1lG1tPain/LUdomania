@@ -495,9 +495,67 @@ img {
 }
 
 /* Анимация спуска/подъёма */
+/* Анимация спуска/подъёма — как будто коготь реально ловит коробку */
 .machine-overlay.spinning .machine-claw {
-    transform: translate(-50%, 130px);
+    animation: claw-move 0.9s cubic-bezier(0.22, 0.9, 0.4, 1.1) forwards;
 }
+
+@keyframes claw-move {
+    0% {
+        transform: translate(-50%, -70px);
+    }
+    35% {
+        transform: translate(-50%, 120px);
+    }
+    50% {
+        transform: translate(-50%, 130px);
+    }
+    70% {
+        transform: translate(-50%, 80px);
+    }
+    100% {
+        transform: translate(-50%, -70px);
+    }
+}
+
+/* центральная коробка чуть подпрыгивает, как будто её зацепили */
+.machine-overlay.spinning .machine-box:nth-child(2) {
+    animation: box-hop 0.6s ease-out 0.28s forwards;
+}
+
+@keyframes box-hop {
+    0% {
+        transform: translateY(0) scale(1);
+        box-shadow:
+                0 0 0 2px rgba(0,0,0,0.25),
+                0 6px 14px rgba(0,0,0,0.7);
+    }
+    40% {
+        transform: translateY(-10px) scale(1.05);
+        box-shadow:
+                0 0 0 2px rgba(255,213,46,0.35),
+                0 10px 20px rgba(0,0,0,0.9);
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        box-shadow:
+                0 0 0 2px rgba(0,0,0,0.25),
+                0 6px 14px rgba(0,0,0,0.7);
+    }
+}
+
+.machine-level-block {
+    margin-bottom: 18px;
+}
+
+.machine-level-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
+    margin: 4px 2px 6px;
+}
+
 
 /* Победа / проигрыш */
 .machine-result {
@@ -523,8 +581,8 @@ img {
 .machine-prize-strip {
     display: flex;
     overflow-x: auto;
-    gap: 8px;
-    padding: 4px 2px 2px;
+    gap: 10px;
+    padding: 6px 2px 4px;
     scrollbar-width: none;
 }
 
@@ -534,19 +592,44 @@ img {
 
 .machine-prize-pill {
     flex: 0 0 auto;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: #151515;
+    min-width: 190px;
+    padding: 8px 12px;
+    border-radius: 16px;
+    background: radial-gradient(circle at top left, #222 0%, #111 60%);
     font-size: 11px;
     display: flex;
     align-items: center;
-    gap: 6px;
-    border: 1px solid rgba(255,255,255,0.06);
+    gap: 8px;
+    border: 1px solid rgba(255,255,255,0.09);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.6);
 }
 
-.machine-prize-pill span:nth-child(1) {
-    font-size: 16px;
+.pill-emoji {
+    font-size: 22px;
 }
+
+.pill-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.pill-name {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.pill-meta {
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+.pill-value {
+    font-size: 11px;
+    opacity: 0.9;
+}
+
 
 
 
@@ -600,3 +683,98 @@ img {
     font-size: 10px;
     opacity: 0.7;
 }
+
+/* ===== Автоматы по уровням ===== */
+
+.machine-level-block {
+    width: 100%;
+    margin-bottom: 22px;
+}
+
+.machine-level-title {
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.8;
+    margin: 10px 0 8px;
+    padding-left: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* контейнер для автоматов на уровне */
+.machine-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+}
+
+/* карточка автомата */
+.machine-card {
+    /* ❗ ВАЖНО: width НЕ УКАЗЫВАЕМ */
+    padding: 12px 10px;
+    border-radius: 16px;
+
+    background: #161616;
+    border: 1px solid rgba(255,255,255,0.06);
+
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+    cursor: pointer;
+
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.machine-card:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+/* название автомата */
+.machine-name {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+/* под-инфа */
+.machine-meta {
+    font-size: 12px;
+    opacity: 0.8;
+}
+.machine-image {
+    width: 100%;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.machine-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+
+/* Контейнер с автоматами — больше НЕ сетка, а вертикальный список уровней */
+#machines {
+    display: block !important;      /* ломаем старый flex/грид */
+}
+
+/* Каждый уровень — отдельный вертикальный блок на всю ширину */
+.machine-level-block {
+    display: block;
+    width: 100%;
+    margin-bottom: 22px;
+}
+
+/* Небольшой отступ между уровнями */
+.machine-level-block + .machine-level-block {
+    margin-top: 8px;
+}
+
+
+
