@@ -361,34 +361,193 @@ img {
     margin-bottom: 12px;
 }
 
+/* ======== ТОСТЕРЫ (обновлённые) ======== */
 .toast {
     position: fixed;
-    top: 10px;
+    top: 16px;
     left: 50%;
     transform: translateX(-50%);
-    width: 90vw;
-    max-width: 480px;
-    background: linear-gradient(135deg, #1f1f1f, #302b15);
-    border-radius: 14px;
-    padding: 10px 14px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    width: 90%;
+    max-width: 420px;
+    background: linear-gradient(135deg, #262626, #101010);
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 12px;
     font-size: 13px;
-    font-weight: 500;
-    color: #fff4c2;
-    text-align: center;
-    border: 1px solid rgba(255,213,46,0.25);
-    z-index: 9999;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
     opacity: 0;
-    animation: toast-slide 2.6s forwards;
+    z-index: 3000;
+    animation: toast 2.2s forwards;
 }
 
-/* обновлённая анимация сверху вниз */
-@keyframes toast-slide {
-    0%   { opacity: 0; transform: translate(-50%, -20px); }
+@keyframes toast {
+    0%   { opacity: 0; transform: translate(-50%, -10px); }
     10%  { opacity: 1; transform: translate(-50%, 0); }
     80%  { opacity: 1; transform: translate(-50%, 0); }
     100% { opacity: 0; transform: translate(-50%, -10px); }
 }
+
+/* ======== ФУЛЛСКРИН АВТОМАТ ======== */
+
+.machine-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2500;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 12px 8px 20px;
+}
+
+.machine-overlay.active {
+    display: flex;
+}
+
+.machine-shell {
+    width: 100%;
+    max-width: 430px;
+    background: #050505;
+    border-radius: 20px;
+    padding: 12px 12px 16px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.7);
+}
+
+.machine-close {
+    border: none;
+    background: transparent;
+    color: #777;
+    font-size: 18px;
+    float: right;
+    cursor: pointer;
+}
+
+.machine-header-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 4px 0 10px;
+}
+
+.machine-title {
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.machine-price {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* Витрина автомата */
+.machine-viewport {
+    position: relative;
+    height: 220px;
+    border-radius: 22px;
+    background:
+            radial-gradient(circle at 50% 15%, rgba(255,255,255,0.15) 0, transparent 55%),
+            radial-gradient(circle at 50% 80%, #222 0, #070707 60%);
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+/* Коготь */
+.machine-claw {
+    position: absolute;
+    top: -70px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 34px;
+    height: 70px;
+    border-radius: 999px 999px 14px 14px;
+    background: linear-gradient(180deg, #f5f5f5, #c9c9c9 40%, #555 95%);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+    transition: transform 0.25s cubic-bezier(0.22, 0.9, 0.4, 1.1);
+}
+
+/* Коробки */
+.machine-boxes {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+}
+
+.machine-box {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #ffb74d, #f57c00);
+    box-shadow:
+            0 0 0 2px rgba(0,0,0,0.25),
+            0 6px 14px rgba(0,0,0,0.7);
+    position: relative;
+}
+
+.machine-box::after {
+    content: "";
+    position: absolute;
+    inset: 18px 8px 5px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.15);
+}
+
+/* Анимация спуска/подъёма */
+.machine-overlay.spinning .machine-claw {
+    transform: translate(-50%, 130px);
+}
+
+/* Победа / проигрыш */
+.machine-result {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.machine-result-emoji {
+    font-size: 40px;
+}
+
+.machine-result-text {
+    font-size: 14px;
+    margin-top: 4px;
+    opacity: 0.9;
+}
+
+.machine-main-btn {
+    margin-bottom: 8px;
+}
+
+/* Слайдер призов */
+.machine-prize-strip {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 4px 2px 2px;
+    scrollbar-width: none;
+}
+
+.machine-prize-strip::-webkit-scrollbar {
+    display: none;
+}
+
+.machine-prize-pill {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #151515;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.machine-prize-pill span:nth-child(1) {
+    font-size: 16px;
+}
+
 
 
 /* быстрый пульс клика */

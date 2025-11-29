@@ -106,6 +106,42 @@
         </section>
 
     </main>
+    <!-- =============================== -->
+    <!-- 🎰 ФУЛЛСКРИН ЭКРАН АВТОМАТА    -->
+    <!-- =============================== -->
+    <div id="machineOverlay" class="machine-overlay hidden">
+        <div class="machine-shell">
+            <button id="machineCloseBtn" class="machine-close">✕</button>
+
+            <div class="machine-header-line">
+                <div id="machineTitle" class="machine-title">Автомат</div>
+                <div class="machine-price">
+                    <span id="machinePrice">0</span> LM / игра
+                </div>
+            </div>
+
+            <div class="machine-viewport">
+                <div class="machine-claw"></div>
+                <div class="machine-boxes">
+                    <div class="machine-box"></div>
+                    <div class="machine-box"></div>
+                    <div class="machine-box"></div>
+                </div>
+            </div>
+
+            <div id="machineResult" class="machine-result hidden">
+                <div id="machineResultEmoji" class="machine-result-emoji"></div>
+                <div id="machineResultText" class="machine-result-text"></div>
+            </div>
+
+            <button id="machinePlayBtn" class="btn primary machine-main-btn">
+                Играть
+            </button>
+
+            <div id="machinePrizeStrip" class="machine-prize-strip"></div>
+        </div>
+    </div>
+
     <nav class="bottom-nav">
         <div class="nav-item active" data-target="pageFarm">
             <span class="nav-icon">🟡</span>
