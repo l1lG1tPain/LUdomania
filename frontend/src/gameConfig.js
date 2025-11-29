@@ -152,7 +152,6 @@ export const MACHINES = [
         price: 400,
         winChance: 0.55,
         description: "Чуть дороже — чуть лучше призы.",
-        minLevel:true,
         minLevel: 0,
         prizePool: ["rubber_duck", "arcade_token", "coal_box", "space_rocket", "candy_bar", "lollipop", "wooden_duck", "pixel_coin"],
     },
