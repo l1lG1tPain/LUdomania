@@ -24,12 +24,15 @@ const loginBtn = document.getElementById("login");
 const profileAvatarEl = document.getElementById("profileAvatar");
 const profileNameEl   = document.getElementById("profileName");
 const profileIdEl     = document.getElementById("profileId");
+const headerBalanceEl = document.getElementById("headerBalance");
+const headerLevelEl   = document.getElementById("headerLevel");
 
 // Статистика FARM
-const balanceEl     = document.getElementById("balance");
-const clickPowerEl  = document.getElementById("clickPower");
-const totalClicksEl = document.getElementById("totalClicks");
-const playerLevelEl = document.getElementById("playerLevel");
+const balanceEl        = document.getElementById("balance");
+const clickPowerEl     = document.getElementById("clickPower");
+const totalClicksEl    = document.getElementById("totalClicks");
+const playerLevelEl    = document.getElementById("playerLevel");
+const levelProgressBar = document.getElementById("levelProgressBar");
 
 // Игровые элементы
 const bigClickArea = document.getElementById("bigClickArea");
@@ -51,6 +54,7 @@ let userRef        = null;
 let clickPower     = 1;
 let balance        = 0;
 let totalClicks    = 0;
+let currentLevel   = 0;
 let authInProgress = false;
 
 const BOT_USERNAME = "LUdomania_app_bot";
@@ -63,7 +67,7 @@ const API_BASE =
 
 // ==================== Утилиты ====================
 
-// сокращение чисел: 9999 → 9.9k, 1200000 → 1.2m
+// формат LM: 10000 → 10k, 1_200_000 → 1.2m
 function formatLM(num) {
     if (num < 10000) return String(num);
     const units = [
@@ -75,13 +79,37 @@ function formatLM(num) {
         if (num >= u.v) {
             const base = num / u.v;
             let txt = base.toFixed(base < 10 ? 1 : 0) + u.s;
-            if (txt.length > 5) {
-                txt = base.toFixed(0) + u.s;
-            }
+            if (txt.length > 5) txt = base.toFixed(0) + u.s;
             return txt;
         }
     }
     return String(num);
+}
+
+// расчёт уровня по общему числу кликов
+// 0 → [0,500)
+// 1 → +1000
+// 2 → +1500 ...
+function calcLevel(total) {
+    let level = 0;
+    let step = 500;
+    let remaining = total;
+
+    while (remaining >= step) {
+        remaining -= step;
+        level++;
+        step += 500; // каждый следующий дороже на 500
+    }
+
+    const progressToNext = step === 0 ? 0 : remaining / step;
+
+    return { level, progress: progressToNext };
+}
+
+// максимум силы клика для текущего уровня
+// 3 апгрейда на уровень → maxPower = 1 + (level+1)*3
+function getMaxClickPower(level) {
+    return 1 + (level + 1) * 3;
 }
 
 // красивый тост
@@ -91,9 +119,7 @@ function showToast(message) {
     toast.textContent = message;
     document.body.appendChild(toast);
 
-    setTimeout(() => {
-        toast.remove();
-    }, 2100);
+    setTimeout(() => toast.remove(), 2100);
 }
 
 // модалка выигрыша
@@ -151,9 +177,8 @@ function renderProfileFromData(data) {
     profileNameEl.textContent = name;
     profileIdEl.textContent   = `AkulkaID: ${akulkaId}`;
 
-    // аватар: если есть фото — рисуем картинку, иначе эмоджи
     const photoUrl = data.photoUrl;
-    profileAvatarEl.innerHTML = ""; // очищаем содержимое
+    profileAvatarEl.innerHTML = "";
 
     if (photoUrl) {
         const img = document.createElement("img");
@@ -311,15 +336,23 @@ function subscribeToUser(userUid) {
         clickPower  = data.clickPower  ?? 1;
         totalClicks = data.totalClicks ?? 0;
 
+        const { level, progress } = calcLevel(totalClicks);
+        currentLevel = level;
+
         if (balanceEl)     balanceEl.textContent     = formatLM(balance);
         if (clickPowerEl)  clickPowerEl.textContent  = clickPower;
         if (totalClicksEl) totalClicksEl.textContent = totalClicks;
-        if (playerLevelEl) playerLevelEl.textContent = data.level ?? 0;
+
+        if (playerLevelEl) playerLevelEl.textContent = level;
+        if (headerLevelEl) headerLevelEl.textContent = level;
+        if (headerBalanceEl) headerBalanceEl.textContent = formatLM(balance);
+        if (levelProgressBar) {
+            levelProgressBar.style.width = `${Math.round(progress * 100)}%`;
+        }
 
         updateUpgradeUI();
         renderProfileFromData(data);
 
-        // показываем онлайн-точку
         const onlineDot = document.getElementById("onlineDot");
         if (onlineDot) onlineDot.classList.remove("hidden");
     });
@@ -370,7 +403,8 @@ async function handleClick() {
         return;
     }
 
-    bigClickArea && (bigClickArea.style.pointerEvents = "none");
+    if (bigClickArea) bigClickArea.style.pointerEvents = "none";
+
     try {
         await updateDoc(userRef, {
             balance:     increment(clickPower),
@@ -380,13 +414,20 @@ async function handleClick() {
     } catch (e) {
         console.error("click error", e);
     } finally {
-        bigClickArea && (bigClickArea.style.pointerEvents = "auto");
+        if (bigClickArea) bigClickArea.style.pointerEvents = "auto";
     }
 }
 
+// апгрейд с лимитом по уровню
 async function handleUpgrade() {
     if (!uid || !userRef) {
         showToast("Сначала авторизуйся через Telegram");
+        return;
+    }
+
+    const maxPower = getMaxClickPower(currentLevel);
+    if (clickPower >= maxPower) {
+        showToast(`Лимит силы клика на уровне ${currentLevel}. Накликай до следующего уровня!`);
         return;
     }
 

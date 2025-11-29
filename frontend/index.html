@@ -17,10 +17,6 @@
 
 <body>
 <div id="app">
-
-    <!-- =============================== -->
-    <!-- 🔹 ХЕДЕР ПРОФИЛЯ                -->
-    <!-- =============================== -->
     <header class="app-header">
         <div class="profile-left">
             <div id="profileAvatar" class="profile-avatar">
@@ -33,7 +29,17 @@
                 <div id="profileId" class="profile-id">AkulkaID: —</div>
             </div>
         </div>
+
+        <div class="profile-right">
+            <div class="header-balance">
+                <span id="headerBalance">0</span> LM
+            </div>
+            <div class="header-level">
+                LVL <span id="headerLevel">0</span>
+            </div>
+        </div>
     </header>
+
 
     <!-- Кнопка авторизации -->
     <div class="auth-block">
@@ -42,15 +48,8 @@
         </button>
     </div>
 
-    <!-- =============================== -->
-    <!-- 🔥 ГЛАВНЫЕ СТРАНИЦЫ             -->
-    <!-- =============================== -->
-
     <main class="pages">
 
-        <!-- =================== -->
-        <!-- 🟡 1. ФАРМ           -->
-        <!-- =================== -->
         <section id="pageFarm" class="page active">
 
             <!-- Характеристика игрока -->
@@ -75,6 +74,10 @@
                     <span>Уровень:</span>
                     <span id="playerLevel" class="value">0</span>
                 </div>
+                <div class="level-progress-container">
+                    <div id="levelProgressBar" class="level-progress-bar"></div>
+                </div>
+
             </div>
 
             <!-- Большая кнопка клика → потом будет монета -->
@@ -88,9 +91,6 @@
             </button>
         </section>
 
-        <!-- =================== -->
-        <!-- 🎰 2. МИНИ-ИГРЫ      -->
-        <!-- =================== -->
         <section id="pageMiniGames" class="page">
 
             <h2 class="section-title">🎰 Автоматы</h2>
@@ -98,9 +98,6 @@
 
         </section>
 
-        <!-- =================== -->
-        <!-- 🎁 3. ИНВЕНТАРЬ     -->
-        <!-- =================== -->
         <section id="pageInventory" class="page">
 
             <h2 class="section-title">🎁 Инвентарь</h2>
@@ -109,23 +106,23 @@
         </section>
 
     </main>
-
-    <!-- =============================== -->
-    <!-- 🔻 НИЖНЕЕ МЕНЮ НАВИГАЦИИ        -->
-    <!-- =============================== -->
     <nav class="bottom-nav">
         <div class="nav-item active" data-target="pageFarm">
-            🟡<br>Фарм
+            <span class="nav-icon">🟡</span>
+            <span class="nav-label">Фарм</span>
         </div>
 
         <div class="nav-item" data-target="pageMiniGames">
-            🎰<br>Игры
+            <span class="nav-icon">🎰</span>
+            <span class="nav-label">Игры</span>
         </div>
 
         <div class="nav-item" data-target="pageInventory">
-            🎁<br>Инвентарь
+            <span class="nav-icon">🎁</span>
+            <span class="nav-label">Инвентарь</span>
         </div>
     </nav>
+
 
 </div>
 

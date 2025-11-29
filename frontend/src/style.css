@@ -9,27 +9,24 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     outline: none;
-    box-sizing: border-box;
 }
 
 html, body {
     margin: 0;
     padding: 0;
-    background: #0f0f0f;
+    background: #0b0b0b;
     color: #fff;
     overflow-x: hidden;
-    height: 100%;
-    touch-action: manipulation; /* меньше рандомного скролла/зума на мобиле */
 }
 
-/* запрещаем long-press-save на iOS */
 img {
     pointer-events: none;
 }
 
 #app {
-    min-height: 100vh;
-    padding: 0 10px 80px; /* +80px под нижнее меню */
+    padding: 0 8px 80px; /* место под bottom-nav */
+    max-width: 480px;
+    margin: 0 auto;
 }
 
 /* ======== ХЕДЕР ======== */
@@ -38,11 +35,14 @@ img {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    background: #0f0f0f;
+    padding: 12px 8px;
+    margin-top: 4px;
+    border-radius: 16px;
+    background: radial-gradient(circle at top left, #2a2a2a 0%, #111 60%, #080808 100%);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
+/* левая часть — аватар + имя */
 .profile-left {
     display: flex;
     gap: 10px;
@@ -51,10 +51,10 @@ img {
 
 .profile-avatar {
     position: relative;
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: #1a1a1a;
+    background: #181818;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -77,7 +77,7 @@ img {
     position: absolute;
     bottom: -1px;
     right: -1px;
-    border: 2px solid #0f0f0f;
+    border: 2px solid #111;
 }
 
 .hidden {
@@ -91,23 +91,45 @@ img {
 
 .profile-id {
     font-size: 12px;
-    opacity: 0.6;
+    opacity: 0.7;
 }
 
-/* блок с кнопкой авторизации */
+/* правая часть — баланс и уровень в хедере */
+
+.profile-right {
+    text-align: right;
+    align-items: center;
+    font-size: 12px;
+    flex-wrap: nowrap;
+    display: flex;
+    gap: 15px;
+}
+
+.header-balance {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.header-balance span {
+    color: #ffd52e;
+}
+
+.header-level {
+    margin-top: 2px;
+    opacity: 0.8;
+}
+
+/* ======== АВТОРИЗАЦИЯ ======== */
+
 .auth-block {
-    padding: 8px 0 4px;
+    margin: 10px 4px;
 }
 
-/* ======== СЕКЦИИ / СТРАНИЦЫ ======== */
-
-.pages {
-    padding-top: 4px;
-}
+/* ======== СЕКЦИИ ======== */
 
 .page {
     display: none;
-    padding: 10px 0 0;
+    padding: 12px 4px 16px;
 }
 
 .page.active {
@@ -117,10 +139,12 @@ img {
 /* ======== FARM ======== */
 
 .farm-stats {
-    margin-bottom: 20px;
-    background: #111;
-    border-radius: 12px;
+    margin-top: 8px;
+    margin-bottom: 10px;
     padding: 10px 12px;
+    border-radius: 16px;
+    background: #121212;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
 }
 
 .stat-row {
@@ -134,23 +158,44 @@ img {
     font-weight: 600;
 }
 
-.big-click-area {
-    margin: 20px auto;
-    width: 180px;
-    height: 180px;
+/* прогресс-бар уровня */
+
+.level-progress-container {
+    margin-top: 8px;
+    height: 6px;
     border-radius: 999px;
-    background: radial-gradient(circle, #2b2b2b, #1a1a1a);
+    background: #1a1a1a;
+    overflow: hidden;
+}
+
+.level-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ffcc33, #ff7b39, #ff3b6a);
+    box-shadow: 0 0 10px rgba(255, 204, 51, 0.6);
+    transition: width 0.2s ease-out;
+}
+
+/* большая зона клика */
+
+.big-click-area {
+    margin: 22px auto 12px;
+    width: 190px;
+    height: 190px;
+    border-radius: 999px;
+    background: radial-gradient(circle, #282828 0%, #141414 65%, #050505 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 50px;
+    font-size: 52px;
     cursor: pointer;
-    box-shadow: 0 0 20px rgba(255,200,30,0.15);
-    transition: 0.08s;
+    box-shadow: 0 0 15px rgba(255,200,30,0.15);
+    transition: transform 0.06s ease-out, box-shadow 0.06s ease-out;
 }
 
 .big-click-area:active {
-    transform: scale(0.95);
+    transform: scale(0.9);
+    box-shadow: 0 0 5px rgba(255,200,30,0.25);
 }
 
 /* ======== INVENTORY ======== */
@@ -158,14 +203,16 @@ img {
 .inventory-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 10px;
 }
 
 .inv-card {
     background: #161616;
     padding: 10px 6px;
-    border-radius: 12px;
+    border-radius: 14px;
     text-align: center;
+    font-size: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
 .inv-emoji {
@@ -174,36 +221,29 @@ img {
 
 .inv-name {
     margin-top: 4px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
 }
 
 .inv-progress {
-    font-size: 10px;
-    opacity: 0.7;
     margin-top: 2px;
+    font-size: 11px;
+    opacity: 0.75;
 }
 
 /* ======== MINI-GAMES ======== */
 
-.section-title {
-    font-size: 16px;
-    font-weight: 600;
-    margin: 6px 0 10px;
-}
-
 .machine-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 8px;
+    gap: 10px;
 }
 
 .machine-card {
     background: #161616;
-    padding: 10px;
-    border-radius: 12px;
-    font-size: 12px;
+    padding: 12px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
 .machine-name {
@@ -212,7 +252,7 @@ img {
 }
 
 .machine-meta {
-    font-size: 11px;
+    font-size: 12px;
     opacity: 0.75;
 }
 
@@ -223,26 +263,43 @@ img {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 64px;
-    background: #0d0d0d;
-    border-top: 1px solid rgba(255,255,255,0.05);
+    max-width: 480px;
+    margin: 0 auto;
+    right: 0;
+    height: 70px;
+    background: #050505;
+    border-top: 1px solid rgba(255,255,255,0.06);
     display: flex;
-    z-index: 900;
+    justify-content: space-around;
+    align-items: stretch;
+    box-shadow: 0 -10px 20px rgba(0,0,0,0.7);
+    z-index: 50;
 }
 
 .nav-item {
     flex: 1;
     text-align: center;
-    padding-top: 6px;
     font-size: 12px;
     opacity: 0.6;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
     cursor: pointer;
-    line-height: 1.2;
+}
+
+.nav-item span.nav-icon {
+    font-size: 18px;
+}
+
+.nav-item span.nav-label {
+    font-size: 11px;
 }
 
 .nav-item.active {
     opacity: 1;
     font-weight: 600;
+    background: radial-gradient(circle at top, rgba(255,213,46,0.12), transparent 60%);
 }
 
 /* ======== КНОПКИ ======== */
@@ -250,7 +307,7 @@ img {
 .btn {
     width: 100%;
     padding: 12px;
-    border-radius: 12px;
+    border-radius: 14px;
     font-size: 14px;
     background: #222;
     color: #fff;
@@ -259,21 +316,22 @@ img {
     margin: 6px 0;
 }
 
-.btn:active {
-    transform: scale(0.97);
-}
-
 .btn.primary {
     background: #ffd52e;
     color: #000;
     font-weight: 600;
 }
 
+.btn.primary:hover {
+    background: #4c3603;
+    color: #fff;
+}
+
 .btn.secondary {
     background: #333;
 }
 
-/* ======== МОДАЛКИ ======== */
+/* ======== МОДАЛКИ / ТОСТЫ ======== */
 
 .modal-backdrop {
     position: fixed;
@@ -294,6 +352,7 @@ img {
     padding: 20px;
     border-radius: 16px;
     text-align: center;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.6);
 }
 
 .modal-title {
@@ -302,25 +361,18 @@ img {
     margin-bottom: 12px;
 }
 
-.modal-body {
-    font-size: 14px;
-    margin-bottom: 16px;
-}
-
-/* ======== ТОАСТЫ ======== */
-
 .toast {
     position: fixed;
-    bottom: 80px;
+    bottom: 90px;
     left: 50%;
     transform: translateX(-50%);
     background: #333;
     color: white;
-    padding: 12px 18px;
-    border-radius: 8px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-size: 14px;
     opacity: 0;
     animation: toast 2s forwards;
-    font-size: 13px;
 }
 
 @keyframes toast {
