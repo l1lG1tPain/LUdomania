@@ -728,22 +728,33 @@ function openMachineOverlay(machineId) {
     const machine = MACHINES.find((m) => m.id === machineId);
     if (!machine || !machineOverlayEl) return;
 
-    currentMachineId = machineId;
-    machineResultEl?.classList.add("hidden");
+    currentMachineId   = machineId;
+    machineSpinRunning = false;
+
+    // прячем прошлый результат
+    if (machineResultEl) {
+        machineResultEl.classList.add("hidden");
+    }
     machineOverlayEl.classList.remove("spinning");
 
-    if (machineTitleEl)  machineTitleEl.textContent  = machine.name;
-    if (machinePriceEl)  machinePriceEl.textContent  = machine.price;
+    if (machineTitleEl) machineTitleEl.textContent = machine.name;
+    if (machinePriceEl) machinePriceEl.textContent = machine.price;
+
     fillMachinePrizeStrip(machineId);
 
+    // ✨ вот тут главное:
+    machineOverlayEl.classList.remove("hidden");
     machineOverlayEl.classList.add("active");
 }
 
 function closeMachineOverlay() {
     if (!machineOverlayEl || machineSpinRunning) return;
+
     machineOverlayEl.classList.remove("active");
+    machineOverlayEl.classList.add("hidden"); // обратно прячем
     currentMachineId = null;
 }
+
 
 async function handleMachinePlayClick() {
     if (!currentMachineId || !machineOverlayEl || machineSpinRunning) return;
