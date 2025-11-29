@@ -633,8 +633,9 @@ async function playMachine(machineId) {
     }
 
     // 4) персональная статистика юзера по этому автомату
+    // 4) персональная статистика юзера по этому автомату
     try {
-        const userMachineRef = doc(db, "user_machine_stats", uid, machineId);
+        const userMachineRef = doc(db, "user_machine_stats", uid, "machines", machineId);
         await setDoc(userMachineRef, {
             spins:      increment(1),
             wins:       increment(win ? 1 : 0),
