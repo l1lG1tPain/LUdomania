@@ -513,13 +513,13 @@ function subscribeToUser(userUid) {
         const league      = getLeagueForLevel(levelState.level);
         const leagueState = getLeagueProgress(totalClicks);
 
-        renderProfileFromUserDoc(data, {
-            level:  levelState.level,
-            league,
-            leagueState,
-            balance,
-            totalClicks,
-        });
+        // 🔥 профильный рендер — просто уровень и баланс
+        renderProfileFromUserDoc(
+            data,
+            levelState.level, // уровень
+            balance           // текущий баланс LM
+        );
+
 
         const onlineDot = document.getElementById("onlineDot");
         if (onlineDot) onlineDot.classList.remove("hidden");
@@ -822,99 +822,110 @@ async function grantPrizeWithGlobalLimit(machine) {
     const pool = Array.isArray(machine.prizePool) ? machine.prizePool.slice() : [];
     if (!pool.length) return { outcome: "no-prize" };
 
-    return await runTransaction(db, async (tx) => {
-        // 1️⃣ СНАЧАЛА ВСЕ ЧТЕНИЯ
+    // чтобы не зациклиться на исчерпанных призах
+    const tried = new Set();
 
-        // читаем все глобальные счётчики призов
-        const counterSnaps = await Promise.all(
-            pool.map((id) => tx.get(doc(db, "prize_counters", id)))
-        );
+    while (tried.size < pool.length) {
+        const candidateId = pickRandomPrize(machine);
+        if (!candidateId || tried.has(candidateId)) continue;
+        tried.add(candidateId);
 
-        const globalCounts = {};
-        counterSnaps.forEach((snap, idx) => {
-            const id = pool[idx];
-            globalCounts[id] = snap.exists() ? (snap.data().count ?? 0) : 0;
-        });
+        const cfg = PRIZES[candidateId];
+        if (!cfg) continue;
 
-        // выбираем приз с учётом лимитов
-        const tried       = new Set();
-        let chosenPrize   = null;
-        let chosenPrizeId = null;
+        const maxGlobal = cfg.maxCopiesGlobal ?? Infinity;
 
-        while (tried.size < pool.length && !chosenPrize) {
-            const candidateId = pickRandomPrize(machine); // наш весовой рандом
-            if (!candidateId || tried.has(candidateId)) continue;
-            tried.add(candidateId);
+        try {
+            const txResult = await runTransaction(db, async (tx) => {
+                // 1) читаем глобальный счётчик ЭТОГО приза
+                const counterRef  = doc(db, "prize_counters", candidateId);
+                const counterSnap = await tx.get(counterRef);
+                const data        = counterSnap.exists() ? counterSnap.data() : {};
+                const used        = data.count ?? 0;
 
-            const cfg = PRIZES[candidateId];
-            if (!cfg) continue;
+                // если лимит исчерпан — помечаем и выходим из транзакции
+                if (Number.isFinite(maxGlobal) && used >= maxGlobal) {
+                    return { outcome: "exhausted" };
+                }
 
-            const maxGlobal = cfg.maxCopiesGlobal ?? Infinity;
-            const used      = globalCounts[candidateId] ?? 0;
+                // 2) читаем инвентарь пользователя по этому призу
+                const invDocRef = doc(db, "users", uid, "inventory", cfg.id);
+                const invSnap   = await tx.get(invDocRef);
+                const prevData  = invSnap.exists() ? invSnap.data() : {};
+                const prevCount = prevData.count ?? 0;
 
-            // если приз закончился глобально — пропускаем
-            if (Number.isFinite(maxGlobal) && used >= maxGlobal) {
+                // 3) пишем глобальный счётчик
+                tx.set(
+                    counterRef,
+                    { count: used + 1 },
+                    { merge: true }
+                );
+
+                // 4) стэкаем предмет в инвентаре
+                tx.set(
+                    invDocRef,
+                    {
+                        prizeId:   cfg.id,
+                        name:      cfg.name,
+                        emoji:     cfg.emoji,
+                        rarity:    cfg.rarity,
+                        value:     cfg.value,
+                        createdAt: prevData.createdAt || serverTimestamp(),
+                        count:     prevCount + 1,
+                    },
+                    { merge: true }
+                );
+
+                return { outcome: "win", prize: cfg };
+            });
+
+            if (txResult.outcome === "win") {
+                // обновим локальный кэш, если он уже загружен
+                if (prizeCountersLoaded) {
+                    const prev = prizeCountersCache[cfg.id] ?? 0;
+                    prizeCountersCache[cfg.id] = prev + 1;
+                }
+                return txResult;
+            }
+
+            if (txResult.outcome === "exhausted") {
+                // этот приз закончился — пробуем следующий из пула
                 continue;
             }
 
-            chosenPrize   = cfg;
-            chosenPrizeId = candidateId;
-        }
+            // любая другая ситуация — ошибка
+            return { outcome: "error" };
+        } catch (e) {
+            console.error("grantPrizeWithGlobalLimit tx error", e);
 
-        if (!chosenPrize || !chosenPrizeId) {
-            // все призы в пуле закончились
-            return { outcome: "no-prize" };
-        }
+            // Если Firestore говорит "Quota exceeded / resource-exhausted" —
+            // перестаём трогать лимиты, но игру не ломаем: просто выдаём приз без учёта глобального лимита.
+            if (
+                e.code === "resource-exhausted" ||
+                (typeof e.message === "string" && e.message.includes("Quota exceeded"))
+            ) {
+                const invDocRef = doc(db, "users", uid, "inventory", cfg.id);
+                await setDoc(
+                    invDocRef,
+                    {
+                        prizeId: cfg.id,
+                        name:    cfg.name,
+                        emoji:   cfg.emoji,
+                        rarity:  cfg.rarity,
+                        value:   cfg.value,
+                        createdAt: serverTimestamp(),
+                    },
+                    { merge: true }
+                );
+                return { outcome: "win", prize: cfg };
+            }
 
-        // читаем документ инвентаря для этого приза (тоже до любых write)
-        const invDocRef = doc(db, "users", uid, "inventory", chosenPrize.id);
-        const invSnap   = await tx.get(invDocRef);
-        const prevData  = invSnap.exists() ? invSnap.data() : {};
-        const prevCount = prevData.count ?? 0;
-
-        // 2️⃣ ТЕПЕРЬ ПИШЕМ
-
-        // обновляем глобальный счётчик
-        const counterRef = doc(db, "prize_counters", chosenPrizeId);
-        const current    = globalCounts[chosenPrizeId] ?? 0;
-
-        tx.set(
-            counterRef,
-            { count: current + 1 },
-            { merge: true }
-        );
-
-        // стэкаем предмет в инвентаре пользователя
-        tx.set(
-            invDocRef,
-            {
-                prizeId:   chosenPrize.id,
-                name:      chosenPrize.name,
-                emoji:     chosenPrize.emoji,
-                rarity:    chosenPrize.rarity,
-                value:     chosenPrize.value,
-                createdAt: prevData.createdAt || serverTimestamp(),
-                count:     prevCount + 1, // 🔥 тут и есть стэк
-            },
-            { merge: true }
-        );
-
-        return {
-            outcome: "win",
-            prize: chosenPrize,
-        };
-    });
-
-    // 🔁 обновляем локальный кэш, если загрузили его раньше
-    if (txResult.outcome === "win" && txResult.prize) {
-        const id = txResult.prize.id;
-        if (prizeCountersLoaded) {
-            const prev = prizeCountersCache[id] ?? 0;
-            prizeCountersCache[id] = prev + 1;
+            return { outcome: "error" };
         }
     }
 
-    return txResult;
+    // Все призы в пуле оказались исчерпаны
+    return { outcome: "no-prize" };
 }
 
 
