@@ -605,8 +605,8 @@ async function playMachine(machineId) {
         return;
     }
 
+    // 1) списываем цену
     try {
-        // 1) списываем цену
         await updateDoc(userRef, {
             balance:    increment(-machine.price),
             totalSpent: increment(machine.price),
@@ -620,30 +620,44 @@ async function playMachine(machineId) {
     const roll = Math.random();
     const win  = roll < machine.winChance;
 
-    // 3) глобальная статистика автомата
+    // 3) глобальная статистика автомата: /machine_stats/{machineId}
     try {
         const globalRef = doc(db, "machine_stats", machineId);
-        await setDoc(globalRef, {
-            totalSpins: increment(1),
-            totalWins:  increment(win ? 1 : 0),
-            updatedAt:  serverTimestamp(),
-        }, { merge: true });
+        await setDoc(
+            globalRef,
+            {
+                totalSpins: increment(1),
+                totalWins:  increment(win ? 1 : 0),
+                updatedAt:  serverTimestamp(),
+            },
+            { merge: true }
+        );
     } catch (e) {
         console.error("machine stats error", e);
     }
 
-   // 4) персональная статистика юзера по этому автомату
+    // 4) персональная статистика юзера по автомату:
+    // users/{uid}/machineStats/{machineId}
     try {
-        const userMachineRef = doc(db, "user_machine_stats", uid, "machines", machineId);
-        await setDoc(userMachineRef, {
-            spins:      increment(1),
-            wins:       increment(win ? 1 : 0),
-            lastPlayed: serverTimestamp(),
-        }, { merge: true });
+        const userMachineRef = doc(
+            db,
+            "users",
+            uid,
+            "machineStats",
+            machineId
+        );
+        await setDoc(
+            userMachineRef,
+            {
+                spins:      increment(1),
+                wins:       increment(win ? 1 : 0),
+                lastPlayed: serverTimestamp(),
+            },
+            { merge: true }
+        );
     } catch (e) {
         console.error("user machine stats error", e);
     }
-
 
     // 5) если не выиграл — просто тостер и выходим
     if (!win) {
@@ -651,7 +665,7 @@ async function playMachine(machineId) {
         return;
     }
 
-    // 6) выбираем приз и кладём в инвентарь
+    // 6) выбираем приз
     const prizeId       = randomFrom(machine.prizePool);
     const prizeTemplate = PRIZES[prizeId];
 
@@ -660,18 +674,27 @@ async function playMachine(machineId) {
         return;
     }
 
-    const invCol = collection(db, "users", uid, "inventory");
+    // 7) ⚙️ СТЕКИРУЕМ приз в инвентаре:
+    // один документ на prizeId, поле count увеличиваем
+    const invDocRef = doc(db, "users", uid, "inventory", prizeTemplate.id);
 
     try {
-        await addDoc(invCol, {
-            prizeId:   prizeTemplate.id,
-            name:      prizeTemplate.name,
-            emoji:     prizeTemplate.emoji,
-            rarity:    prizeTemplate.rarity,
-            value:     prizeTemplate.value,
-            collectionId: prizeTemplate.collectionId || null,
-            createdAt: serverTimestamp(),
-        });
+        await setDoc(
+            invDocRef,
+            {
+                prizeId:        prizeTemplate.id,
+                name:           prizeTemplate.name,
+                emoji:          prizeTemplate.emoji,
+                rarity:         prizeTemplate.rarity,
+                value:          prizeTemplate.value,
+                collectionId:   prizeTemplate.collectionId || null,
+                maxCopiesGlobal: prizeTemplate.maxCopiesGlobal ?? null,
+                count:          increment(1),
+                firstWonAt:     serverTimestamp(),
+                lastWonAt:      serverTimestamp(),
+            },
+            { merge: true }
+        );
 
         // красивый тостер вместо модалки
         showToast(`Выигрыш: ${prizeTemplate.emoji} ${prizeTemplate.name}!`);
