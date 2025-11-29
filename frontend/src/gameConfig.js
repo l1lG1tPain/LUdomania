@@ -439,7 +439,7 @@ export const MACHINES = [
     {
         id: "basic_claw",
         name: "🧸 Детский кран",
-        image: "assets/machine.png",
+        image: "public/assets/machine.png",
         price: 250,
         winChance: 0.55,
         description: "Лучший вариант для первых шагов, только обычные призы.",
@@ -458,7 +458,7 @@ export const MACHINES = [
     {
         id: "toy_grabber",
         name: "🪀 Игрушечный захват",
-        image: "assets/machine3.png",
+        image: "public/assets/machine3.png",
         price: 280,
         winChance: 0.52,
         description: "Простой автомат для новичков с базовыми игрушками.",
@@ -476,7 +476,7 @@ export const MACHINES = [
     {
         id: "candy_claw",
         name: "🍬 Конфетный кран",
-        image: "assets/machine8.png",
+        image: "public/assets/machine8.png",
         price: 260,
         winChance: 0.54,
         description: "Сладкие призы для начинающих.",
@@ -495,7 +495,7 @@ export const MACHINES = [
     {
         id: "street_claw",
         name: "🏙 Уличный автомат",
-        image: "assets/machine5.png",
+        image: "public/assets/machine5.png",
         price: 800,
         winChance: 0.4,
         description: "Средний риск, уже можно поймать редкости.",
@@ -515,7 +515,7 @@ export const MACHINES = [
     {
         id: "neon_grabber",
         name: "🌃 Неоновый захват",
-        image: "assets/machine6.png",
+        image: "public/assets/machine6.png",
         price: 850,
         winChance: 0.38,
         description: "Уличный стиль с неоновыми акцентами и редкими призами.",
@@ -533,7 +533,7 @@ export const MACHINES = [
     {
         id: "hookah_street",
         name: "🫧 Уличный кальянный",
-        image: "assets/machine9.png",
+        image: "public/assets/machine9.png",
         price: 900,
         winChance: 0.42,
         description: "Призы из кальянной тематики с небольшим шансом на редкость.",
@@ -553,7 +553,7 @@ export const MACHINES = [
     {
         id: "casino_claw",
         name: "🎰 Казино-кран",
-        image: "assets/machine7.png",
+        image: "public/assets/machine7.png",
         price: 2200,
         winChance: 0.3,
         description: "Меньше шансов, но больше epic и шанс на легендарку.",
@@ -574,7 +574,7 @@ export const MACHINES = [
     {
         id: "retro_casino",
         name: "🕹 Ретро-казино",
-        image: "assets/machine11.png",
+        image: "public/assets/machine11.png",
         price: 2400,
         winChance: 0.28,
         description: "Казино с ретро-тематикой и эпическими призами.",
@@ -592,7 +592,7 @@ export const MACHINES = [
     {
         id: "space_slot",
         name: "🌌 Космический слот",
-        image: "assets/machine10.png",
+        image: "public/assets/machine10.png",
         price: 2000,
         winChance: 0.32,
         description: "Призы из космоса с шансом на эпик.",
@@ -612,7 +612,7 @@ export const MACHINES = [
     {
         id: "vip_claw",
         name: "💎 VIP-лапа",
-        image: "assets/machine4.png",
+        image: "public/assets/machine4.png",
         price: 6500,
         winChance: 0.22,
         description: "Только редкие и эпические игрушки.",
@@ -633,7 +633,7 @@ export const MACHINES = [
     {
         id: "elite_grabber",
         name: "🏆 Элитный захват",
-        image: "assets/machine2.png",
+        image: "public/assets/machine2.png",
         price: 7200,
         winChance: 0.20,
         description: "VIP-доступ к эпическим и редким призам.",
@@ -651,7 +651,7 @@ export const MACHINES = [
     {
         id: "candy_vip",
         name: "🍭 VIP-конфеты",
-        image: "assets/machine11.png",
+        image: "public/assets/machine11.png",
         price: 6200,
         winChance: 0.24,
         description: "Сладкие эпические призы для элиты.",
@@ -671,7 +671,7 @@ export const MACHINES = [
     {
         id: "akula_jackpot",
         name: "🦈 Акулка Слот",
-        image: "assets/machine_shark.png",
+        image: "public/assets/machine_shark.png",
         price: 15000,
         winChance: 0.1,
         description: "Мало попыток, но призы по-настоящему жирные.",
@@ -690,7 +690,7 @@ export const MACHINES = [
     {
         id: "legendary_slot",
         name: "🏅 Легендарный слот",
-        image: "assets/machine12.png",
+        image: "public/assets/machine12.png",
         price: 18000,
         winChance: 0.08,
         description: "Шанс на настоящие легендарки и топ-эпики.",
@@ -708,7 +708,7 @@ export const MACHINES = [
     {
         id: "cosmic_jackpot",
         name: "🚀 Космический джекпот",
-        image: "assets/machine10.png",
+        image: "public/assets/machine10.png",
         price: 14000,
         winChance: 0.12,
         description: "Жирные призы из космоса и акул.",

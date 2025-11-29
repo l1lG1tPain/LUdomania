@@ -734,7 +734,7 @@ function renderMachines() {
             card.className  = "machine-card";
             card.dataset.id = m.id;
 
-            const imgSrc = m.image || "assets/machine.png";
+            const imgSrc = m.image || "public/assets/machine.png";
 
             card.innerHTML = `
                 <div class="machine-image">
