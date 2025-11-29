@@ -1,70 +1,136 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8" />
     <title>LUdomania</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- НЕТ зума, нет масштаба — чисто мобильное поведение -->
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
     <link rel="stylesheet" href="/src/style.css" />
 </head>
+
 <body>
 <div id="app">
 
-    <!-- 🔹 Профильный хедер -->
+    <!-- =============================== -->
+    <!-- 🔹 ХЕДЕР ПРОФИЛЯ                -->
+    <!-- =============================== -->
     <header class="app-header">
         <div class="profile-left">
             <div id="profileAvatar" class="profile-avatar">
                 🦈
                 <div id="onlineDot" class="online-dot hidden"></div>
             </div>
+
             <div class="profile-text">
                 <div id="profileName" class="profile-name">Гость</div>
                 <div id="profileId" class="profile-id">AkulkaID: —</div>
             </div>
         </div>
-
     </header>
 
+    <!-- Кнопка авторизации -->
+    <div class="auth-block">
         <button id="login" class="btn primary">
             Авторизоваться через Telegram
         </button>
+    </div>
 
-    <div id="game" class="game hidden">
-        <div class="stats">
-            <div class="stat-row">
-                <span>Баланс:</span>
-                <span id="balance" class="value">0</span>
-                <span class="unit">LM</span>
+    <!-- =============================== -->
+    <!-- 🔥 ГЛАВНЫЕ СТРАНИЦЫ             -->
+    <!-- =============================== -->
+
+    <main class="pages">
+
+        <!-- =================== -->
+        <!-- 🟡 1. ФАРМ           -->
+        <!-- =================== -->
+        <section id="pageFarm" class="page active">
+
+            <!-- Характеристика игрока -->
+            <div class="farm-stats">
+                <div class="stat-row">
+                    <span>Баланс:</span>
+                    <span id="balance" class="value">0</span>
+                    <span class="unit">LM</span>
+                </div>
+
+                <div class="stat-row">
+                    <span>Сила клика:</span>
+                    <span id="clickPower" class="value">1</span>
+                </div>
+
+                <div class="stat-row">
+                    <span>Всего кликов:</span>
+                    <span id="totalClicks" class="value">0</span>
+                </div>
+
+                <div class="stat-row">
+                    <span>Уровень:</span>
+                    <span id="playerLevel" class="value">0</span>
+                </div>
             </div>
-            <div class="stat-row">
-                <span>Сила клика:</span>
-                <span id="clickPower" class="value">1</span>
+
+            <!-- Большая кнопка клика → потом будет монета -->
+            <div id="bigClickArea" class="big-click-area">
+                💰
             </div>
-            <div class="stat-row">
-                <span>Всего кликов:</span>
-                <span id="totalClicks" class="value">0</span>
-            </div>
+
+            <!-- Кнопка улучшения -->
+            <button id="upgradeBtn" class="btn secondary">
+                Улучшить клик (стоимость: <span id="upgradeCost">10</span> LM)
+            </button>
+        </section>
+
+        <!-- =================== -->
+        <!-- 🎰 2. МИНИ-ИГРЫ      -->
+        <!-- =================== -->
+        <section id="pageMiniGames" class="page">
+
+            <h2 class="section-title">🎰 Автоматы</h2>
+            <div id="machines" class="machine-grid"></div>
+
+        </section>
+
+        <!-- =================== -->
+        <!-- 🎁 3. ИНВЕНТАРЬ     -->
+        <!-- =================== -->
+        <section id="pageInventory" class="page">
+
+            <h2 class="section-title">🎁 Инвентарь</h2>
+            <div id="inventory" class="inventory-grid"></div>
+
+        </section>
+
+    </main>
+
+    <!-- =============================== -->
+    <!-- 🔻 НИЖНЕЕ МЕНЮ НАВИГАЦИИ        -->
+    <!-- =============================== -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" data-target="pageFarm">
+            🟡<br>Фарм
         </div>
 
-        <button id="clickBtn" class="btn big">
-            КЛИК 💥
-        </button>
+        <div class="nav-item" data-target="pageMiniGames">
+            🎰<br>Игры
+        </div>
 
-        <button id="upgradeBtn" class="btn secondary">
-            Улучшить клик (стоимость: <span id="upgradeCost">10</span> LM)
-        </button>
+        <div class="nav-item" data-target="pageInventory">
+            🎁<br>Инвентарь
+        </div>
+    </nav>
 
-        <h2>🎰 Автоматы</h2>
-        <div id="machines" class="machines"></div>
-
-        <h2>🎁 Инвентарь</h2>
-        <div id="inventory" class="inventory"></div>
-    </div>
 </div>
 
+<!-- MAIN JS -->
 <script type="module" src="/src/main.js"></script>
+
 </body>
 </html>

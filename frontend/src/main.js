@@ -15,28 +15,42 @@ import {
 } from "firebase/firestore";
 import { MACHINES, PRIZES, randomFrom } from "./gameConfig.js";
 
-// ==================== КОНСТАНТЫ ====================
-const loginBtn      = document.getElementById("login");
-const statusEl      = document.getElementById("status");
-const gameEl        = document.getElementById("game");
-const balanceEl     = document.getElementById("balance");
-const clickPowerEl  = document.getElementById("clickPower");
-const totalClicksEl = document.getElementById("totalClicks");
-const clickBtn      = document.getElementById("clickBtn");
-const upgradeBtn    = document.getElementById("upgradeBtn");
-const upgradeCostEl = document.getElementById("upgradeCost");
-const machinesEl    = document.getElementById("machines");
-const inventoryEl   = document.getElementById("inventory");
+// ==================== DOM-элементы ====================
 
-// 🔹 новый профильный хедер
+// Авторизация
+const loginBtn = document.getElementById("login");
+
+// Профильный хедер
 const profileAvatarEl = document.getElementById("profileAvatar");
 const profileNameEl   = document.getElementById("profileName");
 const profileIdEl     = document.getElementById("profileId");
 
-let userRef    = null;
-let uid        = null;
-let clickPower = 1;
-let balance    = 0;
+// Статистика FARM
+const balanceEl     = document.getElementById("balance");
+const clickPowerEl  = document.getElementById("clickPower");
+const totalClicksEl = document.getElementById("totalClicks");
+const playerLevelEl = document.getElementById("playerLevel");
+
+// Игровые элементы
+const bigClickArea = document.getElementById("bigClickArea");
+const upgradeBtn   = document.getElementById("upgradeBtn");
+const upgradeCostEl = document.getElementById("upgradeCost");
+
+// Mini-games / Inventory
+const machinesEl  = document.getElementById("machines");
+const inventoryEl = document.getElementById("inventory");
+
+// Навигация
+const bottomNavItems = document.querySelectorAll(".bottom-nav .nav-item");
+const pages          = document.querySelectorAll(".page");
+
+// ==================== Состояние ====================
+
+let uid            = null;
+let userRef        = null;
+let clickPower     = 1;
+let balance        = 0;
+let totalClicks    = 0;
 let authInProgress = false;
 
 const BOT_USERNAME = "LUdomania_app_bot";
@@ -47,15 +61,74 @@ const API_BASE =
         ? "http://localhost:3000"
         : "https://ludomania.onrender.com";
 
-// ==================== УТИЛИТЫ ====================
-function getUpgradeCost(power) {
-    return Math.round(10 * Math.pow(power, 1.5));
+// ==================== Утилиты ====================
+
+// сокращение чисел: 9999 → 9.9k, 1200000 → 1.2m
+function formatLM(num) {
+    if (num < 10000) return String(num);
+    const units = [
+        { v: 1e9, s: "b" },
+        { v: 1e6, s: "m" },
+        { v: 1e3, s: "k" },
+    ];
+    for (const u of units) {
+        if (num >= u.v) {
+            const base = num / u.v;
+            let txt = base.toFixed(base < 10 ? 1 : 0) + u.s;
+            if (txt.length > 5) {
+                txt = base.toFixed(0) + u.s;
+            }
+            return txt;
+        }
+    }
+    return String(num);
 }
 
-function updateUpgradeUI() {
-    const cost = getUpgradeCost(clickPower);
-    if (upgradeCostEl) upgradeCostEl.textContent = cost;
-    if (upgradeBtn)    upgradeBtn.disabled = balance < cost;
+// красивый тост
+function showToast(message) {
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 2100);
+}
+
+// модалка выигрыша
+function showPrizeModal(prize) {
+    const backdrop = document.createElement("div");
+    backdrop.className = "modal-backdrop";
+
+    const modal = document.createElement("div");
+    modal.className = "modal";
+
+    modal.innerHTML = `
+    <div class="modal-title">Выигрыш!</div>
+    <div class="modal-body">
+      <div style="font-size:48px;">${prize.emoji}</div>
+      <div style="margin-top:8px;font-weight:600;">${prize.name}</div>
+      <div style="margin-top:4px;font-size:13px;opacity:0.7;">Стоимость: ${prize.value} LM</div>
+    </div>
+    <button class="btn primary" id="modalPrizeOk">Дальше играть</button>
+  `;
+
+    backdrop.addEventListener("click", () => {
+        backdrop.remove();
+        modal.remove();
+    });
+
+    document.body.appendChild(backdrop);
+    document.body.appendChild(modal);
+
+    const okBtn = document.getElementById("modalPrizeOk");
+    if (okBtn) {
+        okBtn.addEventListener("click", () => {
+            backdrop.remove();
+            modal.remove();
+        });
+    }
 }
 
 function isTelegramWebApp() {
@@ -80,10 +153,7 @@ function renderProfileFromData(data) {
 
     // аватар: если есть фото — рисуем картинку, иначе эмоджи
     const photoUrl = data.photoUrl;
-    profileAvatarEl.innerHTML = "";
-    profileAvatarEl.style.backgroundImage = "";
-    profileAvatarEl.style.backgroundSize  = "";
-    profileAvatarEl.style.backgroundPosition = "";
+    profileAvatarEl.innerHTML = ""; // очищаем содержимое
 
     if (photoUrl) {
         const img = document.createElement("img");
@@ -95,7 +165,42 @@ function renderProfileFromData(data) {
     }
 }
 
-// ==================== РЕНДЕР АВТОМАТОВ ====================
+// ==================== Навигация между страницами ====================
+
+function setActivePage(targetId) {
+    pages.forEach((p) => {
+        if (p.id === targetId) p.classList.add("active");
+        else p.classList.remove("active");
+    });
+
+    bottomNavItems.forEach((item) => {
+        if (item.dataset.target === targetId) item.classList.add("active");
+        else item.classList.remove("active");
+    });
+}
+
+bottomNavItems.forEach((item) => {
+    item.addEventListener("click", () => {
+        const target = item.dataset.target;
+        if (!target) return;
+        setActivePage(target);
+    });
+});
+
+// ==================== Игровые утилиты ====================
+
+function getUpgradeCost(power) {
+    return Math.round(10 * Math.pow(power, 1.5));
+}
+
+function updateUpgradeUI() {
+    const cost = getUpgradeCost(clickPower);
+    if (upgradeCostEl) upgradeCostEl.textContent = cost;
+    if (upgradeBtn)    upgradeBtn.disabled = balance < cost || !uid;
+}
+
+// ==================== Рендер автоматов ====================
+
 function renderMachines() {
     if (!machinesEl) return;
 
@@ -106,10 +211,8 @@ function renderMachines() {
         div.className = "machine-card";
 
         div.innerHTML = `
-      <div class="machine-header">
-        <span class="machine-name">${m.name}</span>
-        <span class="machine-meta">${m.price} LM / попытка</span>
-      </div>
+      <div class="machine-name">${m.name}</div>
+      <div class="machine-meta">${m.price} LM / попытка</div>
       <div class="machine-meta">Шанс: ${(m.winChance * 100).toFixed(0)}%</div>
       <div class="machine-meta">${m.description}</div>
       <button class="btn secondary machine-play" data-id="${m.id}">
@@ -128,7 +231,8 @@ function renderMachines() {
     };
 }
 
-// ==================== ИНВЕНТАРЬ ====================
+// ==================== Инвентарь ====================
+
 function renderInventory(items) {
     if (!inventoryEl) return;
 
@@ -148,23 +252,17 @@ function renderInventory(items) {
 
     items.forEach((item) => {
         const div = document.createElement("div");
-        div.className = "inv-item";
+        div.className = "inv-card";
 
         div.innerHTML = `
-      <div class="inv-main">
-        <span class="inv-emoji">${item.emoji}</span>
-        <div>
-          <div class="inv-name">${item.name}</div>
-          <div class="inv-rarity">
-            ${rarityLabels[item.rarity] ?? item.rarity} • ${item.value} LM
-          </div>
-        </div>
+      <div class="inv-emoji">${item.emoji}</div>
+      <div class="inv-name">${item.name}</div>
+      <div class="inv-progress">
+        ${rarityLabels[item.rarity] ?? item.rarity} • ${item.value} LM
       </div>
-      <div class="inv-actions">
-        <button class="btn primary inv-sell" data-id="${item.id}">
-          Продать
-        </button>
-      </div>
+      <button class="btn secondary inv-sell" data-id="${item.id}">
+        Продать
+      </button>
     `;
 
         inventoryEl.appendChild(div);
@@ -173,6 +271,10 @@ function renderInventory(items) {
     inventoryEl.onclick = async (e) => {
         const btn = e.target.closest(".inv-sell");
         if (!btn) return;
+        if (!uid) {
+            showToast("Сначала авторизуйся через Telegram");
+            return;
+        }
 
         const itemId = btn.dataset.id;
         const item   = items.find((it) => it.id === itemId);
@@ -196,7 +298,8 @@ function subscribeToInventory(userUid) {
     });
 }
 
-// ==================== ПОДПИСКА НА ЮЗЕРА ====================
+// ==================== Подписка на документ пользователя ====================
+
 function subscribeToUser(userUid) {
     userRef = doc(db, "users", userUid);
 
@@ -204,20 +307,26 @@ function subscribeToUser(userUid) {
         if (!snap.exists()) return;
         const data = snap.data();
 
-        balance    = data.balance     ?? 0;
-        clickPower = data.clickPower  ?? 1;
-        const totalClicks = data.totalClicks ?? 0;
+        balance     = data.balance     ?? 0;
+        clickPower  = data.clickPower  ?? 1;
+        totalClicks = data.totalClicks ?? 0;
 
-        if (balanceEl)     balanceEl.textContent     = balance;
+        if (balanceEl)     balanceEl.textContent     = formatLM(balance);
         if (clickPowerEl)  clickPowerEl.textContent  = clickPower;
         if (totalClicksEl) totalClicksEl.textContent = totalClicks;
+        if (playerLevelEl) playerLevelEl.textContent = data.level ?? 0;
 
         updateUpgradeUI();
         renderProfileFromData(data);
+
+        // показываем онлайн-точку
+        const onlineDot = document.getElementById("onlineDot");
+        if (onlineDot) onlineDot.classList.remove("hidden");
     });
 }
 
-// ==================== ГАРАНТИЯ ПОЛЕЙ В БД ====================
+// ==================== Инициализация полей в БД ====================
+
 async function ensureGameFields(userUid, telegramInfo) {
     const ref  = doc(db, "users", userUid);
     const snap = await getDoc(ref);
@@ -235,6 +344,7 @@ async function ensureGameFields(userUid, telegramInfo) {
             totalClicks: 0,
             totalEarned: 0,
             totalSpent:  0,
+            level:       0,
         });
     } else {
         const data = snap.data();
@@ -244,6 +354,7 @@ async function ensureGameFields(userUid, telegramInfo) {
         if (data.totalClicks  === undefined) patch.totalClicks  = 0;
         if (data.totalEarned  === undefined) patch.totalEarned  = 0;
         if (data.totalSpent   === undefined) patch.totalSpent   = 0;
+        if (data.level        === undefined) patch.level        = 0;
 
         if (Object.keys(patch).length > 0) {
             await updateDoc(ref, patch);
@@ -251,10 +362,15 @@ async function ensureGameFields(userUid, telegramInfo) {
     }
 }
 
-// ==================== КЛИКЕР ====================
+// ==================== Кликер ====================
+
 async function handleClick() {
-    if (!userRef) return;
-    if (clickBtn) clickBtn.disabled = true;
+    if (!uid || !userRef) {
+        showToast("Сначала авторизуйся через Telegram");
+        return;
+    }
+
+    bigClickArea && (bigClickArea.style.pointerEvents = "none");
     try {
         await updateDoc(userRef, {
             balance:     increment(clickPower),
@@ -264,16 +380,19 @@ async function handleClick() {
     } catch (e) {
         console.error("click error", e);
     } finally {
-        if (clickBtn) clickBtn.disabled = false;
+        bigClickArea && (bigClickArea.style.pointerEvents = "auto");
     }
 }
 
 async function handleUpgrade() {
-    if (!userRef) return;
+    if (!uid || !userRef) {
+        showToast("Сначала авторизуйся через Telegram");
+        return;
+    }
 
     const cost = getUpgradeCost(clickPower);
     if (balance < cost) {
-        alert("Недостаточно ЛудоМани для апгрейда 💸");
+        showToast("Недостаточно ЛудоМани для апгрейда 💸");
         return;
     }
 
@@ -292,15 +411,19 @@ async function handleUpgrade() {
     }
 }
 
-// ==================== АВТОМАТЫ ====================
+// ==================== Автоматы ====================
+
 async function playMachine(machineId) {
-    if (!userRef) return;
+    if (!uid || !userRef) {
+        showToast("Сначала авторизуйся через Telegram");
+        return;
+    }
 
     const machine = MACHINES.find((m) => m.id === machineId);
     if (!machine) return;
 
     if (balance < machine.price) {
-        alert("Не хватает ЛудоМани для этого автомата 🪙");
+        showToast("Не хватает ЛудоМани для этого автомата 🪙");
         return;
     }
 
@@ -318,7 +441,7 @@ async function playMachine(machineId) {
     const win  = roll < machine.winChance;
 
     if (!win) {
-        alert("Не повезло, игрушка выскользнула из лапы 😢");
+        showToast("Игрушка выскользнула из лапы 😢");
         return;
     }
 
@@ -342,11 +465,13 @@ async function playMachine(machineId) {
             createdAt: serverTimestamp(),
         });
 
-        alert(`Ты вытащил: ${prizeTemplate.emoji} ${prizeTemplate.name}!`);
+        showPrizeModal(prizeTemplate);
     } catch (e) {
         console.error("add prize error", e);
     }
 }
+
+// ==================== Продажа предмета ====================
 
 async function sellItem(item) {
     if (!userRef || !uid) return;
@@ -364,21 +489,14 @@ async function sellItem(item) {
     }
 }
 
-// ==================== ОБЩИЙ ПОСТ-ЛОГИН ====================
+// ==================== Общий пост-логин ====================
+
 async function afterFirebaseLogin(userUid, tgUser) {
     uid = userUid;
 
     await ensureGameFields(uid, tgUser || null);
 
-    // убираем текст статуса
-    if (statusEl) statusEl.textContent = "";
-
-    // показываем зелёный индикатор
-    const onlineDot = document.getElementById("onlineDot");
-    if (onlineDot) onlineDot.classList.remove("hidden");
-
     if (loginBtn) loginBtn.classList.add("hidden");
-    if (gameEl) gameEl.classList.remove("hidden");
 
     userRef = doc(db, "users", uid);
     subscribeToUser(uid);
@@ -386,11 +504,12 @@ async function afterFirebaseLogin(userUid, tgUser) {
     renderMachines();
 }
 
-// ==================== БРАУЗЕРНЫЙ ФЛОУ (код) ====================
+// ==================== Браузерный флоу (код) ====================
+
 async function pollBrowserAuth(code) {
     return new Promise((resolve, reject) => {
         let tries = 0;
-        const maxTries = 60; // 60 * 2с = 2 минуты
+        const maxTries = 60;
 
         const timer = setInterval(async () => {
             tries++;
@@ -437,22 +556,18 @@ async function loginInBrowserViaCode() {
 
     window.open(`https://t.me/${BOT_USERNAME}?start=${code}`, "_blank");
 
-    if (statusEl) {
-        statusEl.textContent = "Открылся Telegram, нажми Start в боте…";
-    }
+    showToast("Открылся Telegram, нажми Start в боте…");
 
     await pollBrowserAuth(code);
 
-    if (statusEl) {
-        statusEl.textContent = "Авторизация выполнена ✔️";
-    }
+    showToast("Авторизация выполнена ✔️");
 }
 
-// ==================== MINIAPP ФЛОУ ====================
+// ==================== MiniApp флоу ====================
+
 async function loginInsideMiniApp() {
     try {
         if (loginBtn) loginBtn.disabled = true;
-        if (statusEl) statusEl.textContent = "Авторизация...";
 
         const tg       = window.Telegram.WebApp;
         const initData = tg.initData;
@@ -491,7 +606,8 @@ async function loginInsideMiniApp() {
     }
 }
 
-// ==================== ОБЩАЯ КНОПКА ЛОГИНА ====================
+// ==================== Общая кнопка логина ====================
+
 async function loginWithTelegram() {
     if (authInProgress) return;
     authInProgress = true;
@@ -510,15 +626,16 @@ async function loginWithTelegram() {
     }
 }
 
-// ==================== ЛИСНЕРЫ ====================
-if (loginBtn)   loginBtn.addEventListener("click", loginWithTelegram);
-if (clickBtn)   clickBtn.addEventListener("click", handleClick);
-if (upgradeBtn) upgradeBtn.addEventListener("click", handleUpgrade);
+// ==================== Лиснеры ====================
+
+if (loginBtn)      loginBtn.addEventListener("click", loginWithTelegram);
+if (bigClickArea)  bigClickArea.addEventListener("click", handleClick);
+if (upgradeBtn)    upgradeBtn.addEventListener("click", handleUpgrade);
 
 // ==================== onAuthStateChanged ====================
+
 onAuthStateChanged(auth, async (user) => {
     if (!user) return;
-
     if (uid === user.uid && userRef) return;
 
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -531,3 +648,6 @@ if (isTelegramWebApp()) {
         console.error("auto miniapp login error", e)
     );
 }
+
+// при загрузке рендерим автоматы (для гостя тоже)
+renderMachines();
