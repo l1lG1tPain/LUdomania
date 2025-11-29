@@ -13,7 +13,13 @@ import {
     addDoc,
     deleteDoc,
 } from "firebase/firestore";
-import { MACHINES, PRIZES, randomFrom } from "./gameConfig.js";
+import {
+    MACHINES,
+    PRIZES,
+    randomFrom,
+    calculateLevelState,
+    RARITY_META,
+} from "./gameConfig.js";
 
 // ==================== DOM-элементы ====================
 
@@ -22,46 +28,47 @@ const loginBtn = document.getElementById("login");
 
 // Профильный хедер
 const profileAvatarEl = document.getElementById("profileAvatar");
-const profileNameEl   = document.getElementById("profileName");
-const profileIdEl     = document.getElementById("profileId");
+const profileNameEl = document.getElementById("profileName");
+const profileIdEl = document.getElementById("profileId");
 const headerBalanceEl = document.getElementById("headerBalance");
-const headerLevelEl   = document.getElementById("headerLevel");
+const headerLevelEl = document.getElementById("headerLevel");
 
 // Статистика FARM
-const balanceEl        = document.getElementById("balance");
-const clickPowerEl     = document.getElementById("clickPower");
-const totalClicksEl    = document.getElementById("totalClicks");
-const playerLevelEl    = document.getElementById("playerLevel");
+const balanceEl = document.getElementById("balance");
+const clickPowerEl = document.getElementById("clickPower");
+const totalClicksEl = document.getElementById("totalClicks");
+const playerLevelEl = document.getElementById("playerLevel");
 const levelProgressBar = document.getElementById("levelProgressBar");
 
 // Игровые элементы
 const bigClickArea = document.getElementById("bigClickArea");
-const upgradeBtn   = document.getElementById("upgradeBtn");
+const upgradeBtn = document.getElementById("upgradeBtn");
 const upgradeCostEl = document.getElementById("upgradeCost");
 
 // Mini-games / Inventory
-const machinesEl  = document.getElementById("machines");
+const machinesEl = document.getElementById("machines");
 const inventoryEl = document.getElementById("inventory");
 
 // Навигация
 const bottomNavItems = document.querySelectorAll(".bottom-nav .nav-item");
-const pages          = document.querySelectorAll(".page");
+const pages = document.querySelectorAll(".page");
 
 // ==================== Состояние ====================
 
-let uid            = null;
-let userRef        = null;
-let clickPower     = 1;
-let balance        = 0;
-let totalClicks    = 0;
-let currentLevel   = 0;
+let uid = null;
+let userRef = null;
+let clickPower = 1;
+let balance = 0;
+let totalClicks = 0;
+let currentLevel = 0;
 let authInProgress = false;
 
 const BOT_USERNAME = "LUdomania_app_bot";
 
 // базовый URL для бэка (локалка / прод)
 const API_BASE =
-    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
         ? "http://localhost:3000"
         : "https://ludomania.onrender.com";
 
@@ -84,26 +91,6 @@ function formatLM(num) {
         }
     }
     return String(num);
-}
-
-// расчёт уровня по общему числу кликов
-// 0 → [0,500)
-// 1 → +1000
-// 2 → +1500 ...
-function calcLevel(total) {
-    let level = 0;
-    let step = 500;
-    let remaining = total;
-
-    while (remaining >= step) {
-        remaining -= step;
-        level++;
-        step += 500; // каждый следующий дороже на 500
-    }
-
-    const progressToNext = step === 0 ? 0 : remaining / step;
-
-    return { level, progress: progressToNext };
 }
 
 // максимум силы клика для текущего уровня
@@ -135,7 +122,9 @@ function showPrizeModal(prize) {
     <div class="modal-body">
       <div style="font-size:48px;">${prize.emoji}</div>
       <div style="margin-top:8px;font-weight:600;">${prize.name}</div>
-      <div style="margin-top:4px;font-size:13px;opacity:0.7;">Стоимость: ${prize.value} LM</div>
+      <div style="margin-top:4px;font-size:13px;opacity:0.7;">Стоимость: ${
+        prize.value
+    } LM</div>
     </div>
     <button class="btn primary" id="modalPrizeOk">Дальше играть</button>
   `;
@@ -167,15 +156,11 @@ function isTelegramWebApp() {
 function renderProfileFromData(data) {
     if (!profileNameEl || !profileIdEl || !profileAvatarEl) return;
 
-    const name =
-        data.firstName ||
-        data.username ||
-        "Игрок";
-
+    const name = data.firstName || data.username || "Игрок";
     const akulkaId = data.akulkaId || "—";
 
     profileNameEl.textContent = name;
-    profileIdEl.textContent   = `AkulkaID: ${akulkaId}`;
+    profileIdEl.textContent = `AkulkaID: ${akulkaId}`;
 
     const photoUrl = data.photoUrl;
     profileAvatarEl.innerHTML = "";
@@ -188,6 +173,30 @@ function renderProfileFromData(data) {
     } else {
         profileAvatarEl.textContent = "🦈";
     }
+}
+
+// обновление всех цифр/прогресса из текущего state
+function renderStatsFromState() {
+    const levelState = calculateLevelState(totalClicks);
+    currentLevel = levelState.level;
+
+    if (balanceEl) balanceEl.textContent = formatLM(balance);
+    if (clickPowerEl) clickPowerEl.textContent = clickPower;
+    if (totalClicksEl) totalClicksEl.textContent = totalClicks;
+
+    if (playerLevelEl) playerLevelEl.textContent = levelState.level;
+    if (headerLevelEl) headerLevelEl.textContent = levelState.level;
+    if (headerBalanceEl) headerBalanceEl.textContent = formatLM(balance);
+
+    if (levelProgressBar) {
+        levelProgressBar.style.width = `${Math.round(
+            (levelState.progress || 0) * 100
+        )}%`;
+    }
+
+    updateUpgradeUI();
+    // автоматы завязаны на уровне → перерендер
+    renderMachines();
 }
 
 // ==================== Навигация между страницами ====================
@@ -221,7 +230,7 @@ function getUpgradeCost(power) {
 function updateUpgradeUI() {
     const cost = getUpgradeCost(clickPower);
     if (upgradeCostEl) upgradeCostEl.textContent = cost;
-    if (upgradeBtn)    upgradeBtn.disabled = balance < cost || !uid;
+    if (upgradeBtn) upgradeBtn.disabled = balance < cost || !uid;
 }
 
 // ==================== Рендер автоматов ====================
@@ -235,13 +244,22 @@ function renderMachines() {
         const div = document.createElement("div");
         div.className = "machine-card";
 
+        const locked = currentLevel < (m.minLevel ?? 0);
+
         div.innerHTML = `
       <div class="machine-name">${m.name}</div>
       <div class="machine-meta">${m.price} LM / попытка</div>
       <div class="machine-meta">Шанс: ${(m.winChance * 100).toFixed(0)}%</div>
+      ${
+            m.minLevel != null
+                ? `<div class="machine-meta">Доступно с уровня ${m.minLevel}</div>`
+                : ""
+        }
       <div class="machine-meta">${m.description}</div>
-      <button class="btn secondary machine-play" data-id="${m.id}">
-        Крутить
+      <button class="btn secondary machine-play" data-id="${m.id}" ${
+            locked ? "disabled" : ""
+        }>
+        ${locked ? "Недоступно" : "Крутить"}
       </button>
     `;
 
@@ -250,7 +268,7 @@ function renderMachines() {
 
     machinesEl.onclick = (e) => {
         const btn = e.target.closest(".machine-play");
-        if (!btn) return;
+        if (!btn || btn.disabled) return;
         const id = btn.dataset.id;
         playMachine(id);
     };
@@ -268,22 +286,23 @@ function renderInventory(items) {
         return;
     }
 
-    const rarityLabels = {
-        common: "Обычный",
-        rare: "Редкий",
-        epic: "Эпический",
-        legendary: "Легендарный",
-    };
-
     items.forEach((item) => {
         const div = document.createElement("div");
         div.className = "inv-card";
+
+        const rarityMeta = RARITY_META[item.rarity] || null;
+        if (rarityMeta) {
+            div.style.border = `1px solid ${rarityMeta.color}`;
+        }
+
+        const rarityLabel =
+            rarityMeta?.label ?? item.rarity ?? "Неизвестная редкость";
 
         div.innerHTML = `
       <div class="inv-emoji">${item.emoji}</div>
       <div class="inv-name">${item.name}</div>
       <div class="inv-progress">
-        ${rarityLabels[item.rarity] ?? item.rarity} • ${item.value} LM
+        ${rarityLabel} • ${item.value} LM
       </div>
       <button class="btn secondary inv-sell" data-id="${item.id}">
         Продать
@@ -302,7 +321,7 @@ function renderInventory(items) {
         }
 
         const itemId = btn.dataset.id;
-        const item   = items.find((it) => it.id === itemId);
+        const item = items.find((it) => it.id === itemId);
         if (!item) return;
 
         const confirmSell = confirm(
@@ -332,25 +351,11 @@ function subscribeToUser(userUid) {
         if (!snap.exists()) return;
         const data = snap.data();
 
-        balance     = data.balance     ?? 0;
-        clickPower  = data.clickPower  ?? 1;
+        balance = data.balance ?? 0;
+        clickPower = data.clickPower ?? 1;
         totalClicks = data.totalClicks ?? 0;
 
-        const { level, progress } = calcLevel(totalClicks);
-        currentLevel = level;
-
-        if (balanceEl)     balanceEl.textContent     = formatLM(balance);
-        if (clickPowerEl)  clickPowerEl.textContent  = clickPower;
-        if (totalClicksEl) totalClicksEl.textContent = totalClicks;
-
-        if (playerLevelEl) playerLevelEl.textContent = level;
-        if (headerLevelEl) headerLevelEl.textContent = level;
-        if (headerBalanceEl) headerBalanceEl.textContent = formatLM(balance);
-        if (levelProgressBar) {
-            levelProgressBar.style.width = `${Math.round(progress * 100)}%`;
-        }
-
-        updateUpgradeUI();
+        renderStatsFromState();
         renderProfileFromData(data);
 
         const onlineDot = document.getElementById("onlineDot");
@@ -361,33 +366,33 @@ function subscribeToUser(userUid) {
 // ==================== Инициализация полей в БД ====================
 
 async function ensureGameFields(userUid, telegramInfo) {
-    const ref  = doc(db, "users", userUid);
+    const ref = doc(db, "users", userUid);
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
         await setDoc(ref, {
             telegram_id: telegramInfo?.id ?? null,
-            username:    telegramInfo?.username ?? null,
-            firstName:   telegramInfo?.first_name ?? "",
-            photoUrl:    telegramInfo?.photo_url ?? null,
-            createdAt:   serverTimestamp(),
-            lastLogin:   serverTimestamp(),
-            balance:     0,
-            clickPower:  1,
+            username: telegramInfo?.username ?? null,
+            firstName: telegramInfo?.first_name ?? "",
+            photoUrl: telegramInfo?.photo_url ?? null,
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp(),
+            balance: 0,
+            clickPower: 1,
             totalClicks: 0,
             totalEarned: 0,
-            totalSpent:  0,
-            level:       0,
+            totalSpent: 0,
+            level: 0,
         });
     } else {
         const data = snap.data();
         const patch = {};
-        if (data.balance      === undefined) patch.balance      = 0;
-        if (data.clickPower   === undefined) patch.clickPower   = 1;
-        if (data.totalClicks  === undefined) patch.totalClicks  = 0;
-        if (data.totalEarned  === undefined) patch.totalEarned  = 0;
-        if (data.totalSpent   === undefined) patch.totalSpent   = 0;
-        if (data.level        === undefined) patch.level        = 0;
+        if (data.balance === undefined) patch.balance = 0;
+        if (data.clickPower === undefined) patch.clickPower = 1;
+        if (data.totalClicks === undefined) patch.totalClicks = 0;
+        if (data.totalEarned === undefined) patch.totalEarned = 0;
+        if (data.totalSpent === undefined) patch.totalSpent = 0;
+        if (data.level === undefined) patch.level = 0;
 
         if (Object.keys(patch).length > 0) {
             await updateDoc(ref, patch);
@@ -403,19 +408,26 @@ async function handleClick() {
         return;
     }
 
-    if (bigClickArea) bigClickArea.style.pointerEvents = "none";
+    // ⚡ моментальный отклик на клиенте
+    balance += clickPower;
+    totalClicks += 1;
+    renderStatsFromState(); // локально обновляем цифры/прогресс
 
-    try {
-        await updateDoc(userRef, {
-            balance:     increment(clickPower),
-            totalClicks: increment(1),
-            totalEarned: increment(clickPower),
-        });
-    } catch (e) {
-        console.error("click error", e);
-    } finally {
-        if (bigClickArea) bigClickArea.style.pointerEvents = "auto";
+    // быстрый визуальный "пульс"
+    if (bigClickArea) {
+        bigClickArea.classList.add("pulsing");
+        setTimeout(() => bigClickArea.classList.remove("pulsing"), 80);
     }
+
+    // асинхронно шлём инкременты в Firestore, не блокируя клики
+    updateDoc(userRef, {
+        balance: increment(clickPower),
+        totalClicks: increment(1),
+        totalEarned: increment(clickPower),
+    }).catch((e) => {
+        console.error("click error", e);
+        showToast("Ошибка сохранения клика");
+    });
 }
 
 // апгрейд с лимитом по уровню
@@ -427,7 +439,9 @@ async function handleUpgrade() {
 
     const maxPower = getMaxClickPower(currentLevel);
     if (clickPower >= maxPower) {
-        showToast(`Лимит силы клика на уровне ${currentLevel}. Накликай до следующего уровня!`);
+        showToast(
+            `Лимит силы клика на уровне ${currentLevel}. Накликай до следующего уровня!`
+        );
         return;
     }
 
@@ -441,7 +455,7 @@ async function handleUpgrade() {
 
     try {
         await updateDoc(userRef, {
-            balance:    increment(-cost),
+            balance: increment(-cost),
             clickPower: increment(1),
             totalSpent: increment(cost),
         });
@@ -463,6 +477,11 @@ async function playMachine(machineId) {
     const machine = MACHINES.find((m) => m.id === machineId);
     if (!machine) return;
 
+    if (currentLevel < (machine.minLevel ?? 0)) {
+        showToast(`Автомат доступен с уровня ${machine.minLevel}`);
+        return;
+    }
+
     if (balance < machine.price) {
         showToast("Не хватает ЛудоМани для этого автомата 🪙");
         return;
@@ -470,7 +489,7 @@ async function playMachine(machineId) {
 
     try {
         await updateDoc(userRef, {
-            balance:    increment(-machine.price),
+            balance: increment(-machine.price),
             totalSpent: increment(machine.price),
         });
     } catch (e) {
@@ -479,14 +498,14 @@ async function playMachine(machineId) {
     }
 
     const roll = Math.random();
-    const win  = roll < machine.winChance;
+    const win = roll < machine.winChance;
 
     if (!win) {
         showToast("Игрушка выскользнула из лапы 😢");
         return;
     }
 
-    const prizeId       = randomFrom(machine.prizePool);
+    const prizeId = randomFrom(machine.prizePool);
     const prizeTemplate = PRIZES[prizeId];
 
     if (!prizeTemplate) {
@@ -498,11 +517,11 @@ async function playMachine(machineId) {
 
     try {
         await addDoc(invCol, {
-            prizeId:   prizeTemplate.id,
-            name:      prizeTemplate.name,
-            emoji:     prizeTemplate.emoji,
-            rarity:    prizeTemplate.rarity,
-            value:     prizeTemplate.value,
+            prizeId: prizeTemplate.id,
+            name: prizeTemplate.name,
+            emoji: prizeTemplate.emoji,
+            rarity: prizeTemplate.rarity,
+            value: prizeTemplate.value,
             createdAt: serverTimestamp(),
         });
 
@@ -522,7 +541,7 @@ async function sellItem(item) {
     try {
         await deleteDoc(invDocRef);
         await updateDoc(userRef, {
-            balance:     increment(item.value),
+            balance: increment(item.value),
             totalEarned: increment(item.value),
         });
     } catch (e) {
@@ -610,9 +629,9 @@ async function loginInsideMiniApp() {
     try {
         if (loginBtn) loginBtn.disabled = true;
 
-        const tg       = window.Telegram.WebApp;
+        const tg = window.Telegram.WebApp;
         const initData = tg.initData;
-        const unsafe   = tg.initDataUnsafe;
+        const unsafe = tg.initDataUnsafe;
 
         if (!initData) {
             alert("Telegram не передал initData");
@@ -669,9 +688,9 @@ async function loginWithTelegram() {
 
 // ==================== Лиснеры ====================
 
-if (loginBtn)      loginBtn.addEventListener("click", loginWithTelegram);
-if (bigClickArea)  bigClickArea.addEventListener("click", handleClick);
-if (upgradeBtn)    upgradeBtn.addEventListener("click", handleUpgrade);
+if (loginBtn) loginBtn.addEventListener("click", loginWithTelegram);
+if (bigClickArea) bigClickArea.addEventListener("click", handleClick);
+if (upgradeBtn) upgradeBtn.addEventListener("click", handleUpgrade);
 
 // ==================== onAuthStateChanged ====================
 
