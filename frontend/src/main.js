@@ -11,8 +11,9 @@ import {
     serverTimestamp,
     collection,
     deleteDoc,
-    addDoc, // пусть лежит, вдруг пригодится далее
+    runTransaction,
 } from "firebase/firestore";
+
 import {
     MACHINES,
     PRIZES,
@@ -762,6 +763,84 @@ function renderMachines() {
     };
 }
 
+// ==================== Призы с глобальным лимитом ====================
+
+async function grantPrizeWithGlobalLimit(machine) {
+    if (!uid) return { outcome: "error" };
+
+    // ⚠️ защита от пустого пула
+    const pool = Array.isArray(machine.prizePool) ? machine.prizePool.slice() : [];
+    if (!pool.length) return { outcome: "no-prize" };
+
+    // транзакция: резервируем приз + пишем в инвентарь
+    return await runTransaction(db, async (tx) => {
+        const tried = new Set();
+        let chosenPrize = null;
+
+        while (tried.size < pool.length && !chosenPrize) {
+            const candidateId = pickRandomPrize(machine); // наш рандом по редкости
+            if (!candidateId || tried.has(candidateId)) continue;
+            tried.add(candidateId);
+
+            const cfg = PRIZES[candidateId];
+            if (!cfg) continue;
+
+            const maxGlobal = cfg.maxCopiesGlobal ?? Infinity;
+
+            // приз "безлимитный" — сразу выдаём
+            if (!isFinite(maxGlobal)) {
+                chosenPrize = cfg;
+                break;
+            }
+
+            const counterRef  = doc(db, "prize_counters", candidateId);
+            const counterSnap = await tx.get(counterRef);
+            const current     = counterSnap.exists()
+                ? (counterSnap.data().count ?? 0)
+                : 0;
+
+            // если закончился — пробуем другой
+            if (current >= maxGlobal) {
+                continue;
+            }
+
+            // резервируем 1 шт. глобально
+            tx.set(
+                counterRef,
+                { count: current + 1 },
+                { merge: true }
+            );
+
+            chosenPrize = cfg;
+            break;
+        }
+
+        if (!chosenPrize) {
+            // все призы из пула закончились
+            return { outcome: "no-prize" };
+        }
+
+        // пишем предмет в инвентарь игрока
+        const invDocRef = doc(collection(db, "users", uid, "inventory"));
+        tx.set(invDocRef, {
+            prizeId:   chosenPrize.id,
+            name:      chosenPrize.name,
+            emoji:     chosenPrize.emoji,
+            rarity:    chosenPrize.rarity,
+            value:     chosenPrize.value,
+            createdAt: serverTimestamp(),
+            count:     1, // базовый стэк
+        });
+
+        return {
+            outcome: "win",
+            prize: chosenPrize,
+        };
+    });
+}
+
+
+// Чистая логика спина автомата
 // Чистая логика спина автомата
 async function spinMachine(machineId) {
     if (!uid || !userRef) {
@@ -827,52 +906,31 @@ async function spinMachine(machineId) {
         return { outcome: "lose" };
     }
 
-    // 🎁 выбираем приз с учётом редкости
-    const prizeId = pickRandomPrize(machine);
-    if (!prizeId) {
-        console.error("No prize available for machine", machineId);
-        return { outcome: "error" };
-    }
-
-    const prizeTemplate = PRIZES[prizeId];
-    if (!prizeTemplate) {
-        console.error("Unknown prizeId", prizeId);
-        return { outcome: "error" };
-    }
-
-    // 📦 пишем в инвентарь: СТАК по prizeId
+    // 🎁 выдача приза с учётом глобального лимита
     try {
-        const stackRef = doc(db, "users", uid, "inventory", prizeTemplate.id);
-        const stackSnap = await getDoc(stackRef);
+        const result = await grantPrizeWithGlobalLimit(machine);
+        // result: { outcome: 'win' | 'no-prize' | 'error', prize? }
 
-        if (stackSnap.exists()) {
-            // уже есть такой приз → увеличиваем count
-            await updateDoc(stackRef, {
-                count:     increment(1),
-                lastDropAt: serverTimestamp(),
-            });
-        } else {
-            // создаём новый стак
-            await setDoc(stackRef, {
-                prizeId:        prizeTemplate.id,
-                name:           prizeTemplate.name,
-                emoji:          prizeTemplate.emoji,
-                rarity:         prizeTemplate.rarity,
-                value:          prizeTemplate.value,
-                maxCopiesGlobal: prizeTemplate.maxCopiesGlobal ?? null,
-                count:          1,
-                createdAt:      serverTimestamp(),
-                lastDropAt:     serverTimestamp(),
-            });
+        if (result.outcome === "win" && result.prize) {
+            return { outcome: "win", prize: result.prize };
         }
-    } catch (e) {
-        console.error("add prize error", e);
-    }
 
-    return { outcome: "win", prize: prizeTemplate };
+        if (result.outcome === "no-prize") {
+            // можно показать отдельный тост
+            showToast("Все призы этого автомата уже разобрали 😢");
+            return { outcome: "no-prize" };
+        }
+
+        return { outcome: "error" };
+    } catch (e) {
+        console.error("grantPrizeWithGlobalLimit error", e);
+        return { outcome: "error" };
+    }
 }
 
-function fillMachinePrizeStrip(machineId) {
+
+// список призов и их шансов + глобальный остаток
+async function fillMachinePrizeStrip(machineId) {
     if (!machinePrizeStripEl) return;
     machinePrizeStripEl.innerHTML = "";
 
@@ -881,7 +939,21 @@ function fillMachinePrizeStrip(machineId) {
 
     const chanceMap = getPrizeChancesForMachine(machine); // { prizeId: 0..1 }
 
-    machine.prizePool.forEach((id) => {
+    // берём только валидные призы
+    const prizeIds = (machine.prizePool || []).filter((id) => PRIZES[id]);
+
+    // читаем глобальные счётчики для всех призов параллельно
+    const snaps = await Promise.all(
+        prizeIds.map((id) => getDoc(doc(db, "prize_counters", id)))
+    );
+
+    const globalUsedMap = {};
+    snaps.forEach((snap, idx) => {
+        const id = prizeIds[idx];
+        globalUsedMap[id] = snap.exists() ? (snap.data().count ?? 0) : 0;
+    });
+
+    prizeIds.forEach((id) => {
         const p = PRIZES[id];
         if (!p) return;
 
@@ -892,13 +964,24 @@ function fillMachinePrizeStrip(machineId) {
         };
 
         const chance = chanceMap[id] || 0;
+        const pct    = chance * 100;
         let chanceStr;
-        const pct = chance * 100;
 
-        if (pct <= 0)        chanceStr = "—";
-        else if (pct < 1)    chanceStr = "< 1%";
-        else if (pct < 10)   chanceStr = `${pct.toFixed(1)}%`;
-        else                 chanceStr = `${pct.toFixed(0)}%`;
+        if (pct <= 0)      chanceStr = "—";
+        else if (pct < 1)  chanceStr = "< 1%";
+        else if (pct < 10) chanceStr = `${pct.toFixed(1)}%`;
+        else               chanceStr = `${pct.toFixed(0)}%`;
+
+        const used      = globalUsedMap[id] || 0;
+        const maxGlobal = p.maxCopiesGlobal ?? 0;
+
+        let globalStr;
+        if (maxGlobal && Number.isFinite(maxGlobal)) {
+            const remaining = Math.max(0, maxGlobal - used);
+            globalStr = `Глобально осталось: ${remaining} / ${maxGlobal}`;
+        } else {
+            globalStr = "Безлимитный приз";
+        }
 
         const pill = document.createElement("div");
         pill.className = "machine-prize-pill";
@@ -909,6 +992,9 @@ function fillMachinePrizeStrip(machineId) {
               <div class="pill-meta" style="color:${rarityMeta.color}">
                 ${rarityMeta.label} • ${chanceStr}
               </div>
+              <div class="pill-meta-secondary">
+                ${globalStr}
+              </div>
             </div>
             <span class="pill-value">${p.value} LM</span>
         `;
@@ -916,6 +1002,7 @@ function fillMachinePrizeStrip(machineId) {
         machinePrizeStripEl.appendChild(pill);
     });
 }
+
 
 function openMachineOverlay(machineId) {
     const machine = MACHINES.find((m) => m.id === machineId);
@@ -945,6 +1032,20 @@ function closeMachineOverlay() {
     machineOverlayEl.classList.add("hidden");
     currentMachineId = null;
 }
+
+const LOSE_MESSAGES = [
+    "Коготь почесал витрину и ушёл ни с чем.",
+    "Игрушка подмигнула и снова спряталась 😏",
+    "Почти зацепил… но это был байт от автомата.",
+    "Автомат посчитал, что ты ещё не достаточно лудоман 🤡",
+    "Коробка уже ехала к выходу… и передумала.",
+    "Коготь скользнул, как твой контроль бюджета.",
+    "Игрушки шепчут: «Ещё одну монетку…»",
+    "Этот ход был тренировочным, следующий — рабочий.",
+    "Автомат сделал вид, что лаганул. Но нет.",
+    "ЛудоМани минус, опыта плюс — тоже выгода, да?"
+];
+
 
 async function handleMachinePlayClick() {
     if (!currentMachineId || !machineOverlayEl || machineSpinRunning) return;
@@ -983,11 +1084,18 @@ async function handleMachinePlayClick() {
             machineResultEl.classList.remove("hidden");
         } else if (result.outcome === "lose") {
             machineResultEmojiEl.textContent = "😢";
-            machineResultTextEl.textContent  =
-                "Коготь пустой — коробка выскользнула.";
+            const msg =
+                LOSE_MESSAGES[Math.floor(Math.random() * LOSE_MESSAGES.length)];
+            machineResultTextEl.textContent = msg;
             machineResultEl.classList.remove("hidden");
-        }
-    } finally {
+        } else if (result.outcome === "no-prize") {
+        machineResultEmojiEl.textContent = "🧩";
+        machineResultTextEl.textContent  =
+            "Все топовые призы из этого автомата уже разобрали.";
+        machineResultEl.classList.remove("hidden");
+    }
+
+} finally {
         machineSpinRunning = false;
     }
 }
