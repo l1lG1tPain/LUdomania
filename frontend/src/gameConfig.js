@@ -5,33 +5,47 @@
 // ==========================================
 
 /**
- * Клики, нужные для перехода с уровня N на N+1.
- * 0→1: 500, 1→2: 1000, 2→3: 1500, ...
+ * Сколько кликов нужно для перехода на следующий уровень
+ * Формула: 800 × 1.35^level → красиво, плавно и долгоиграюще
  */
 export function getRequiredClicksForLevel(level) {
-    return 500 * (level + 1);
+    // Math.round + небольшой фикс, чтобы числа были всегда красивыми и предсказуемыми
+    return Math.round(800 * Math.pow(1.35, level) * 800);
 }
 
 /**
- * Считает уровень по общему количеству кликов.
- * Возвращает { level, current, required, progress }.
+ * Рассчитывает текущий уровень и прогресс по общему количеству кликов
+ * Возвращает: { level, current, required, progress }
  */
 export function calculateLevelState(totalClicks = 0) {
-    let level = 0;
-    let remaining = totalClicks;
+    if (totalClicks < 0) totalClicks = 0;
 
+    let level = 0;
+    let accumulatedClicks = 0;
+
+    // Цикл идёт пока не упрёмся в текущий уровень
     while (true) {
-        const need = getRequiredClicksForLevel(level);
-        if (remaining < need) break;
-        remaining -= need;
+        const requiredForNext = getRequiredClicksForLevel(level);
+
+        if (accumulatedClicks + requiredForNext > totalClicks) {
+            break;
+        }
+
+        accumulatedClicks += requiredForNext;
         level++;
     }
 
     const required = getRequiredClicksForLevel(level);
-    const current  = remaining;
-    const progress = required > 0 ? current / required : 0;
+    const current = totalClicks - accumulatedClicks;
+    const progress = required > 0 ? current / required : 1;
 
-    return { level, current, required, progress };
+    return {
+        level,                              // текущий уровень (начинается с 0)
+        current,                            // сколько уже набрано на следующий
+        required,                           // сколько всего нужно на следующий
+        progress: Number(progress.toFixed(4)), // 0.0000 – 1.0000
+        totalClicksRequiredSoFar: accumulatedClicks, // бонус: сколько всего было потрачено до этого уровня
+    };
 }
 
 // ==========================================
@@ -560,50 +574,174 @@ export const MACHINES = [
 // ==========================================
 
 export const COLLECTIONS = {
+    // Старые, но усиленные
     duck_collection: {
         id: "duck_collection",
         name: "Утиное братство",
-        requiredPrizeIds: ["plush_duck", "rubber_duck", "golden_duck"],
+        emoji: "Duck",
+        description: "Собери всех уток — стань королём пруда!",
+        requiredPrizeIds: [
+            "plush_duck",
+            "rubber_duck",
+            "wooden_duck",
+            "silver_duck",
+            "golden_duck",
+            "diamond_duck"
+        ],
         bonus: {
             type: "clickMultiplier",
-            value: 1.1, // +10% к клику
+            value: 1.3, // +30% к кликам (было +10%)
         },
     },
+
     neon_arcade: {
         id: "neon_arcade",
         name: "Неоновая аркада",
-        requiredPrizeIds: ["neon_cat", "gold_cube", "arcade_token"],
+        emoji: "Arcade",
+        description: "Зажги неоновые огни старой школы",
+        requiredPrizeIds: [
+            "arcade_token",
+            "pixel_coin",
+            "neon_cat",
+            "neon_dog",
+            "gold_cube",
+            "platinum_cube"
+        ],
         bonus: {
             type: "machineWinBonus",
             machineId: "street_claw",
-            value: 0.05, // +5% к winChance
+            value: 0.12, // +12% к шансу выигрыша (было 5%)
         },
     },
+
     akula_collection: {
         id: "akula_collection",
-        name: "Акулячий сет",
-        requiredPrizeIds: ["pixel_shark", "ludo_core"],
+        name: "Акулий синдикат",
+        emoji: "Shark",
+        description: "Ты либо акула, либо корм",
+        requiredPrizeIds: ["shark_fin", "pixel_shark", "mega_shark", "ludo_core", "abyss_pearl"],
         bonus: {
             type: "clickMultiplier",
-            value: 1.2, // +20% к клику
+            value: 1.5, // +50% к кликам — самая мощная кликовая коллекция
         },
     },
+
     hookah_collection: {
         id: "hookah_collection",
-        name: "Кальянный клуб",
-        requiredPrizeIds: ["hookah_flask", "coal_box"],
+        name: "Кальянный клуб «Дым»",
+        emoji: "Hookah",
+        description: "Расслабься и дыши глубже",
+        requiredPrizeIds: [
+            "coal_box",
+            "hookah_hose",
+            "hookah_flask",
+            "smoke_ring",
+            "premium_tobacco"
+        ],
         bonus: {
             type: "sellBonus",
-            value: 0.15, // +15% к цене продажи
+            value: 0.25, // +25% к цене продажи всех призов
         },
     },
+
     retro_collection: {
         id: "retro_collection",
-        name: "Ретро-легенды",
-        requiredPrizeIds: ["retro_console", "golden_ticket"],
+        name: "Ретро-легенды 8-bit",
+        emoji: "Retro Controller",
+        description: "Время, когда игры были сложными, а мы — молодыми",
+        requiredPrizeIds: [
+            "pixel_controller",
+            "retro_joystick",
+            "retro_console",
+            "vintage_cartridge",
+            "golden_ticket",
+            "legendary_game"
+        ],
         bonus: {
             type: "upgradeDiscount",
-            value: 0.15, // -15% к стоимости апгрейдов
+            value: 0.25, // −25% ко всем апгрейдам
+        },
+    },
+
+    // Новые коллекции
+    space_collection: {
+        id: "space_collection",
+        name: "Космическая одиссея",
+        emoji: "Rocket",
+        description: "До бесконечности и дальше!",
+        requiredPrizeIds: ["space_rocket", "alien_head", "black_hole", "star_crystal"],
+        bonus: {
+            type: "machineWinBonus",
+            machineId: "space_slot",
+            value: 0.15, // +15% шанса в космическом автомате
+        },
+    },
+
+    candy_collection: {
+        id: "candy_collection",
+        name: "Сладкое королевство",
+        emoji: "Candy",
+        description: "Собери все конфеты и никогда не грусти",
+        requiredPrizeIds: ["candy_bar", "lollipop", "gummy_bear", "golden_candy"],
+        bonus: {
+            type: "dailyRewardMultiplier",
+            value: 1.4, // +40% к ежедневным наградам
+        },
+    },
+
+    // Премиум-комбо коллекции (очень сложные, но мощные)
+    platinum_vault: {
+        id: "platinum_vault",
+        name: "Платиновый тайник",
+        emoji: "Vault",
+        description: "Только для тех, кто собрал почти всё",
+        requiredPrizeIds: [
+            "platinum_cube",
+            "diamond_duck",
+            "abyss_pearl",
+            "star_crystal",
+            "legendary_game"
+        ],
+        bonus: {
+            type: "globalMultiplier",
+            value: 1.2, // +20% ко ВСЕМ доходам и кликам навсегда
+        },
+    },
+
+    ultimate_jackpot: {
+        id: "ultimate_jackpot",
+        name: "Абсолютный джекпот",
+        emoji: "Jackpot",
+        description: "Легенда среди легенд. Только 100 человек в мире соберут",
+        requiredPrizeIds: [
+            "ludo_core",
+            "golden_ticket",
+            "legendary_game",
+            "abyss_pearl",
+            "star_crystal",
+            "platinum_cube"
+        ],
+        bonus: {
+            type: "machineWinBonus",
+            machineId: "akula_jackpot",
+            value: 0.25, // +25% к шансу в самом дорогом автомате
+        },
+    },
+
+    golden_era: {
+        id: "golden_era",
+        name: "Золотая эра",
+        emoji: "Crown",
+        description: "Все золотые призы в одном месте",
+        requiredPrizeIds: [
+            "golden_duck",
+            "gold_cube",
+            "golden_ticket",
+            "golden_candy"
+        ],
+        bonus: {
+            type: "passiveIncome",
+            value: 5000, // +5000 монет в минуту пассивно
         },
     },
 };

@@ -72,7 +72,6 @@ let   userMachineStats   = {}; // { [machineId]: { spins } }
 
 const BOT_USERNAME = "LUdomania_app_bot";
 
-// базовый URL для бэка (локалка / прод)
 const API_BASE =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
@@ -81,7 +80,6 @@ const API_BASE =
 
 // ==================== Утилиты ====================
 
-// формат LM: 10000 → 10k, 1_200_000 → 1.2m
 function formatLM(num) {
     if (num < 10000) return String(num);
     const units = [
@@ -100,19 +98,17 @@ function formatLM(num) {
     return String(num);
 }
 
-// максимум силы клика для текущего уровня
-// 3 апгрейда на уровень → maxPower = 1 + (level+1)*3
 function getMaxClickPower(level) {
     return 1 + (level + 1) * 3;
 }
 
+// 🔔 тостер (широкий, сверху)
 function showToast(message) {
     const toast = document.createElement("div");
     toast.className = "toast";
     toast.textContent = message;
     document.body.appendChild(toast);
-
-    setTimeout(() => toast.remove(), 2100);
+    setTimeout(() => toast.remove(), 2600);
 }
 
 function isTelegramWebApp() {
@@ -138,7 +134,8 @@ function spawnClickBubble(x, y, gain) {
     });
 }
 
-// аккуратно рендерим профиль
+// ==================== Профиль ====================
+
 function renderProfileFromData(data) {
     if (!profileNameEl || !profileIdEl || !profileAvatarEl) return;
 
@@ -161,7 +158,7 @@ function renderProfileFromData(data) {
     }
 }
 
-// ==================== Навигация между страницами ====================
+// ==================== Навигация ====================
 
 function setActivePage(targetId) {
     pages.forEach((p) => {
@@ -195,10 +192,9 @@ function updateUpgradeUI() {
     if (upgradeBtn)    upgradeBtn.disabled = balance < cost || !uid;
 }
 
-// полный пересчёт статы
+// ⚙️ только отрисовка статы, без смены currentLevel
 function renderStatsFromState(levelStateOverride) {
     const ls = levelStateOverride || calculateLevelState(totalClicks);
-    currentLevel = ls.level;
 
     if (balanceEl)        balanceEl.textContent        = formatLM(balance);
     if (clickPowerEl)     clickPowerEl.textContent     = clickPower;
@@ -227,7 +223,6 @@ function onLevelChange(oldLevel, newLevel, levelState) {
 
     currentLevel = newLevel;
 
-    // какие автоматы только что стали доступны
     const newlyUnlocked = MACHINES.filter((m) => {
         const min = m.minLevel ?? 0;
         return min > oldLevel && min <= newLevel;
@@ -308,7 +303,7 @@ function recomputeCollectionsAndBonuses(items) {
             const value = bonus.value ?? 1;
             newClickMultiplier *= value;
         }
-        // остальные типы бонусов (machineWinBonus / sellBonus / upgradeDiscount) оставляем на будущее
+        // остальные типы бонусов пока не трогаем
     });
 
     clickMultiplier = newClickMultiplier;
@@ -328,7 +323,6 @@ function renderInventory(items) {
         return;
     }
 
-    // пересчитать коллекции + множитель
     recomputeCollectionsAndBonuses(items);
     renderStatsFromState();
 
@@ -411,7 +405,7 @@ function subscribeToInventory(userUid) {
     });
 }
 
-// ==================== Подписка на документ пользователя ====================
+// ==================== Подписка на пользователя ====================
 
 function subscribeToUser(userUid) {
     userRef = doc(db, "users", userUid);
@@ -424,11 +418,19 @@ function subscribeToUser(userUid) {
         clickPower  = data.clickPower  ?? 1;
         totalClicks = data.totalClicks ?? 0;
 
-        const levelState = calculateLevelState(totalClicks);
+        const storedLevel = data.level ?? 0;
+        const levelState  = calculateLevelState(totalClicks);
 
-        if (levelState.level !== currentLevel) {
-            const oldLevel = currentLevel;
-            onLevelChange(oldLevel, levelState.level, levelState);
+        // Левелап только когда реальный уровень > сохранённого
+        if (levelState.level > storedLevel) {
+            onLevelChange(storedLevel, levelState.level, levelState);
+            // один раз записываем новый уровень
+            updateDoc(userRef, { level: levelState.level }).catch((e) =>
+                console.error("update level error", e)
+            );
+            currentLevel = levelState.level;
+        } else {
+            currentLevel = storedLevel;
         }
 
         renderStatsFromState(levelState);
@@ -496,7 +498,6 @@ async function handleClick() {
         setTimeout(() => bigClickArea.classList.remove("pulsing"), 80);
     }
 
-    // асинхронно в Firestore
     updateDoc(userRef, {
         balance:     increment(gain),
         totalClicks: increment(1),
@@ -574,8 +575,8 @@ function renderMachines() {
             locked
                 ? `<div class="machine-meta" style="color:#ffb74d;">Доступно с уровня ${m.minLevel}</div>`
                 : `<button class="btn secondary machine-play" data-id="${m.id}">
-               Крутить
-             </button>`
+                   Крутить
+                 </button>`
         }
     `;
 
@@ -614,7 +615,6 @@ async function playMachine(machineId) {
         return;
     }
 
-    // глобальная статистика автомата + статистика юзера
     const globalStatsRef = doc(db, "machine_stats", machineId);
     const userStatsRef   = doc(db, "users", uid, "machineStats", machineId);
 
@@ -651,34 +651,32 @@ async function playMachine(machineId) {
         return;
     }
 
-    // один документ на тип приза, с полем count
     const invDocRef = doc(db, "users", uid, "inventory", prizeTemplate.id);
 
     try {
         await setDoc(
             invDocRef,
             {
-                prizeId:        prizeTemplate.id,
-                name:           prizeTemplate.name,
-                emoji:          prizeTemplate.emoji,
-                rarity:         prizeTemplate.rarity,
-                value:          prizeTemplate.value,
-                collectionId:   prizeTemplate.collectionId || null,
+                prizeId:         prizeTemplate.id,
+                name:            prizeTemplate.name,
+                emoji:           prizeTemplate.emoji,
+                rarity:          prizeTemplate.rarity,
+                value:           prizeTemplate.value,
+                collectionId:    prizeTemplate.collectionId || null,
                 maxCopiesGlobal: prizeTemplate.maxCopiesGlobal || null,
-                count:          increment(1),
-                createdAt:      serverTimestamp(),
+                count:           increment(1),
+                createdAt:       serverTimestamp(),
             },
             { merge: true }
         );
 
-        // вместо модалки — тостер
         showToast(`Выбил ${prizeTemplate.emoji} ${prizeTemplate.name}!`);
     } catch (e) {
         console.error("add prize error", e);
     }
 }
 
-// ==================== Продажа предмета (−1 из стека) ====================
+// ==================== Продажа предмета ====================
 
 async function sellItem(item) {
     if (!userRef || !uid) return;
@@ -724,7 +722,7 @@ async function afterFirebaseLogin(userUid, tgUser) {
     renderMachines();
 }
 
-// ==================== Браузерный флоу (код) ====================
+// ==================== Браузерный флоу ====================
 
 async function pollBrowserAuth(code) {
     return new Promise((resolve, reject) => {
@@ -851,7 +849,7 @@ async function loginWithTelegram() {
 if (loginBtn)   loginBtn.addEventListener("click", loginWithTelegram);
 if (upgradeBtn) upgradeBtn.addEventListener("click", handleUpgrade);
 
-// ⭐ клики с мультитачем и +N
+// клики с мультитачем и +N
 if (bigClickArea) {
     bigClickArea.addEventListener("click", (e) => {
         const gain = clickPower * clickMultiplier;
@@ -887,15 +885,12 @@ onAuthStateChanged(auth, async (user) => {
 
 // ==================== Стартовые подписки ====================
 
-// глобальная статистика автоматов — для гостя тоже
 subscribeGlobalMachineStats();
 
-// автологин только внутри миниаппа
 if (isTelegramWebApp()) {
     loginInsideMiniApp().catch((e) =>
         console.error("auto miniapp login error", e)
     );
 }
 
-// при загрузке рендерим автоматы (для гостя тоже)
 renderMachines();
