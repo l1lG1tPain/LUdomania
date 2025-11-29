@@ -22,6 +22,12 @@ import {
     calculateLevelState,
     randomFrom, // пока оставим, вдруг ещё пригодится
 } from "./gameConfig.js";
+import {
+    buildProfileViewModel,
+    renderProfileFromUserDoc,
+} from "./profileLogic.js";
+import { getLeagueForLevel } from "./leagueLogic.js";
+
 
 // ====== ШАНСЫ ВЫПАДЕНИЯ ПРИЗОВ (по редкости) ======
 const RARITY_WEIGHTS = {
@@ -197,30 +203,6 @@ function spawnClickBubble(x, y, gain) {
     bubble.addEventListener("animationend", () => {
         bubble.remove();
     });
-}
-
-// ==================== Профиль ====================
-
-function renderProfileFromData(data) {
-    if (!profileNameEl || !profileIdEl || !profileAvatarEl) return;
-
-    const name     = data.firstName || data.username || "Игрок";
-    const akulkaId = data.akulkaId || "—";
-
-    profileNameEl.textContent = name;
-    profileIdEl.textContent   = `AkulkaID: ${akulkaId}`;
-
-    const photoUrl = data.photoUrl;
-    profileAvatarEl.innerHTML = "";
-
-    if (photoUrl) {
-        const img = document.createElement("img");
-        img.src = photoUrl;
-        img.alt = name;
-        profileAvatarEl.appendChild(img);
-    } else {
-        profileAvatarEl.textContent = "🦈";
-    }
 }
 
 // ==================== Навигация ====================
@@ -507,7 +489,7 @@ function subscribeToUser(userUid) {
         }
 
         renderStatsFromState(levelState);
-        renderProfileFromData(data);
+        renderProfileFromUserDoc(data, currentLevel, balance);
 
         const onlineDot = document.getElementById("onlineDot");
         if (onlineDot) onlineDot.classList.remove("hidden");
@@ -763,22 +745,20 @@ function renderMachines() {
     };
 }
 
-// ==================== Призы с глобальным лимитом ====================
+// ==================== Призы с глобальным лимитом (со стэками) ====================
 
 async function grantPrizeWithGlobalLimit(machine) {
     if (!uid) return { outcome: "error" };
 
-    // ⚠️ защита от пустого пула
     const pool = Array.isArray(machine.prizePool) ? machine.prizePool.slice() : [];
     if (!pool.length) return { outcome: "no-prize" };
 
-    // транзакция: резервируем приз + пишем в инвентарь
     return await runTransaction(db, async (tx) => {
         const tried = new Set();
         let chosenPrize = null;
 
         while (tried.size < pool.length && !chosenPrize) {
-            const candidateId = pickRandomPrize(machine); // наш рандом по редкости
+            const candidateId = pickRandomPrize(machine); // наш весовой рандом
             if (!candidateId || tried.has(candidateId)) continue;
             tried.add(candidateId);
 
@@ -787,8 +767,8 @@ async function grantPrizeWithGlobalLimit(machine) {
 
             const maxGlobal = cfg.maxCopiesGlobal ?? Infinity;
 
-            // приз "безлимитный" — сразу выдаём
-            if (!isFinite(maxGlobal)) {
+            // безлимитный приз — не проверяем глобальный лимит
+            if (!Number.isFinite(maxGlobal)) {
                 chosenPrize = cfg;
                 break;
             }
@@ -799,12 +779,12 @@ async function grantPrizeWithGlobalLimit(machine) {
                 ? (counterSnap.data().count ?? 0)
                 : 0;
 
-            // если закончился — пробуем другой
             if (current >= maxGlobal) {
+                // этот приз закончился, пробуем другой
                 continue;
             }
 
-            // резервируем 1 шт. глобально
+            // резервируем глобально
             tx.set(
                 counterRef,
                 { count: current + 1 },
@@ -816,21 +796,28 @@ async function grantPrizeWithGlobalLimit(machine) {
         }
 
         if (!chosenPrize) {
-            // все призы из пула закончились
-            return { outcome: "no-prize" };
+            return { outcome: "no-prize" }; // все призы в пуле закончились
         }
 
-        // пишем предмет в инвентарь игрока
-        const invDocRef = doc(collection(db, "users", uid, "inventory"));
-        tx.set(invDocRef, {
-            prizeId:   chosenPrize.id,
-            name:      chosenPrize.name,
-            emoji:     chosenPrize.emoji,
-            rarity:    chosenPrize.rarity,
-            value:     chosenPrize.value,
-            createdAt: serverTimestamp(),
-            count:     1, // базовый стэк
-        });
+        // 🔹 здесь ВАЖНО: один документ на prizeId, стэкаем count
+        const invDocRef = doc(db, "users", uid, "inventory", chosenPrize.id);
+        const invSnap   = await tx.get(invDocRef);
+        const prevData  = invSnap.exists() ? invSnap.data() : {};
+        const prevCount = prevData.count ?? 0;
+
+        tx.set(
+            invDocRef,
+            {
+                prizeId:  chosenPrize.id,
+                name:     chosenPrize.name,
+                emoji:    chosenPrize.emoji,
+                rarity:   chosenPrize.rarity,
+                value:    chosenPrize.value,
+                createdAt: prevData.createdAt || serverTimestamp(),
+                count:    prevCount + 1,          // <-- увеличиваем стэк
+            },
+            { merge: true }
+        );
 
         return {
             outcome: "win",
@@ -838,6 +825,7 @@ async function grantPrizeWithGlobalLimit(machine) {
         };
     });
 }
+
 
 
 // Чистая логика спина автомата
