@@ -486,9 +486,7 @@ function recomputeCollectionsAndBonuses(items) {
 function renderInventory(items) {
     if (!inventoryEl) return;
 
-    // обновляем кеш
     lastInventoryItems = items;
-
     inventoryEl.innerHTML = "";
 
     if (items.length === 0) {
@@ -500,15 +498,12 @@ function renderInventory(items) {
         return;
     }
 
-    // пересчитываем множители и стоимость коллекции
+    // Бонусы и сумма коллекции
     recomputeCollectionsAndBonuses(items);
-
     totalCollectionValue = items.reduce((sum, item) => {
-        const prizeId = item.prizeId || item.id;
-        const cfg     = PRIZES[prizeId] || {};
-        const value   = (item.value ?? cfg.value) || 0;
-        const count   = item.count ?? 1;
-        return sum + value * count;
+        const cfg = PRIZES[item.prizeId || item.id] || {};
+        const val = item.value ?? cfg.value ?? 0;
+        return sum + val * (item.count ?? 1);
     }, 0);
 
     updateProfileCollectionValue(totalCollectionValue);
@@ -521,25 +516,19 @@ function renderInventory(items) {
         const prizeId = item.prizeId || item.id;
         const cfg     = PRIZES[prizeId] || {};
 
-        const rarityKey  = item.rarity || cfg.rarity || "common";
-        const rarityMeta = RARITY_META[rarityKey] || {
-            label: rarityKey,
-            color: "#888",
-        };
+        const rarityMeta = RARITY_META[item.rarity || cfg.rarity || "common"] || {};
+        const count      = item.count ?? 1;
+        const maxGlobal  = item.maxCopiesGlobal ?? cfg.maxCopiesGlobal;
 
-        const count     = item.count ?? 1;
-        const maxGlobal = item.maxCopiesGlobal ?? cfg.maxCopiesGlobal ?? 0;
-        let   percent   = 0;
+        // ❗ если maxGlobal нет — это ошибка
+        const percent       = Math.min(100, Math.round((count / maxGlobal) * 100));
+        const progressLabel = `${count} / ${maxGlobal}`;
 
-        if (maxGlobal > 0) {
-            percent = Math.min(100, Math.round((count / maxGlobal) * 100));
-        }
-
-        const value = (item.value ?? cfg.value) || 0;
-        const progressLabel = maxGlobal > 0 ? `${count} / ${maxGlobal}` : `x${count}`;
+        const value = item.value ?? cfg.value ?? 0;
 
         div.innerHTML = `
           <div class="inv-emoji">${item.emoji || cfg.emoji || "🎁"}</div>
+
           <div class="inv-info">
             <div class="inv-name">${item.name || cfg.name || prizeId}</div>
 
@@ -554,15 +543,11 @@ function renderInventory(items) {
               <span class="inv-count">x${count}</span>
             </div>
 
-            ${
-            maxGlobal > 0
-                ? `<div class="inv-progress">
-                         <div class="inv-progress-bar" style="width:${percent}%">
-                           <span class="inv-progress-text">${progressLabel}</span>
-                         </div>
-                       </div>`
-                : ""
-        }
+            <div class="inv-progress">
+                <div class="inv-progress-bar" style="width:${percent}%">
+                    <span class="inv-progress-text">${progressLabel}</span>
+                </div>
+            </div>
 
             <div class="inv-actions">
               <button class="inv-sell-btn" data-id="${item.id}" data-amount="1">🗑 x1</button>
@@ -575,7 +560,6 @@ function renderInventory(items) {
         inventoryEl.appendChild(div);
     });
 }
-
 
 function subscribeToInventory(userUid) {
     const invCol = collection(db, "users", userUid, "inventory");
