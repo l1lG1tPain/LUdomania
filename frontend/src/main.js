@@ -21,14 +21,17 @@ import {
     COLLECTIONS,
     RARITY_META,
     calculateLevelState,
-    randomFrom, // пока оставим, вдруг ещё пригодится
+    randomFrom,
 } from "./gameConfig.js";
+
 import {
     buildProfileViewModel,
     renderProfileFromUserDoc,
+    updateProfileCollectionValue,
+    updateProfileGameStats,
 } from "./profileLogic.js";
-import { getLeagueForLevel, getLeagueProgress } from "./leagueLogic.js";
 
+import { getLeagueForLevel } from "./leagueLogic.js";
 
 // ====== ШАНСЫ ВЫПАДЕНИЯ ПРИЗОВ (по редкости) ======
 const RARITY_WEIGHTS = {
@@ -113,7 +116,7 @@ const inventoryEl = document.getElementById("inventory");
 const bottomNavItems = document.querySelectorAll(".bottom-nav .nav-item");
 const pages          = document.querySelectorAll(".page");
 
-// ---------- overlay автомата ----------
+// overlay автомата
 const machineOverlayEl      = document.getElementById("machineOverlay");
 const machineCloseBtn       = document.getElementById("machineCloseBtn");
 const machinePlayBtn        = document.getElementById("machinePlayBtn");
@@ -138,7 +141,8 @@ let totalClicks    = 0;
 let currentLevel   = 0;
 let authInProgress = false;
 
-let clickMultiplier = 1; // множитель от коллекций
+let clickMultiplier       = 1; // множитель от коллекций
+let totalCollectionValue  = 0; // общая стоимость коллекции (включая все копии)
 
 // статистика автоматов
 let globalMachineStats = {}; // { machineId: { totalSpins, totalWins } }
@@ -153,6 +157,35 @@ const API_BASE =
         : "https://ludomania.onrender.com";
 
 // ==================== Утилиты ====================
+
+function recomputeAggregateMachineStats() {
+    let myGames     = 0;
+    let myWins      = 0;
+    let globalGames = 0;
+    let globalWins  = 0;
+
+    Object.values(userMachineStats).forEach((s) => {
+        myGames += s.spins || 0;
+        myWins  += s.wins  || 0;
+    });
+
+    Object.values(globalMachineStats).forEach((s) => {
+        globalGames += s.totalSpins || 0;
+        globalWins  += s.totalWins  || 0;
+    });
+
+    const myWinrate     = myGames > 0 ? (myWins / myGames) * 100 : 0;
+    const globalWinrate = globalGames > 0 ? (globalWins / globalGames) * 100 : 0;
+
+    updateProfileGameStats({
+        myGames,
+        myWins,
+        myWinrate,
+        globalGames,
+        globalWins,
+        globalWinrate,
+    });
+}
 
 function formatLM(num) {
     if (num < 10000) return String(num);
@@ -222,6 +255,7 @@ function setActivePage(targetId) {
     });
 }
 
+// кнопки внизу
 bottomNavItems.forEach((item) => {
     item.addEventListener("click", () => {
         const target = item.dataset.target;
@@ -229,6 +263,21 @@ bottomNavItems.forEach((item) => {
         setActivePage(target);
     });
 });
+
+// Открываем страницу профиля по клику на шапку
+function openProfilePage() {
+    setActivePage("pageProfile");
+}
+
+if (profileAvatarEl) {
+    profileAvatarEl.addEventListener("click", openProfilePage);
+}
+if (profileNameEl) {
+    profileNameEl.addEventListener("click", openProfilePage);
+}
+if (profileIdEl) {
+    profileIdEl.addEventListener("click", openProfilePage);
+}
 
 // ==================== Игровые утилиты ====================
 
@@ -246,12 +295,12 @@ function updateUpgradeUI() {
 function renderStatsFromState(levelStateOverride) {
     const ls = levelStateOverride || calculateLevelState(totalClicks);
 
-    if (balanceEl)        balanceEl.textContent        = formatLM(balance);
-    if (clickPowerEl)     clickPowerEl.textContent     = clickPower;
-    if (totalClicksEl)    totalClicksEl.textContent    = totalClicks;
-    if (playerLevelEl)    playerLevelEl.textContent    = ls.level;
-    if (headerLevelEl)    headerLevelEl.textContent    = ls.level;
-    if (headerBalanceEl)  headerBalanceEl.textContent  = formatLM(balance);
+    if (balanceEl)        balanceEl.textContent       = formatLM(balance);
+    if (clickPowerEl)     clickPowerEl.textContent    = clickPower;
+    if (totalClicksEl)    totalClicksEl.textContent   = totalClicks;
+    if (playerLevelEl)    playerLevelEl.textContent   = ls.level;
+    if (headerLevelEl)    headerLevelEl.textContent   = ls.level;
+    if (headerBalanceEl)  headerBalanceEl.textContent = formatLM(balance);
     if (levelProgressBar) levelProgressBar.style.width =
         `${Math.round((ls.progress || 0) * 100)}%`;
 
@@ -281,8 +330,6 @@ function renderStatsFromState(levelStateOverride) {
 
     updateUpgradeUI();
 }
-
-
 
 // ==================== Левел-ап ====================
 
@@ -326,15 +373,18 @@ function subscribeGlobalMachineStats() {
     onSnapshot(
         statsCol,
         (snap) => {
+            const map = { ...globalMachineStats };
             snap.docChanges().forEach((change) => {
                 const id = change.doc.id;
                 if (change.type === "removed") {
-                    delete globalMachineStats[id];
+                    delete map[id];
                 } else {
-                    globalMachineStats[id] = change.doc.data();
+                    map[id] = change.doc.data();
                 }
             });
+            globalMachineStats = map;
             renderMachines();
+            recomputeAggregateMachineStats();
         },
         (err) => console.error("machine_stats subscribe error", err)
     );
@@ -352,6 +402,7 @@ function subscribeUserMachineStats(userUid) {
             });
             userMachineStats = map;
             renderMachines();
+            recomputeAggregateMachineStats();
         },
         (err) => console.error("user machineStats subscribe error", err)
     );
@@ -435,11 +486,24 @@ function renderInventory(items) {
     if (items.length === 0) {
         inventoryEl.textContent = "Пока пусто. Выбей что-нибудь из автомата 🎰";
         clickMultiplier = 1;
+        totalCollectionValue = 0;
         renderStatsFromState();
+        updateProfileCollectionValue(0);
         return;
     }
 
+    // пересчитываем множители и стоимость коллекции
     recomputeCollectionsAndBonuses(items);
+
+    totalCollectionValue = items.reduce((sum, item) => {
+        const prizeId = item.prizeId || item.id;
+        const cfg     = PRIZES[prizeId] || {};
+        const value   = (item.value ?? cfg.value) || 0;
+        const count   = item.count ?? 1;
+        return sum + value * count;
+    }, 0);
+
+    updateProfileCollectionValue(totalCollectionValue);
     renderStatsFromState();
 
     items.forEach((item) => {
@@ -466,50 +530,28 @@ function renderInventory(items) {
         const value = (item.value ?? cfg.value) || 0;
 
         div.innerHTML = `
-      <div class="inv-emoji">${item.emoji || cfg.emoji || "🎁"}</div>
-      <div class="inv-name">${item.name || cfg.name || "Неизвестный приз"}</div>
-      <div class="inv-progress">
-        <div style="color:${rarityMeta.color}">
-          ${rarityMeta.label} • ${value} LM
-        </div>
-        <div class="inv-progress-bar">
-          <div class="inv-progress-fill" style="width:${percent}%"></div>
-        </div>
-        <div class="inv-progress-text">
-          ${count} / ${maxGlobal || "∞"}
-        </div>
-      </div>
-      <button class="btn secondary inv-sell" data-id="${item.id}">
-        Продать 1
-      </button>
-    `;
+          <div class="inv-emoji">${item.emoji || cfg.emoji || "🎁"}</div>
+          <div class="inv-info">
+            <div class="inv-name">${item.name || cfg.name || prizeId}</div>
+            <div class="inv-meta">
+              <span class="inv-rarity" style="color:${rarityMeta.color}">
+                ${rarityMeta.label}
+              </span>
+              <span class="inv-count">x${count}</span>
+              <span class="inv-value">${value} LM</span>
+            </div>
+            ${
+            maxGlobal > 0
+                ? `<div class="inv-progress">
+                         <div class="inv-progress-bar" style="width:${percent}%"></div>
+                       </div>`
+                : ""
+        }
+          </div>
+        `;
 
         inventoryEl.appendChild(div);
     });
-
-    inventoryEl.onclick = async (e) => {
-        const btn = e.target.closest(".inv-sell");
-        if (!btn) return;
-        if (!uid) {
-            showToast("Сначала авторизуйся через Telegram");
-            return;
-        }
-
-        const itemId = btn.dataset.id;
-        const item   = items.find((it) => it.id === itemId);
-        if (!item) return;
-
-        const prizeId = item.prizeId || item.id;
-        const cfg     = PRIZES[prizeId] || {};
-        const value   = (item.value ?? cfg.value) || 0;
-
-        const confirmSell = confirm(
-            `Продать 1 шт "${item.name}" за ${value} ЛудоМани?`
-        );
-        if (!confirmSell) return;
-
-        await sellItem(item);
-    };
 }
 
 function subscribeToInventory(userUid) {
@@ -549,11 +591,11 @@ function subscribeToUser(userUid) {
 
         renderStatsFromState(levelState);
 
-        // 🔥 новый профильный рендер (только имя / AkulkaID / аватар)
+        // профиль (шапка + страница)
         renderProfileFromUserDoc(
             data,
-            levelState.level, // уровень
-            balance           // текущий баланс LM
+            levelState.level,
+            balance
         );
 
         const onlineDot = document.getElementById("onlineDot");
@@ -612,7 +654,7 @@ async function handleClick() {
     totalClicks += 1;
     renderStatsFromState();
 
-    // 🔥 пульсуем картинку, а не контейнер
+    // пульсуем картинку, а не контейнер
     const bigClickImg = document.getElementById("bigClick");
     const pulseTarget = bigClickImg || bigClickArea;
 
@@ -629,7 +671,6 @@ async function handleClick() {
         console.error("click error", e);
     });
 }
-
 
 // ==================== Апгрейд ====================
 
@@ -668,14 +709,13 @@ async function handleUpgrade() {
     }
 }
 
-// ==================== Весовые шансы призов ====================
+// ==================== Весовые шансы призов (новый слой) ====================
 
-// вес для конкретного приза
+// если понадобится — prize.dropWeight или RARITY_META[rarity].weight
 function getPrizeWeight(prizeId) {
     const prize = PRIZES[prizeId];
     if (!prize) return 1;
 
-    // если захотим — можно добавить prize.dropWeight и переопределять
     if (typeof prize.dropWeight === "number" && prize.dropWeight > 0) {
         return prize.dropWeight;
     }
@@ -699,8 +739,8 @@ function getMachinePrizeChances(machine) {
     if (!total) return [];
 
     return machine.prizePool.map((id, idx) => {
-        const prize = PRIZES[id];
-        const w     = weights[idx];
+        const prize  = PRIZES[id];
+        const w      = weights[idx];
         const chance = w / total; // 0..1
 
         return {
@@ -734,7 +774,6 @@ function rollPrizeForMachine(machine) {
         r -= e.weight;
     }
 
-    // на всякий случай
     return entries[entries.length - 1].id;
 }
 
@@ -744,7 +783,6 @@ function renderMachines() {
     if (!machinesEl) return;
     machinesEl.innerHTML = "";
 
-    // красивые заголовки по уровням
     const levelLabels = {
         0: "⭐ Стартовые автоматы",
         1: "📈 Уровень 1 — Улица",
@@ -801,7 +839,6 @@ function renderMachines() {
         machinesEl.appendChild(block);
     });
 
-    // делегирование кликов по карточкам
     machinesEl.onclick = (e) => {
         const card = e.target.closest(".machine-card");
         if (!card) return;
@@ -812,15 +849,14 @@ function renderMachines() {
 
 // ==================== Кэш глобальных счётчиков призов ====================
 
-let prizeCountersCache = {};           // { prizeId: count }
-let prizeCountersLoaded = false;
+let prizeCountersCache         = {};           // { prizeId: count }
+let prizeCountersLoaded        = false;
 let prizeCountersLoadingPromise = null;
 
 async function ensurePrizeCountersCache() {
     if (prizeCountersLoaded) return;
 
     if (prizeCountersLoadingPromise) {
-        // если уже грузим — просто дождёмся
         return prizeCountersLoadingPromise;
     }
 
@@ -833,12 +869,11 @@ async function ensurePrizeCountersCache() {
                 const data = docSnap.data() || {};
                 map[docSnap.id] = data.count ?? 0;
             });
-            prizeCountersCache = map;
+            prizeCountersCache  = map;
             prizeCountersLoaded = true;
         })
         .catch((e) => {
             console.error("ensurePrizeCountersCache error", e);
-            // если не получилось — в следующий раз попробуем ещё раз
             prizeCountersLoaded = false;
         })
         .finally(() => {
@@ -848,7 +883,6 @@ async function ensurePrizeCountersCache() {
     return prizeCountersLoadingPromise;
 }
 
-
 // ==================== Призы с глобальным лимитом (со стэками) ====================
 
 async function grantPrizeWithGlobalLimit(machine) {
@@ -857,7 +891,6 @@ async function grantPrizeWithGlobalLimit(machine) {
     const pool = Array.isArray(machine.prizePool) ? machine.prizePool.slice() : [];
     if (!pool.length) return { outcome: "no-prize" };
 
-    // чтобы не зациклиться на исчерпанных призах
     const tried = new Set();
 
     while (tried.size < pool.length) {
@@ -872,31 +905,26 @@ async function grantPrizeWithGlobalLimit(machine) {
 
         try {
             const txResult = await runTransaction(db, async (tx) => {
-                // 1) читаем глобальный счётчик ЭТОГО приза
                 const counterRef  = doc(db, "prize_counters", candidateId);
                 const counterSnap = await tx.get(counterRef);
                 const data        = counterSnap.exists() ? counterSnap.data() : {};
                 const used        = data.count ?? 0;
 
-                // если лимит исчерпан — помечаем и выходим из транзакции
                 if (Number.isFinite(maxGlobal) && used >= maxGlobal) {
                     return { outcome: "exhausted" };
                 }
 
-                // 2) читаем инвентарь пользователя по этому призу
                 const invDocRef = doc(db, "users", uid, "inventory", cfg.id);
                 const invSnap   = await tx.get(invDocRef);
                 const prevData  = invSnap.exists() ? invSnap.data() : {};
                 const prevCount = prevData.count ?? 0;
 
-                // 3) пишем глобальный счётчик
                 tx.set(
                     counterRef,
                     { count: used + 1 },
                     { merge: true }
                 );
 
-                // 4) стэкаем предмет в инвентаре
                 tx.set(
                     invDocRef,
                     {
@@ -915,7 +943,6 @@ async function grantPrizeWithGlobalLimit(machine) {
             });
 
             if (txResult.outcome === "win") {
-                // обновим локальный кэш, если он уже загружен
                 if (prizeCountersLoaded) {
                     const prev = prizeCountersCache[cfg.id] ?? 0;
                     prizeCountersCache[cfg.id] = prev + 1;
@@ -924,17 +951,13 @@ async function grantPrizeWithGlobalLimit(machine) {
             }
 
             if (txResult.outcome === "exhausted") {
-                // этот приз закончился — пробуем следующий из пула
                 continue;
             }
 
-            // любая другая ситуация — ошибка
             return { outcome: "error" };
         } catch (e) {
             console.error("grantPrizeWithGlobalLimit tx error", e);
 
-            // Если Firestore говорит "Quota exceeded / resource-exhausted" —
-            // перестаём трогать лимиты, но игру не ломаем: просто выдаём приз без учёта глобального лимита.
             if (
                 e.code === "resource-exhausted" ||
                 (typeof e.message === "string" && e.message.includes("Quota exceeded"))
@@ -959,12 +982,8 @@ async function grantPrizeWithGlobalLimit(machine) {
         }
     }
 
-    // Все призы в пуле оказались исчерпаны
     return { outcome: "no-prize" };
 }
-
-
-
 
 // Чистая логика спина автомата
 async function spinMachine(machineId) {
@@ -986,7 +1005,6 @@ async function spinMachine(machineId) {
         return { outcome: "no-money" };
     }
 
-    // списываем стоимость
     try {
         await updateDoc(userRef, {
             balance:    increment(-machine.price),
@@ -1000,9 +1018,7 @@ async function spinMachine(machineId) {
     const roll = Math.random();
     const win  = roll < machine.winChance;
 
-    // обновляем статы
     try {
-        // глобальная
         const globalRef = doc(db, "machine_stats", machineId);
         await setDoc(
             globalRef,
@@ -1013,7 +1029,6 @@ async function spinMachine(machineId) {
             { merge: true }
         );
 
-        // персональная: users/{uid}/machineStats/{machineId}
         const userStatRef = doc(db, "users", uid, "machineStats", machineId);
         await setDoc(
             userStatRef,
@@ -1031,17 +1046,14 @@ async function spinMachine(machineId) {
         return { outcome: "lose" };
     }
 
-    // 🎁 выдача приза с учётом глобального лимита
     try {
         const result = await grantPrizeWithGlobalLimit(machine);
-        // result: { outcome: 'win' | 'no-prize' | 'error', prize? }
 
         if (result.outcome === "win" && result.prize) {
             return { outcome: "win", prize: result.prize };
         }
 
         if (result.outcome === "no-prize") {
-            // можно показать отдельный тост
             showToast("Все призы этого автомата уже разобрали 😢");
             return { outcome: "no-prize" };
         }
@@ -1053,7 +1065,6 @@ async function spinMachine(machineId) {
     }
 }
 
-
 // список призов и их шансов + глобальный остаток
 async function fillMachinePrizeStrip(machineId) {
     if (!machinePrizeStripEl) return;
@@ -1063,15 +1074,10 @@ async function fillMachinePrizeStrip(machineId) {
     if (!machine) return;
 
     const chanceMap = getPrizeChancesForMachine(machine); // { prizeId: 0..1 }
+    const prizeIds  = (machine.prizePool || []).filter((id) => PRIZES[id]);
 
-    // берём только валидные призы
-    const prizeIds = (machine.prizePool || []).filter((id) => PRIZES[id]);
-
-    // ✅ один общий запрос (или кэш, если уже есть)
     await ensurePrizeCountersCache();
-
     const globalUsedMap = prizeCountersCache || {};
-
 
     prizeIds.forEach((id) => {
         const p = PRIZES[id];
@@ -1123,7 +1129,6 @@ async function fillMachinePrizeStrip(machineId) {
     });
 }
 
-
 function openMachineOverlay(machineId) {
     const machine = MACHINES.find((m) => m.id === machineId);
     if (!machine || !machineOverlayEl) return;
@@ -1167,12 +1172,12 @@ const LOSE_MESSAGES = [
     "ЛудоМани минус, опыта плюс — тоже выгода, да?"
 ];
 
-
 async function handleMachinePlayClick() {
     if (!currentMachineId || !machineOverlayEl || machineSpinRunning) return;
 
     const machine = MACHINES.find((m) => m.id === currentMachineId);
     if (!machine) return;
+
     if (currentLevel < (machine.minLevel || 0)) {
         showToast(`Этот автомат доступен с ${machine.minLevel}-го уровня`);
         return;
@@ -1216,15 +1221,13 @@ async function handleMachinePlayClick() {
             machineResultEl.classList.remove("hidden");
         }
 
-        // после игры обновим статистику блока
         updateMachineStatsSummary(currentMachineId);
-
     } finally {
         machineSpinRunning = false;
     }
 }
 
-/// ==================== Продажа предмета ====================
+// ==================== Продажа предмета ====================
 
 async function sellItem(item) {
     if (!userRef || !uid) return;
@@ -1236,7 +1239,6 @@ async function sellItem(item) {
     const baseValue = item.value ?? cfg.value ?? 0;
 
     try {
-        // 🧳 1) Обновляем инвентарь юзера (как и раньше)
         if (count <= 1) {
             await deleteDoc(invDocRef);
         } else {
@@ -1245,19 +1247,16 @@ async function sellItem(item) {
             });
         }
 
-        // 💰 2) Начисляем деньги пользователю
         await updateDoc(userRef, {
             balance:     increment(baseValue),
             totalEarned: increment(baseValue),
         });
 
-        // 🌍 3) Возвращаем приз в глобальный пул (уменьшаем prize_counters)
         const counterRef = doc(db, "prize_counters", prizeId);
 
         await runTransaction(db, async (tx) => {
             const snap = await tx.get(counterRef);
             if (!snap.exists()) {
-                // на всякий случай – если счётчика нет, просто выходим
                 return;
             }
 
@@ -1274,14 +1273,12 @@ async function sellItem(item) {
     } catch (e) {
         console.error("sell error", e);
     } finally {
-        // 🔁 если кэш загружен — вернём 1 штуку в локальном состоянии
         if (prizeCountersLoaded) {
             const prev = prizeCountersCache[prizeId] ?? 0;
             prizeCountersCache[prizeId] = prev > 0 ? prev - 1 : 0;
         }
     }
 }
-
 
 // ==================== Общий пост-логин ====================
 
@@ -1296,7 +1293,7 @@ async function afterFirebaseLogin(userUid, tgUser) {
 
     subscribeToUser(uid);
     subscribeToInventory(uid);
-    subscribeUserMachineStats(uid); // 💾 "Твоих"
+    subscribeUserMachineStats(uid);
     renderMachines();
 }
 
@@ -1426,7 +1423,6 @@ async function loginWithTelegram() {
 
 if (machineOverlayEl) {
     machineOverlayEl.addEventListener("click", (e) => {
-        // клик строго по фону (не по карточке автомата)
         if (e.target === machineOverlayEl) {
             closeMachineOverlay();
         }

@@ -41,7 +41,6 @@
         </div>
     </header>
 
-
     <!-- Кнопка авторизации -->
     <div class="auth-block">
         <button id="login" class="btn primary">
@@ -51,6 +50,7 @@
 
     <main class="pages">
 
+        <!-- ФАРМ -->
         <section id="pageFarm" class="page active">
 
             <!-- Характеристика игрока -->
@@ -75,12 +75,12 @@
                     <span>Уровень:</span>
                     <span id="playerLevel" class="value">0</span>
                 </div>
+
                 <div class="level-progress-container">
                     <div id="levelProgressBar" class="level-progress-bar"></div>
                 </div>
                 <!-- динамически обновляемый текст про остаток кликов -->
                 <div id="levelHint" class="level-hint">Осталось: 0 кликов</div>
-
             </div>
 
             <!-- Большая кнопка клика → потом будет монета -->
@@ -94,21 +94,110 @@
             </button>
         </section>
 
+        <!-- АВТОМАТЫ -->
         <section id="pageMiniGames" class="page">
-
             <h2 class="section-title">🎰 Автоматы</h2>
             <div id="machines" class="machine-grid"></div>
-
         </section>
 
+        <!-- ИНВЕНТАРЬ -->
         <section id="pageInventory" class="page">
-
             <h2 class="section-title">👛 Инвентарь</h2>
             <div id="inventory" class="inventory-grid"></div>
+        </section>
 
+        <!-- ПРОФИЛЬ (отдельная страница, открывается из хедера) -->
+        <section id="pageProfile" class="page">
+            <h2 class="section-title">👤 Профиль</h2>
+
+            <div class="profile-page-main-card">
+                <div class="profile-page-header">
+                    <div id="profilePageAvatar" class="profile-avatar-big"></div>
+                    <div class="profile-page-header-text">
+                        <div id="profilePageName" class="profile-name-big">Игрок</div>
+                        <div id="profilePageAkulkaId" class="profile-id">AkulkaID: —</div>
+                    </div>
+                </div>
+
+                <div class="profile-page-row">
+                    <span class="label">Баланс</span>
+                    <span class="value">
+                        <span id="profilePageBalance">0</span> LM
+                    </span>
+                </div>
+
+                <div class="profile-page-row">
+                    <span class="label">Уровень</span>
+                    <span class="value">
+                        <span id="profilePageLevel">0</span>
+                        <span id="profilePageLeague" class="profile-league-chip">🥉 Бронза</span>
+                    </span>
+                </div>
+
+                <div class="profile-league-progress">
+                    <div class="profile-league-progress-bar">
+                        <div id="profileLeagueProgressFill" class="profile-league-progress-fill"></div>
+                    </div>
+                    <div id="profileLeagueProgressText" class="profile-league-progress-text">
+                        Прогресс лиги: 0%
+                    </div>
+                </div>
+            </div>
+
+            <!-- Блок "Мой прогресс" -->
+            <h3 class="profile-subtitle">📈 Мой прогресс</h3>
+            <div class="profile-stats-grid">
+                <div class="profile-stat-card">
+                    <div class="label">Всего кликов</div>
+                    <div id="profilePageTotalClicks" class="value">0</div>
+                </div>
+                <div class="profile-stat-card">
+                    <div class="label">Сила клика</div>
+                    <div id="profilePageClickPower" class="value">1</div>
+                </div>
+                <div class="profile-stat-card">
+                    <div class="label">Всего заработано</div>
+                    <div id="profilePageTotalEarned" class="value">0</div>
+                </div>
+                <div class="profile-stat-card">
+                    <div class="label">Всего потрачено</div>
+                    <div id="profilePageTotalSpent" class="value">0</div>
+                </div>
+            </div>
+
+            <!-- Коллекция + статистика по играм -->
+            <h3 class="profile-subtitle">🎁 Коллекция и игры</h3>
+            <div class="profile-stats-grid">
+                <div class="profile-stat-card">
+                    <div class="label">Стоимость коллекции</div>
+                    <div class="value">
+                        <span id="profileCollectionValue">0</span> LM
+                    </div>
+                </div>
+                <div class="profile-stat-card">
+                    <div class="label">Мои игры</div>
+                    <div id="profileMyGames" class="value">0</div>
+                </div>
+                <div class="profile-stat-card">
+                    <div class="label">Мой винрейт</div>
+                    <div id="profileMyWinrate" class="value">0%</div>
+                </div>
+                <div class="profile-stat-card">
+                    <div class="label">Глобальные игры</div>
+                    <div id="profileGlobalGames" class="value">0</div>
+                </div>
+                <div class="profile-stat-card">
+                    <div class="label">Глобальные победы</div>
+                    <div id="profileGlobalWins" class="value">0</div>
+                </div>
+            </div>
+            <div id="profileGlobalWinrateHint" class="profile-hint">
+                Глобальный винрейт: 0%
+            </div>
         </section>
 
     </main>
+
     <!-- =============================== -->
     <!-- 🎰 ФУЛЛСКРИН ЭКРАН АВТОМАТА    -->
     <!-- =============================== -->

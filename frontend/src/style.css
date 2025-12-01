@@ -813,10 +813,10 @@ img {
     font-weight: 600;
 }
 
-#machineStatsSummary {
+#machineStatsSummary, .profile-stats-grid {
     padding: 10px;
 }
-.machine-stats-row {
+.machine-stats-row, .profile-stat-card, .profile-hint {
     display: flex;
     justify-content: space-between;
     align-items: center;
