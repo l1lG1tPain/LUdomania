@@ -144,6 +144,9 @@ let authInProgress = false;
 let clickMultiplier       = 1; // множитель от коллекций
 let totalCollectionValue  = 0; // общая стоимость коллекции (включая все копии)
 
+// кэш последнего инвентаря (для sellItem по кнопке)
+let lastInventoryItems = [];
+
 // статистика автоматов
 let globalMachineStats = {}; // { machineId: { totalSpins, totalWins } }
 let userMachineStats   = {}; // { machineId: { spins, wins } }
@@ -481,6 +484,9 @@ function recomputeCollectionsAndBonuses(items) {
 function renderInventory(items) {
     if (!inventoryEl) return;
 
+    // обновляем кеш
+    lastInventoryItems = items;
+
     inventoryEl.innerHTML = "";
 
     if (items.length === 0) {
@@ -547,6 +553,11 @@ function renderInventory(items) {
                        </div>`
                 : ""
         }
+            <div class="inv-actions">
+              <button class="inv-sell-btn" data-id="${item.id}">
+                🗑 Продать за ${value} LM
+              </button>
+            </div>
           </div>
         `;
 
@@ -1456,6 +1467,20 @@ if (bigClickArea) {
         },
         { passive: false }
     );
+}
+
+// 🔗 обработчик кнопки продажи в инвентаре (делегирование)
+if (inventoryEl) {
+    inventoryEl.addEventListener("click", (e) => {
+        const btn = e.target.closest(".inv-sell-btn");
+        if (!btn) return;
+
+        const id = btn.dataset.id;
+        const item = lastInventoryItems.find((it) => String(it.id) === String(id));
+
+        if (!item) return;
+        sellItem(item);
+    });
 }
 
 // ==================== onAuthStateChanged ====================
