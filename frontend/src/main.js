@@ -481,6 +481,8 @@ function recomputeCollectionsAndBonuses(items) {
 
 // ==================== Инвентарь (СТАКИ) ====================
 
+// ==================== Инвентарь (СТАКИ) ====================
+
 function renderInventory(items) {
     if (!inventoryEl) return;
 
@@ -534,29 +536,38 @@ function renderInventory(items) {
         }
 
         const value = (item.value ?? cfg.value) || 0;
+        const progressLabel = maxGlobal > 0 ? `${count} / ${maxGlobal}` : `x${count}`;
 
         div.innerHTML = `
           <div class="inv-emoji">${item.emoji || cfg.emoji || "🎁"}</div>
           <div class="inv-info">
             <div class="inv-name">${item.name || cfg.name || prizeId}</div>
+
             <div class="inv-meta">
               <span class="inv-rarity" style="color:${rarityMeta.color}">
                 ${rarityMeta.label}
               </span>
-              <span class="inv-count">x${count}</span>
               <span class="inv-value">${value} LM</span>
             </div>
+
+            <div class="inv-count-row">
+              <span class="inv-count">x${count}</span>
+            </div>
+
             ${
             maxGlobal > 0
                 ? `<div class="inv-progress">
-                         <div class="inv-progress-bar" style="width:${percent}%"></div>
+                         <div class="inv-progress-bar" style="width:${percent}%">
+                           <span class="inv-progress-text">${progressLabel}</span>
+                         </div>
                        </div>`
                 : ""
         }
+
             <div class="inv-actions">
-              <button class="inv-sell-btn" data-id="${item.id}">
-                🗑 Продать за ${value} LM
-              </button>
+              <button class="inv-sell-btn" data-id="${item.id}" data-amount="1">🗑 x1</button>
+              ${count >= 10 ? `<button class="inv-sell-btn" data-id="${item.id}" data-amount="10">🗑 x10</button>` : ""}
+              <button class="inv-sell-btn" data-id="${item.id}" data-amount="all">🗑 All</button>
             </div>
           </div>
         `;
@@ -564,6 +575,7 @@ function renderInventory(items) {
         inventoryEl.appendChild(div);
     });
 }
+
 
 function subscribeToInventory(userUid) {
     const invCol = collection(db, "users", userUid, "inventory");
@@ -1240,40 +1252,54 @@ async function handleMachinePlayClick() {
 
 // ==================== Продажа предмета ====================
 
-async function sellItem(item) {
+// ==================== Продажа предмета ====================
+
+async function sellItem(item, requestedAmount = 1) {
     if (!userRef || !uid) return;
 
     const invDocRef = doc(db, "users", uid, "inventory", item.id);
-    const count     = item.count ?? 1;
+    const totalCount = item.count ?? 1;
+
+    // нормализуем количество: 1 / 10 / all
+    let sellCount;
+    if (requestedAmount === "all") {
+        sellCount = totalCount;
+    } else {
+        const n = Number(requestedAmount);
+        sellCount = Number.isFinite(n) && n > 0 ? n : 1;
+        sellCount = Math.min(sellCount, totalCount);
+    }
+
+    if (sellCount <= 0) return;
+
     const prizeId   = item.prizeId || item.id;
     const cfg       = PRIZES[prizeId] || {};
     const baseValue = item.value ?? cfg.value ?? 0;
+    const totalValue = baseValue * sellCount;
 
     try {
-        if (count <= 1) {
+        if (sellCount >= totalCount) {
             await deleteDoc(invDocRef);
         } else {
             await updateDoc(invDocRef, {
-                count: increment(-1),
+                count: increment(-sellCount),
             });
         }
 
         await updateDoc(userRef, {
-            balance:     increment(baseValue),
-            totalEarned: increment(baseValue),
+            balance:     increment(totalValue),
+            totalEarned: increment(totalValue),
         });
 
         const counterRef = doc(db, "prize_counters", prizeId);
 
         await runTransaction(db, async (tx) => {
             const snap = await tx.get(counterRef);
-            if (!snap.exists()) {
-                return;
-            }
+            if (!snap.exists()) return;
 
             const data    = snap.data() || {};
             const current = data.count ?? 0;
-            const next    = current > 0 ? current - 1 : 0;
+            const next    = current > sellCount ? current - sellCount : 0;
 
             tx.set(
                 counterRef,
@@ -1286,10 +1312,12 @@ async function sellItem(item) {
     } finally {
         if (prizeCountersLoaded) {
             const prev = prizeCountersCache[prizeId] ?? 0;
-            prizeCountersCache[prizeId] = prev > 0 ? prev - 1 : 0;
+            const next = prev > sellCount ? prev - sellCount : 0;
+            prizeCountersCache[prizeId] = next;
         }
     }
 }
+
 
 // ==================== Общий пост-логин ====================
 
@@ -1469,19 +1497,21 @@ if (bigClickArea) {
     );
 }
 
-// 🔗 обработчик кнопки продажи в инвентаре (делегирование)
+// 🔗 обработчик кнопок продажи в инвентаре (x1 / x10 / All)
 if (inventoryEl) {
     inventoryEl.addEventListener("click", (e) => {
         const btn = e.target.closest(".inv-sell-btn");
         if (!btn) return;
 
-        const id = btn.dataset.id;
-        const item = lastInventoryItems.find((it) => String(it.id) === String(id));
+        const id      = btn.dataset.id;
+        const amount  = btn.dataset.amount || "1";
+        const item    = lastInventoryItems.find((it) => String(it.id) === String(id));
 
         if (!item) return;
-        sellItem(item);
+        sellItem(item, amount);
     });
 }
+
 
 // ==================== onAuthStateChanged ====================
 
