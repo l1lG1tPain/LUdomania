@@ -685,11 +685,11 @@ img {
 /* прогресс бар в инвентаре (коллекции) */
 .inv-progress-bar {
     width: 100%;
-    height: 6px;
+    height: auto;
     border-radius: 999px;
     background: #222;
     overflow: hidden;
-    margin-top: 4px;
+    margin: 5px 0;
 }
 
 .inv-progress-fill {
