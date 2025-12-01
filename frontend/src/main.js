@@ -544,7 +544,7 @@ function renderInventory(items) {
             </div>
 
             <div class="inv-progress">
-                <div class="inv-progress-bar" style="width:${percent}%">
+                <div class="inv-progress-bar">
                     <span class="inv-progress-text">${progressLabel}</span>
                 </div>
             </div>
