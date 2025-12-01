@@ -98,6 +98,7 @@ const totalClicksEl    = document.getElementById("totalClicks");
 const playerLevelEl    = document.getElementById("playerLevel");
 const levelProgressBar = document.getElementById("levelProgressBar");
 const multiplierEl     = document.getElementById("multiplier");
+const levelHintEl      = document.getElementById("levelHint");
 
 // Игровые элементы
 const bigClickArea  = document.getElementById("bigClickArea");
@@ -122,6 +123,7 @@ const machinePrizeStripEl   = document.getElementById("machinePrizeStrip");
 const machineResultEl       = document.getElementById("machineResult");
 const machineResultEmojiEl  = document.getElementById("machineResultEmoji");
 const machineResultTextEl   = document.getElementById("machineResultText");
+const machineStatsSummaryEl = document.getElementById("machineStatsSummary");
 
 let currentMachineId   = null;
 let machineSpinRunning = false;
@@ -260,10 +262,8 @@ function renderStatsFromState(levelStateOverride) {
     }
 
     // 🏅 текст под прогресс-баром: лига + сколько кликов до следующего уровня
-    const league   = getLeagueForLevel(ls.level);
-    const leagueEl = document.getElementById("farm-league-text");
-
-    if (leagueEl && league) {
+    if (levelHintEl) {
+        const league = getLeagueForLevel(ls.level);
         const leftClicks    = Math.max(0, (ls.required ?? 0) - (ls.current ?? 0));
         const percentToNext = Math.round((ls.progress || 0) * 100);
 
@@ -271,8 +271,12 @@ function renderStatsFromState(levelStateOverride) {
             ? `${leftClicks} кликов`
             : "уровень максимум";
 
-        leagueEl.textContent =
-            `${league.emoji} ${league.name} — до следующего уровня: ${clicksText} (${percentToNext}%)`;
+        const prefix = league
+            ? `${league.emoji} ${league.name} • `
+            : "";
+
+        levelHintEl.textContent =
+            `${prefix}Осталось: ${clicksText} (${percentToNext}%)`;
     }
 
     updateUpgradeUI();
@@ -351,6 +355,42 @@ function subscribeUserMachineStats(userUid) {
         },
         (err) => console.error("user machineStats subscribe error", err)
     );
+}
+
+// ====== Статистика конкретного автомата в оверлее ======
+function updateMachineStatsSummary(machineId) {
+    if (!machineStatsSummaryEl || !machineId) return;
+
+    const g = globalMachineStats[machineId] || {};
+    const u = userMachineStats[machineId]   || {};
+
+    const totalSpinsGlobal = g.totalSpins || 0;
+    const totalWinsGlobal  = g.totalWins  || 0;
+
+    const totalSpinsUser = u.spins || 0;
+    const totalWinsUser  = u.wins  || 0;
+
+    const userWinRate   = totalSpinsUser   > 0 ? (totalWinsUser   / totalSpinsUser)   * 100 : 0;
+    const globalWinRate = totalSpinsGlobal > 0 ? (totalWinsGlobal / totalSpinsGlobal) * 100 : 0;
+
+    machineStatsSummaryEl.innerHTML = `
+      <div class="machine-stats-row">
+        <span class="label">Баланс:</span>
+        <span class="value">${formatLM(balance)} LM</span>
+      </div>
+      <div class="machine-stats-row">
+        <span class="label">Мои игры:</span>
+        <span class="value">${totalSpinsUser} (побед ${totalWinsUser}, ${userWinRate.toFixed(0)}%)</span>
+      </div>
+      <div class="machine-stats-row">
+        <span class="label">Все игры:</span>
+        <span class="value">${totalSpinsGlobal}</span>
+      </div>
+      <div class="machine-stats-row">
+        <span class="label">Всего побед:</span>
+        <span class="value">${totalWinsGlobal} (${globalWinRate.toFixed(0)}%)</span>
+      </div>
+    `;
 }
 
 // ==================== Коллекции и бонусы ====================
@@ -509,17 +549,12 @@ function subscribeToUser(userUid) {
 
         renderStatsFromState(levelState);
 
-        // 🔥 новый профильный рендер
-        const league      = getLeagueForLevel(levelState.level);
-        const leagueState = getLeagueProgress(totalClicks);
-
-        // 🔥 профильный рендер — просто уровень и баланс
+        // 🔥 новый профильный рендер (только имя / AkulkaID / аватар)
         renderProfileFromUserDoc(
             data,
             levelState.level, // уровень
             balance           // текущий баланс LM
         );
-
 
         const onlineDot = document.getElementById("onlineDot");
         if (onlineDot) onlineDot.classList.remove("hidden");
@@ -932,7 +967,6 @@ async function grantPrizeWithGlobalLimit(machine) {
 
 
 // Чистая логика спина автомата
-// Чистая логика спина автомата
 async function spinMachine(machineId) {
     if (!uid || !userRef) {
         showToast("Сначала авторизуйся через Telegram");
@@ -1106,6 +1140,7 @@ function openMachineOverlay(machineId) {
     if (machinePriceEl) machinePriceEl.textContent = machine.price;
 
     fillMachinePrizeStrip(machineId);
+    updateMachineStatsSummary(machineId);
 
     machineOverlayEl.classList.remove("hidden");
     machineOverlayEl.classList.add("active");
@@ -1175,13 +1210,16 @@ async function handleMachinePlayClick() {
             machineResultTextEl.textContent = msg;
             machineResultEl.classList.remove("hidden");
         } else if (result.outcome === "no-prize") {
-        machineResultEmojiEl.textContent = "🧩";
-        machineResultTextEl.textContent  =
-            "Все топовые призы из этого автомата уже разобрали.";
-        machineResultEl.classList.remove("hidden");
-    }
+            machineResultEmojiEl.textContent = "🧩";
+            machineResultTextEl.textContent  =
+                "Все топовые призы из этого автомата уже разобрали.";
+            machineResultEl.classList.remove("hidden");
+        }
 
-} finally {
+        // после игры обновим статистику блока
+        updateMachineStatsSummary(currentMachineId);
+
+    } finally {
         machineSpinRunning = false;
     }
 }

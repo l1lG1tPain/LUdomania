@@ -813,5 +813,13 @@ img {
     font-weight: 600;
 }
 
+#machineStatsSummary {
+    padding: 10px;
+}
+.machine-stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
 
