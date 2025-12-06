@@ -26,7 +26,7 @@ export async function initProfileLeaderboards(currentUid, currentUserMetrics = {
 
     const nameEl        = document.getElementById("profilePageName");
 
-    // Если на странице профиля нет блока рейтинга — просто выходим
+    // Если на странице нет нужных элементов — выходим
     if (!rootEl || !listEl || !tabLevelEl || !tabWealthEl || !tabCollectEl) {
         return;
     }
@@ -52,10 +52,9 @@ export async function initProfileLeaderboards(currentUid, currentUserMetrics = {
             });
         });
 
-        // если пользователей нет — выходим
         if (!users.length) return;
 
-        // гарантируем, что текущий игрок есть в массиве (на всякий случай)
+        // гарантируем наличие текущего игрока
         let me = users.find((u) => u.uid === currentUid);
         if (!me) {
             me = {
@@ -70,7 +69,7 @@ export async function initProfileLeaderboards(currentUid, currentUserMetrics = {
             users.push(me);
         }
 
-        // ==== СОРТИРОВКИ ДЛЯ ТРЁХ ВКЛАДОК ====
+        // === сортировки для трёх вкладок ===
 
         // по уровню (level -> totalEarned)
         const byLevel = [...users].sort((a, b) => {
@@ -92,7 +91,7 @@ export async function initProfileLeaderboards(currentUid, currentUserMetrics = {
             return (b.collectionCount ?? 0) - (a.collectionCount ?? 0);
         });
 
-        // ===== Проставляем #место по уровню в имени (как раньше) =====
+        // метка #n в имени по уровню
         const meIndexByLevel = byLevel.findIndex((u) => u.uid === currentUid);
         const mePlaceByLevel = meIndexByLevel >= 0 ? meIndexByLevel + 1 : null;
 
@@ -101,7 +100,7 @@ export async function initProfileLeaderboards(currentUid, currentUserMetrics = {
             nameEl.textContent = `${me.name}${tag}`;
         }
 
-        // ====== UI вкладок + рендер списка ======
+        // ===== Вкладки и рендер =====
 
         const tabs = [
             { el: tabLevelEl,   metric: "level",      baseLabel: "По уровню" },
@@ -112,7 +111,7 @@ export async function initProfileLeaderboards(currentUid, currentUserMetrics = {
         let currentMetric = "level";
 
         function getSorted(metric) {
-            if (metric === "wealth") return byWealth;
+            if (metric === "wealth")     return byWealth;
             if (metric === "collection") return byCollection;
             return byLevel;
         }
@@ -141,7 +140,7 @@ export async function initProfileLeaderboards(currentUid, currentUserMetrics = {
         }
 
         function renderList() {
-            const metric = currentMetric;
+            const metric  = currentMetric;
             const dataset = getSorted(metric);
 
             listEl.innerHTML = "";
@@ -153,7 +152,7 @@ export async function initProfileLeaderboards(currentUid, currentUserMetrics = {
                     row.classList.add("me");
                 }
 
-                const place = index + 1;
+                const place      = index + 1;
                 const metricText = getMetricText(user, metric);
 
                 row.innerHTML = `
