@@ -5,6 +5,16 @@ import {
     getLeagueProgress,
 } from "./leagueLogic.js";
 
+import {
+    getRankForProfile,
+    RANKS_BY_LEVEL,
+    getWealthRank,
+    WEALTH_RANKS,
+    getCollectorRank,
+    COLLECTOR_RANKS,
+    getPlaceFromTier,
+} from "./ranksLogic.js";
+
 /**
  * Собираем view-model профиля из документа пользователя + уровня и баланса.
  */
@@ -79,7 +89,7 @@ export function renderProfileHeader(viewModel) {
 
 /**
  * Базовая часть страницы профиля (pageProfile):
- * аватар, имя, AkulkaID, уровень, лига, баланс, базовые счётчики и рейтинг.
+ * аватар, имя, AkulkaID, уровень, лига, баланс, базовые счётчики и рейтинги.
  */
 export function renderProfilePageBase(viewModel) {
     const {
@@ -109,15 +119,24 @@ export function renderProfilePageBase(viewModel) {
     const totalEarnedEl     = document.getElementById("profilePageTotalEarned");
     const totalSpentEl      = document.getElementById("profilePageTotalSpent");
 
-    // Новые элементы рейтинга
+    // Элементы рейтинга в основной карточке
     const ratingLevelValueEl       = document.getElementById("profileRatingLevelValue");
     const ratingLeagueChipEl       = document.getElementById("profileRatingLeagueChip");
-    const ratingLeagueProgressEl   = document.getElementById("profileRatingLeagueProgress");
+    const ratingLevelRankTitleEl   = document.getElementById("profileRankTitle");
     const ratingTotalEarnedEl      = document.getElementById("profileRatingTotalEarned");
     const ratingCurrentBalanceEl   = document.getElementById("profileRatingCurrentBalance");
+    const wealthRankChipEl         = document.getElementById("profileWealthRankChip");
+    const ratingCollectionValueEl  = document.getElementById("profileRatingCollectionValue");
+    const ratingCollectionCountEl  = document.getElementById("profileRatingCollectionCount");
+    const collectorRankChipEl      = document.getElementById("profileCollectorRankChip");
 
-    if (nameEl)      nameEl.textContent      = name;
-    if (akulkaIdEl)  akulkaIdEl.textContent  = `AkulkaID: ${akulkaId}`;
+    // Элементы "Рейтинг игрока" под глобальным винрейтом
+    const rankingOverallEl         = document.getElementById("profileRankingOverall");
+    const rankingOverallPlaceEl    = document.getElementById("profileRankingOverallPlace");
+    const rankingWealthEl          = document.getElementById("profileRankingWealth");
+    const rankingWealthPlaceEl     = document.getElementById("profileRankingWealthPlace");
+    const rankingCollectorEl       = document.getElementById("profileRankingCollector");
+    const rankingCollectorPlaceEl  = document.getElementById("profileRankingCollectorPlace");
 
     if (avatarEl) {
         avatarEl.innerHTML = "";
@@ -133,6 +152,18 @@ export function renderProfilePageBase(viewModel) {
         avatarEl.appendChild(img);
     }
 
+    // 🏅 Ранг по уровню (общий)
+    const levelRank = getRankForProfile({ level, totalEarned });
+    const { place: levelPlace } = getPlaceFromTier(levelRank.tier, RANKS_BY_LEVEL);
+
+    if (nameEl) {
+        const tag = levelPlace ? ` #${levelPlace}` : "";
+        nameEl.textContent = `${name}${tag}`;
+    }
+    if (akulkaIdEl) {
+        akulkaIdEl.textContent = `AkulkaID: ${akulkaId}`;
+    }
+
     if (typeof balance === "number" && balanceEl) {
         balanceEl.textContent = balance.toLocaleString("ru-RU");
     }
@@ -143,7 +174,7 @@ export function renderProfilePageBase(viewModel) {
         leagueEl.textContent = `${league.emoji} ${league.name}`;
     }
 
-    // Лига и прогресс
+    // Прогресс лиги
     const lp = leagueProgress || getLeagueProgress(level || 0);
     const progress = Math.max(0, Math.min(1, lp.progress ?? 0));
     const percent  = Math.round(progress * 100);
@@ -160,18 +191,19 @@ export function renderProfilePageBase(viewModel) {
         }
     }
 
-    // 🔹 Рейтинг по уровню и лиге
+    // 🔹 Рейтинг по уровню и лиге (в карточке)
     if (ratingLevelValueEl && typeof level === "number") {
         ratingLevelValueEl.textContent = level;
     }
     if (ratingLeagueChipEl && league) {
         ratingLeagueChipEl.textContent = `${league.emoji} ${league.name}`;
     }
-    if (ratingLeagueProgressEl) {
-        ratingLeagueProgressEl.textContent = `${percent}%`;
+    if (ratingLevelRankTitleEl && levelRank) {
+        ratingLevelRankTitleEl.textContent = `${levelRank.emoji} ${levelRank.title}`;
+        ratingLevelRankTitleEl.title       = levelRank.description;
     }
 
-    // 🔹 Рейтинг по деньгам
+    // 🔹 Рейтинг по деньгам (богатство)
     if (ratingTotalEarnedEl) {
         ratingTotalEarnedEl.textContent = totalEarned.toLocaleString("ru-RU");
     }
@@ -179,7 +211,30 @@ export function renderProfilePageBase(viewModel) {
         ratingCurrentBalanceEl.textContent = balance.toLocaleString("ru-RU");
     }
 
-    // Стандартные статы
+    const wealthRank = getWealthRank({ totalEarned, balance });
+    const { place: wealthPlace } = getPlaceFromTier(wealthRank.tier, WEALTH_RANKS);
+
+    if (wealthRankChipEl && wealthRank) {
+        wealthRankChipEl.textContent = `${wealthRank.emoji} ${wealthRank.title}`;
+        wealthRankChipEl.title       = wealthRank.description;
+    }
+
+    // 🔹 Заполняем блок "Рейтинг игрока" под винрейтом
+    if (rankingOverallEl && levelRank) {
+        rankingOverallEl.textContent = `${levelRank.emoji} ${levelRank.title}`;
+    }
+    if (rankingOverallPlaceEl && levelPlace) {
+        rankingOverallPlaceEl.textContent = `#${levelPlace}`;
+    }
+
+    if (rankingWealthEl && wealthRank) {
+        rankingWealthEl.textContent = `${wealthRank.emoji} ${wealthRank.title}`;
+    }
+    if (rankingWealthPlaceEl && wealthPlace) {
+        rankingWealthPlaceEl.textContent = `#${wealthPlace}`;
+    }
+
+    // стандартные статы
     if (totalClicksEl) totalClicksEl.textContent = totalClicks.toLocaleString("ru-RU");
     if (clickPowerEl)  clickPowerEl.textContent  = clickPower;
     if (totalEarnedEl) totalEarnedEl.textContent = totalEarned.toLocaleString("ru-RU");
@@ -188,12 +243,16 @@ export function renderProfilePageBase(viewModel) {
 
 /**
  * Обновляем стоимость коллекции (учитывает все копии призов)
- * + в рейтинге коллекции.
+ * + в рейтинге коллекции и блоке "Рейтинг игрока".
  */
 export function updateProfileCollectionValue(totalCollectionLM = 0, totalPrizesCount = 0) {
     const mainEl   = document.getElementById("profileCollectionValue");
     const ratingEl = document.getElementById("profileRatingCollectionValue");
     const countEl  = document.getElementById("profileRatingCollectionCount");
+
+    const chipEl          = document.getElementById("profileCollectorRankChip");
+    const rankingEl       = document.getElementById("profileRankingCollector");
+    const rankingPlaceEl  = document.getElementById("profileRankingCollectorPlace");
 
     const formattedValue = totalCollectionLM.toLocaleString("ru-RU");
     const formattedCount = totalPrizesCount.toLocaleString("ru-RU");
@@ -201,6 +260,31 @@ export function updateProfileCollectionValue(totalCollectionLM = 0, totalPrizesC
     if (mainEl)   mainEl.textContent   = formattedValue;
     if (ratingEl) ratingEl.textContent = formattedValue;
     if (countEl)  countEl.textContent  = formattedCount;
+
+    // ранги коллекционера
+    try {
+        const collectorRank = getCollectorRank({
+            totalCollectionValue: totalCollectionLM,
+            totalPrizesCount,
+        });
+        const { place: collectorPlace } = getPlaceFromTier(
+            collectorRank.tier,
+            COLLECTOR_RANKS
+        );
+
+        if (chipEl && collectorRank) {
+            chipEl.textContent = `${collectorRank.emoji} ${collectorRank.title}`;
+            chipEl.title       = collectorRank.description;
+        }
+        if (rankingEl && collectorRank) {
+            rankingEl.textContent = `${collectorRank.emoji} ${collectorRank.title}`;
+        }
+        if (rankingPlaceEl && collectorPlace) {
+            rankingPlaceEl.textContent = `#${collectorPlace}`;
+        }
+    } catch (e) {
+        console.error("Ошибка расчёта ранга коллекционера", e);
+    }
 }
 
 /**

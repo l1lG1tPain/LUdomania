@@ -140,21 +140,16 @@
                     </div>
                 </div>
 
-                <!-- Рейтинг игрока -->
                 <div class="profile-rating-grid">
-                    <!-- 1. Рейтинг по уровню и лиге -->
+                    <!-- 1. Ранг игрока -->
                     <div class="profile-rating-card">
                         <div class="rating-label">Ранг игрока</div>
                         <div class="rating-main">
-                            <span class="rating-main-big">
-                                LVL <span id="profileRatingLevelValue">0</span>
-                            </span>
-                            <span id="profileRatingLeagueChip" class="rating-chip">
-                                🥉 Бронза
-                            </span>
+                            <span id="profileRankTitle" class="rank-title-text">🐣 Новобранец</span>
                         </div>
                         <div class="rating-sub">
-                            До следующей лиги: <span id="profileRatingLeagueProgress">0%</span>
+                            LVL <span id="profileRatingLevelValue">0</span>,
+                            <span id="profileRatingLeagueChip">🥉 Бронза</span>
                         </div>
                     </div>
 
@@ -169,6 +164,9 @@
                             Сейчас на руках:
                             <span id="profileRatingCurrentBalance">0</span> LM
                         </div>
+                        <div class="rating-sub">
+                            <span id="profileWealthRankChip" class="rating-chip">💰 Начинающий фармер</span>
+                        </div>
                     </div>
 
                     <!-- 3. Коллекция -->
@@ -182,8 +180,12 @@
                             Призов:
                             <span id="profileRatingCollectionCount">0</span>
                         </div>
+                        <div class="rating-sub">
+                            <span id="profileCollectorRankChip" class="rating-chip">🎴 Коллекционер-новичок</span>
+                        </div>
                     </div>
                 </div>
+
             </div>
 
             <!-- Блок "Мой прогресс" -->
@@ -236,6 +238,25 @@
             <div id="profileGlobalWinrateHint" class="profile-hint">
                 Глобальный винрейт: 0%
             </div>
+            <h3 class="profile-subtitle">🏆 Рейтинг игроков</h3>
+            <div class="profile-ranking-list">
+                <div class="profile-ranking-row">
+                    <span class="profile-ranking-label">По уровню</span>
+                    <span id="profileRankingLevelValue" class="profile-ranking-value">LVL 0</span>
+                    <span id="profileRankingLevelPlace" class="profile-ranking-place">#—</span>
+                </div>
+                <div class="profile-ranking-row">
+                    <span class="profile-ranking-label">По богатству</span>
+                    <span id="profileRankingWealthValue" class="profile-ranking-value">0 LM</span>
+                    <span id="profileRankingWealthPlace" class="profile-ranking-place">#—</span>
+                </div>
+                <div class="profile-ranking-row">
+                    <span class="profile-ranking-label">По коллекции</span>
+                    <span id="profileRankingCollectionValue" class="profile-ranking-value">0 LM</span>
+                    <span id="profileRankingCollectionPlace" class="profile-ranking-place">#—</span>
+                </div>
+            </div>
+
         </section>
 
 

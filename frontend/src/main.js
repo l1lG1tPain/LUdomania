@@ -33,6 +33,9 @@ import {
 
 import { getLeagueForLevel } from "./leagueLogic.js";
 
+import { initProfileLeaderboards } from "./leaderboardLogic.js"; // ⬅️ новый импорт
+import { getCollectorRank } from "./ranksLogic.js";
+
 // ==================== DOM-элементы ====================
 
 // Авторизация
@@ -439,21 +442,33 @@ function renderInventory(items) {
     lastInventoryItems = items;
     inventoryEl.innerHTML = "";
 
+    // === ПУСТОЙ ИНВЕНТАРЬ ===
     if (items.length === 0) {
         inventoryEl.textContent = "Пока пусто. Выбей что-нибудь из автомата 🎰";
-        clickMultiplier       = 1;
-        totalCollectionValue  = 0;
 
-        // стоимость = 0, призов = 0
+        clickMultiplier      = 1;
+        totalCollectionValue = 0;
+
+        // UI: стоимость коллекции = 0, призов = 0
         updateProfileCollectionValue(0, 0);
         renderStatsFromState();
+
+        // Firestore: коллекция пуста, ранг коллекционера — стартовый
+        if (userRef) {
+            updateDoc(userRef, {
+                collectionValue:    0,
+                collectionCount:    0,
+                collectorRankTier:  1,
+            }).catch(e => console.error("update empty collection error", e));
+        }
+
         return;
     }
 
-    // 🔹 пересчитываем бонусы от коллекций
+    // === БОНУСЫ ОТ КОЛЛЕКЦИЙ ===
     recomputeCollectionsAndBonuses(items);
 
-    // 🔹 общая стоимость коллекции и общее количество копий призов
+    // === АГРЕГАЦИЯ: стоимость и количество копий ===
     const { totalValue, totalCount } = items.reduce(
         (acc, item) => {
             const cfg   = PRIZES[item.prizeId || item.id] || {};
@@ -469,11 +484,37 @@ function renderInventory(items) {
 
     totalCollectionValue = totalValue;
 
-    // обновляем профиль (основной блок + рейтинг коллекции)
-    updateProfileCollectionValue(totalCollectionValue, totalCount);
+    // === UI: обновляем профиль (основной блок + рейтинг коллекции) ===
+    updateProfileCollectionValue(totalValue, totalCount);
     renderStatsFromState();
 
-    // 🔹 рисуем карточки инвентаря
+    // === РАНГ КОЛЛЕКЦИОНЕРА + СОХРАНЕНИЕ В Firestore ===
+    if (userRef) {
+        let collectorRankTier = null;
+        try {
+            const collectorRank = getCollectorRank({
+                totalCollectionValue: totalValue,
+                totalPrizesCount:     totalCount,
+            });
+            collectorRankTier = collectorRank?.tier ?? null;
+        } catch (e) {
+            console.error("collector rank calc error", e);
+        }
+
+        const payload = {
+            collectionValue: totalValue,
+            collectionCount: totalCount,
+        };
+        if (collectorRankTier !== null) {
+            payload.collectorRankTier = collectorRankTier;
+        }
+
+        updateDoc(userRef, payload).catch(err =>
+            console.error("update collection stats error", err)
+        );
+    }
+
+    // === РЕНДЕР КАРТОЧЕК ИНВЕНТАРЯ ===
     items.forEach((item) => {
         const div = document.createElement("div");
         div.className = "inv-card";
@@ -485,9 +526,10 @@ function renderInventory(items) {
         const count      = item.count ?? 1;
         const maxGlobal  = item.maxCopiesGlobal ?? cfg.maxCopiesGlobal;
 
-        const percent       = (maxGlobal && Number.isFinite(maxGlobal))
+        const percent = (maxGlobal && Number.isFinite(maxGlobal))
             ? Math.min(100, Math.round((count / maxGlobal) * 100))
             : 100;
+
         const progressLabel = maxGlobal
             ? `${count} / ${maxGlobal}`
             : `${count}`;
@@ -529,6 +571,7 @@ function renderInventory(items) {
         inventoryEl.appendChild(div);
     });
 }
+
 
 function subscribeToInventory(userUid) {
     const invCol = collection(db, "users", userUid, "inventory");
@@ -573,6 +616,19 @@ function subscribeToUser(userUid) {
             levelState.level,
             balance
         );
+        // 💠 Глобальный рейтинг игроков (по уровню / богатству / коллекции)
+        initProfileLeaderboards(uid, {
+            name:
+                data.firstName ||
+                data.username ||
+                data.displayName ||
+                "Игрок",
+            level:           levelState.level,
+            balance:         balance,
+            totalEarned:     data.totalEarned     ?? 0,
+            collectionValue: data.collectionValue ?? 0,
+            collectionCount: data.collectionCount ?? 0,
+        });
 
         const onlineDot = document.getElementById("onlineDot");
         if (onlineDot) onlineDot.classList.remove("hidden");
@@ -586,23 +642,39 @@ async function ensureGameFields(userUid, telegramInfo) {
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
+        // 🔥 создаём нового пользователя со всеми необходимыми полями
         await setDoc(ref, {
             telegram_id: telegramInfo?.id ?? null,
             username:    telegramInfo?.username ?? null,
             firstName:   telegramInfo?.first_name ?? "",
             photoUrl:    telegramInfo?.photo_url ?? null,
+
             createdAt:   serverTimestamp(),
             lastLogin:   serverTimestamp(),
+
+            // базовые игровые поля
             balance:     0,
             clickPower:  1,
             totalClicks: 0,
             totalEarned: 0,
             totalSpent:  0,
             level:       0,
+
+            // 💿 коллекция для рейтингов
+            collectionValue: 0,  // общая стоимость коллекции
+            collectionCount: 0,  // общее количество копий призов
+
+            // 🏅 tier'ы рангов (пока интересует коллекционер)
+            collectorRankTier: 1, // базовый ранг коллекционера
+            // на будущее можно добавить:
+            // levelRankTier:    1,
+            // wealthRankTier:   1,
         });
     } else {
         const data  = snap.data();
         const patch = {};
+
+        // старые поля
         if (data.balance     === undefined) patch.balance     = 0;
         if (data.clickPower  === undefined) patch.clickPower  = 1;
         if (data.totalClicks === undefined) patch.totalClicks = 0;
@@ -610,11 +682,25 @@ async function ensureGameFields(userUid, telegramInfo) {
         if (data.totalSpent  === undefined) patch.totalSpent  = 0;
         if (data.level       === undefined) patch.level       = 0;
 
+        // новые поля для коллекции
+        if (data.collectionValue === undefined) patch.collectionValue = 0;
+        if (data.collectionCount === undefined) patch.collectionCount = 0;
+
+        // rankTier коллекционера
+        if (data.collectorRankTier === undefined) patch.collectorRankTier = 1;
+        // на будущее можно:
+        // if (data.levelRankTier  === undefined) patch.levelRankTier  = 1;
+        // if (data.wealthRankTier === undefined) patch.wealthRankTier = 1;
+
         if (Object.keys(patch).length > 0) {
             await updateDoc(ref, patch);
         }
+
+        // всегда обновляем lastLogin
+        await updateDoc(ref, { lastLogin: serverTimestamp() });
     }
 }
+
 
 // ==================== Кликер (мультитач + +N) ====================
 
