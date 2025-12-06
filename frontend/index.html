@@ -239,21 +239,27 @@
                 Глобальный винрейт: 0%
             </div>
             <h3 class="profile-subtitle">🏆 Рейтинг игроков</h3>
-            <div class="profile-ranking-list">
-                <div class="profile-ranking-row">
-                    <span class="profile-ranking-label">По уровню</span>
-                    <span id="profileRankingLevelValue" class="profile-ranking-value">LVL 0</span>
-                    <span id="profileRankingLevelPlace" class="profile-ranking-place">#—</span>
+            <div id="profileLeaderboard" class="profile-leaderboard">
+                <div class="profile-leaderboard-tabs">
+                    <button id="leaderboardTabLevel" class="leaderboard-tab active">
+                        (По уровню)
+                    </button>
+                    <button id="leaderboardTabWealth" class="leaderboard-tab">
+                        По богатству
+                    </button>
+                    <button id="leaderboardTabCollection" class="leaderboard-tab">
+                        По коллекции
+                    </button>
                 </div>
-                <div class="profile-ranking-row">
-                    <span class="profile-ranking-label">По богатству</span>
-                    <span id="profileRankingWealthValue" class="profile-ranking-value">0 LM</span>
-                    <span id="profileRankingWealthPlace" class="profile-ranking-place">#—</span>
+
+                <div class="profile-leaderboard-header">
+                    <span class="pl-col-name">Ник</span>
+                    <span class="pl-col-metric">Характеристика</span>
+                    <span class="pl-col-place">№</span>
                 </div>
-                <div class="profile-ranking-row">
-                    <span class="profile-ranking-label">По коллекции</span>
-                    <span id="profileRankingCollectionValue" class="profile-ranking-value">0 LM</span>
-                    <span id="profileRankingCollectionPlace" class="profile-ranking-place">#—</span>
+
+                <div id="profileLeaderboardList" class="profile-leaderboard-list">
+                    <!-- сюда JS будет рендерить строки игроков -->
                 </div>
             </div>
 

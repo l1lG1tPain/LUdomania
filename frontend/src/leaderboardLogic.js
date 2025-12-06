@@ -6,37 +6,28 @@ import {
 } from "firebase/firestore";
 
 /**
- * Загружаем всех пользователей и считаем место текущего игрока
- * по трём метрикам:
- *  - уровень (level)
- *  - богатство (balance / текущие LM на руках)
- *  - коллекция (collectionValue / общая стоимость коллекции)
+ * Глобальный рейтинг игроков:
+ *  - вкладки: по уровню / по богатству / по коллекции
+ *  - показываем ВСЕХ игроков
+ *  - по дефолту открыта вкладка "По уровню"
  *
  * @param {string} currentUid
- * @param {object} currentUserMetrics - метрики текущего пользователя
+ * @param {object} currentUserMetrics
  *   { name, level, balance, totalEarned, collectionValue, collectionCount }
  */
 export async function initProfileLeaderboards(currentUid, currentUserMetrics = {}) {
     if (!currentUid) return;
 
-    const levelValueEl      = document.getElementById("profileRankingLevelValue");
-    const levelPlaceEl      = document.getElementById("profileRankingLevelPlace");
-    const wealthValueEl     = document.getElementById("profileRankingWealthValue");
-    const wealthPlaceEl     = document.getElementById("profileRankingWealthPlace");
-    const collectionValueEl = document.getElementById("profileRankingCollectionValue");
-    const collectionPlaceEl = document.getElementById("profileRankingCollectionPlace");
+    const rootEl        = document.getElementById("profileLeaderboard");
+    const listEl        = document.getElementById("profileLeaderboardList");
+    const tabLevelEl    = document.getElementById("leaderboardTabLevel");
+    const tabWealthEl   = document.getElementById("leaderboardTabWealth");
+    const tabCollectEl  = document.getElementById("leaderboardTabCollection");
 
-    const nameEl            = document.getElementById("profilePageName");
+    const nameEl        = document.getElementById("profilePageName");
 
-    // если на странице нет блока рейтинга — тихо выходим
-    if (
-        !levelValueEl ||
-        !levelPlaceEl ||
-        !wealthValueEl ||
-        !wealthPlaceEl ||
-        !collectionValueEl ||
-        !collectionPlaceEl
-    ) {
+    // Если на странице профиля нет блока рейтинга — просто выходим
+    if (!rootEl || !listEl || !tabLevelEl || !tabWealthEl || !tabCollectEl) {
         return;
     }
 
@@ -61,53 +52,39 @@ export async function initProfileLeaderboards(currentUid, currentUserMetrics = {
             });
         });
 
+        // если пользователей нет — выходим
         if (!users.length) return;
 
-        const me     = users.find((u) => u.uid === currentUid);
-        const meName = me?.name ?? currentUserMetrics.name ?? "Игрок";
+        // гарантируем, что текущий игрок есть в массиве (на всякий случай)
+        let me = users.find((u) => u.uid === currentUid);
+        if (!me) {
+            me = {
+                uid: currentUid,
+                name:            currentUserMetrics.name ?? "Игрок",
+                level:           currentUserMetrics.level           ?? 0,
+                balance:         currentUserMetrics.balance         ?? 0,
+                totalEarned:     currentUserMetrics.totalEarned     ?? 0,
+                collectionValue: currentUserMetrics.collectionValue ?? 0,
+                collectionCount: currentUserMetrics.collectionCount ?? 0,
+            };
+            users.push(me);
+        }
 
-        // ===== Рейтинг по уровню =====
+        // ==== СОРТИРОВКИ ДЛЯ ТРЁХ ВКЛАДОК ====
+
+        // по уровню (level -> totalEarned)
         const byLevel = [...users].sort((a, b) => {
             if (b.level !== a.level) return b.level - a.level;
-            // если уровни равны — сортируем по общему заработку
             return (b.totalEarned ?? 0) - (a.totalEarned ?? 0);
         });
 
-        const levelIndex = byLevel.findIndex((u) => u.uid === currentUid);
-        const levelPlace = levelIndex >= 0 ? levelIndex + 1 : null;
-        const myLevel    = me?.level ?? currentUserMetrics.level ?? 0;
-
-        levelValueEl.textContent = `LVL ${myLevel}`;
-        if (levelPlace) {
-            levelPlaceEl.textContent = `#${levelPlace}`;
-        } else {
-            levelPlaceEl.textContent = "—";
-        }
-
-        // Обновляем имя в профиле с #местом по уровню
-        if (nameEl) {
-            const tag = levelPlace ? ` #${levelPlace}` : "";
-            nameEl.textContent = `${meName}${tag}`;
-        }
-
-        // ===== Рейтинг по богатству (LM на руках) =====
+        // по богатству (balance -> totalEarned)
         const byWealth = [...users].sort((a, b) => {
             if (b.balance !== a.balance) return b.balance - a.balance;
             return (b.totalEarned ?? 0) - (a.totalEarned ?? 0);
         });
 
-        const wealthIndex = byWealth.findIndex((u) => u.uid === currentUid);
-        const wealthPlace = wealthIndex >= 0 ? wealthIndex + 1 : null;
-        const myBalance   = me?.balance ?? currentUserMetrics.balance ?? 0;
-
-        wealthValueEl.textContent = formatNumberWithLM(myBalance);
-        if (wealthPlace) {
-            wealthPlaceEl.textContent = `#${wealthPlace}`;
-        } else {
-            wealthPlaceEl.textContent = "—";
-        }
-
-        // ===== Рейтинг по коллекции =====
+        // по коллекции (collectionValue -> collectionCount)
         const byCollection = [...users].sort((a, b) => {
             if (b.collectionValue !== a.collectionValue) {
                 return b.collectionValue - a.collectionValue;
@@ -115,22 +92,102 @@ export async function initProfileLeaderboards(currentUid, currentUserMetrics = {
             return (b.collectionCount ?? 0) - (a.collectionCount ?? 0);
         });
 
-        const collectionIndex = byCollection.findIndex((u) => u.uid === currentUid);
-        const collectionPlace = collectionIndex >= 0 ? collectionIndex + 1 : null;
-        const myCollectionValue =
-            me?.collectionValue ?? currentUserMetrics.collectionValue ?? 0;
+        // ===== Проставляем #место по уровню в имени (как раньше) =====
+        const meIndexByLevel = byLevel.findIndex((u) => u.uid === currentUid);
+        const mePlaceByLevel = meIndexByLevel >= 0 ? meIndexByLevel + 1 : null;
 
-        collectionValueEl.textContent = formatNumberWithLM(myCollectionValue);
-        if (collectionPlace) {
-            collectionPlaceEl.textContent = `#${collectionPlace}`;
-        } else {
-            collectionPlaceEl.textContent = "—";
+        if (nameEl) {
+            const tag = mePlaceByLevel ? ` #${mePlaceByLevel}` : "";
+            nameEl.textContent = `${me.name}${tag}`;
         }
+
+        // ====== UI вкладок + рендер списка ======
+
+        const tabs = [
+            { el: tabLevelEl,   metric: "level",      baseLabel: "По уровню" },
+            { el: tabWealthEl,  metric: "wealth",     baseLabel: "По богатству" },
+            { el: tabCollectEl, metric: "collection", baseLabel: "По коллекции" },
+        ];
+
+        let currentMetric = "level";
+
+        function getSorted(metric) {
+            if (metric === "wealth") return byWealth;
+            if (metric === "collection") return byCollection;
+            return byLevel;
+        }
+
+        function getMetricText(user, metric) {
+            switch (metric) {
+                case "level":
+                    return `LVL ${user.level}`;
+                case "wealth":
+                    return formatNumberWithLM(user.balance);
+                case "collection":
+                    return formatNumberWithLM(user.collectionValue);
+                default:
+                    return "";
+            }
+        }
+
+        function updateTabs() {
+            tabs.forEach((t) => {
+                const isActive = t.metric === currentMetric;
+                t.el.classList.toggle("active", isActive);
+                t.el.textContent = isActive
+                    ? `(${t.baseLabel})`
+                    : t.baseLabel;
+            });
+        }
+
+        function renderList() {
+            const metric = currentMetric;
+            const dataset = getSorted(metric);
+
+            listEl.innerHTML = "";
+
+            dataset.forEach((user, index) => {
+                const row = document.createElement("div");
+                row.className = "profile-leaderboard-row";
+                if (user.uid === currentUid) {
+                    row.classList.add("me");
+                }
+
+                const place = index + 1;
+                const metricText = getMetricText(user, metric);
+
+                row.innerHTML = `
+                    <span class="pl-name">${user.name}</span>
+                    <span class="pl-metric">${metricText}</span>
+                    <span class="pl-place">#${place}</span>
+                `;
+
+                listEl.appendChild(row);
+            });
+        }
+
+        // обработчики вкладок
+        tabs.forEach((t) => {
+            t.el.addEventListener("click", () => {
+                if (currentMetric === t.metric) return;
+                currentMetric = t.metric;
+                updateTabs();
+                renderList();
+            });
+        });
+
+        // старт: по уровню
+        currentMetric = "level";
+        updateTabs();
+        renderList();
     } catch (err) {
         console.error("Ошибка загрузки рейтинга игроков", err);
     }
 }
 
+/**
+ * Красивое форматирование LM: 12k / 2.3m / 1.1b LM
+ */
 function formatNumberWithLM(value) {
     const num = Number(value) || 0;
     if (num < 10000) return `${num} LM`;

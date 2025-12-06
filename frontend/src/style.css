@@ -1098,7 +1098,7 @@ img {
 /* Текст ранга в карточке */
 .rank-title-text {
     font-weight: 600;
-    font-size: 1.05rem;
+    font-size: 14px;
     letter-spacing: 0.02em;
 }
 
@@ -1139,3 +1139,117 @@ img {
 }
 
 
+/* ===== Новый глобальный рейтинг игроков (табами) ===== */
+
+.profile-leaderboard {
+    margin-top: 8px;
+    padding: 8px 10px 10px;
+    border-radius: 14px;
+    background: #111827;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.profile-leaderboard-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.leaderboard-tab {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 4px 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    background: #020617;
+    color: #e5e7eb;
+    opacity: 0.8;
+    cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
+    white-space: nowrap;
+}
+
+.leaderboard-tab.active {
+    background: linear-gradient(90deg, #4f46e5, #06b6d4);
+    color: #f9fafb;
+    opacity: 1;
+    transform: translateY(-1px);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.leaderboard-tab:active {
+    transform: scale(0.97);
+}
+
+.profile-leaderboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2px 4px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.55;
+}
+
+.profile-leaderboard-header .pl-col-name {
+    flex: 1.2;
+}
+
+.profile-leaderboard-header .pl-col-metric {
+    flex: 1;
+    text-align: center;
+}
+
+.profile-leaderboard-header .pl-col-place {
+    width: 32px;
+    text-align: right;
+}
+
+.profile-leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.profile-leaderboard-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    font-size: 11px;
+}
+
+.profile-leaderboard-row.me {
+    border-color: #facc15;
+    box-shadow: 0 0 12px rgba(250, 204, 21, 0.4);
+    background: radial-gradient(circle at top left, rgba(250, 204, 21, 0.16), #020617);
+}
+
+.profile-leaderboard-row .pl-name {
+    flex: 1.2;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profile-leaderboard-row .pl-metric {
+    flex: 1;
+    text-align: center;
+    opacity: 0.9;
+}
+
+.profile-leaderboard-row .pl-place {
+    width: 32px;
+    text-align: right;
+    font-weight: 600;
+}
