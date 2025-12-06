@@ -110,36 +110,78 @@
         <section id="pageProfile" class="page">
             <h2 class="section-title">👤 Профиль</h2>
 
+            <!-- Главная карточка профиля -->
             <div class="profile-page-main-card">
                 <div class="profile-page-header">
                     <div id="profilePageAvatar" class="profile-avatar-big"></div>
+
                     <div class="profile-page-header-text">
                         <div id="profilePageName" class="profile-name-big">Игрок</div>
                         <div id="profilePageAkulkaId" class="profile-id">AkulkaID: —</div>
+
+                        <div class="profile-header-badges">
+                            <span class="profile-lvl-badge">
+                                LVL <span id="profilePageLevel">0</span>
+                            </span>
+                            <span id="profilePageLeague" class="profile-league-chip">
+                                🥉 Бронза
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="profile-page-row">
-                    <span class="label">Баланс</span>
-                    <span class="value">
-                        <span id="profilePageBalance">0</span> LM
-                    </span>
-                </div>
-
-                <div class="profile-page-row">
-                    <span class="label">Уровень</span>
-                    <span class="value">
-                        <span id="profilePageLevel">0</span>
-                        <span id="profilePageLeague" class="profile-league-chip">🥉 Бронза</span>
-                    </span>
-                </div>
-
+                <!-- Прогресс лиги -->
                 <div class="profile-league-progress">
                     <div class="profile-league-progress-bar">
                         <div id="profileLeagueProgressFill" class="profile-league-progress-fill"></div>
                     </div>
                     <div id="profileLeagueProgressText" class="profile-league-progress-text">
                         Прогресс лиги: 0%
+                    </div>
+                </div>
+
+                <!-- Рейтинг игрока -->
+                <div class="profile-rating-grid">
+                    <!-- 1. Рейтинг по уровню и лиге -->
+                    <div class="profile-rating-card">
+                        <div class="rating-label">Ранг игрока</div>
+                        <div class="rating-main">
+                            <span class="rating-main-big">
+                                LVL <span id="profileRatingLevelValue">0</span>
+                            </span>
+                            <span id="profileRatingLeagueChip" class="rating-chip">
+                                🥉 Бронза
+                            </span>
+                        </div>
+                        <div class="rating-sub">
+                            До следующей лиги: <span id="profileRatingLeagueProgress">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- 2. Сколько нафармил -->
+                    <div class="profile-rating-card">
+                        <div class="rating-label">Сколько нафармил</div>
+                        <div class="rating-main">
+                            <span id="profileRatingTotalEarned" class="rating-main-big">0</span>
+                            <span class="rating-unit">LM</span>
+                        </div>
+                        <div class="rating-sub">
+                            Сейчас на руках:
+                            <span id="profileRatingCurrentBalance">0</span> LM
+                        </div>
+                    </div>
+
+                    <!-- 3. Коллекция -->
+                    <div class="profile-rating-card">
+                        <div class="rating-label">Коллекция</div>
+                        <div class="rating-main">
+                            <span id="profileRatingCollectionValue" class="rating-main-big">0</span>
+                            <span class="rating-unit">LM</span>
+                        </div>
+                        <div class="rating-sub">
+                            Призов:
+                            <span id="profileRatingCollectionCount">0</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -195,6 +237,7 @@
                 Глобальный винрейт: 0%
             </div>
         </section>
+
 
     </main>
 

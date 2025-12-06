@@ -435,29 +435,45 @@ function recomputeCollectionsAndBonuses(items) {
 function renderInventory(items) {
     if (!inventoryEl) return;
 
+    // кэш для кнопок продажи
     lastInventoryItems = items;
     inventoryEl.innerHTML = "";
 
     if (items.length === 0) {
         inventoryEl.textContent = "Пока пусто. Выбей что-нибудь из автомата 🎰";
-        clickMultiplier = 1;
-        totalCollectionValue = 0;
+        clickMultiplier       = 1;
+        totalCollectionValue  = 0;
+
+        // стоимость = 0, призов = 0
+        updateProfileCollectionValue(0, 0);
         renderStatsFromState();
-        updateProfileCollectionValue(0);
         return;
     }
 
-    // Бонусы и сумма коллекции
+    // 🔹 пересчитываем бонусы от коллекций
     recomputeCollectionsAndBonuses(items);
-    totalCollectionValue = items.reduce((sum, item) => {
-        const cfg = PRIZES[item.prizeId || item.id] || {};
-        const val = item.value ?? cfg.value ?? 0;
-        return sum + val * (item.count ?? 1);
-    }, 0);
 
-    updateProfileCollectionValue(totalCollectionValue);
+    // 🔹 общая стоимость коллекции и общее количество копий призов
+    const { totalValue, totalCount } = items.reduce(
+        (acc, item) => {
+            const cfg   = PRIZES[item.prizeId || item.id] || {};
+            const val   = item.value ?? cfg.value ?? 0;
+            const count = item.count ?? 1;
+
+            acc.totalValue += val * count;
+            acc.totalCount += count;
+            return acc;
+        },
+        { totalValue: 0, totalCount: 0 }
+    );
+
+    totalCollectionValue = totalValue;
+
+    // обновляем профиль (основной блок + рейтинг коллекции)
+    updateProfileCollectionValue(totalCollectionValue, totalCount);
     renderStatsFromState();
 
+    // 🔹 рисуем карточки инвентаря
     items.forEach((item) => {
         const div = document.createElement("div");
         div.className = "inv-card";
@@ -469,9 +485,12 @@ function renderInventory(items) {
         const count      = item.count ?? 1;
         const maxGlobal  = item.maxCopiesGlobal ?? cfg.maxCopiesGlobal;
 
-        // ❗ если maxGlobal нет — это ошибка
-        const percent       = Math.min(100, Math.round((count / maxGlobal) * 100));
-        const progressLabel = `${count} / ${maxGlobal}`;
+        const percent       = (maxGlobal && Number.isFinite(maxGlobal))
+            ? Math.min(100, Math.round((count / maxGlobal) * 100))
+            : 100;
+        const progressLabel = maxGlobal
+            ? `${count} / ${maxGlobal}`
+            : `${count}`;
 
         const value = item.value ?? cfg.value ?? 0;
 
@@ -494,8 +513,9 @@ function renderInventory(items) {
 
             <div class="inv-progress">
                 <div class="inv-progress-bar">
-                    <span class="inv-progress-text">${progressLabel}</span>
+                    <div class="inv-progress-fill" style="width:${percent}%;"></div>
                 </div>
+                <div class="inv-progress-text">${progressLabel}</div>
             </div>
 
             <div class="inv-actions">

@@ -79,7 +79,7 @@ export function renderProfileHeader(viewModel) {
 
 /**
  * Базовая часть страницы профиля (pageProfile):
- * аватар, имя, AkulkaID, уровень, лига, баланс и базовые счётчики.
+ * аватар, имя, AkulkaID, уровень, лига, баланс, базовые счётчики и рейтинг.
  */
 export function renderProfilePageBase(viewModel) {
     const {
@@ -109,6 +109,13 @@ export function renderProfilePageBase(viewModel) {
     const totalEarnedEl     = document.getElementById("profilePageTotalEarned");
     const totalSpentEl      = document.getElementById("profilePageTotalSpent");
 
+    // Новые элементы рейтинга
+    const ratingLevelValueEl       = document.getElementById("profileRatingLevelValue");
+    const ratingLeagueChipEl       = document.getElementById("profileRatingLeagueChip");
+    const ratingLeagueProgressEl   = document.getElementById("profileRatingLeagueProgress");
+    const ratingTotalEarnedEl      = document.getElementById("profileRatingTotalEarned");
+    const ratingCurrentBalanceEl   = document.getElementById("profileRatingCurrentBalance");
+
     if (nameEl)      nameEl.textContent      = name;
     if (akulkaIdEl)  akulkaIdEl.textContent  = `AkulkaID: ${akulkaId}`;
 
@@ -136,6 +143,7 @@ export function renderProfilePageBase(viewModel) {
         leagueEl.textContent = `${league.emoji} ${league.name}`;
     }
 
+    // Лига и прогресс
     const lp = leagueProgress || getLeagueProgress(level || 0);
     const progress = Math.max(0, Math.min(1, lp.progress ?? 0));
     const percent  = Math.round(progress * 100);
@@ -152,6 +160,26 @@ export function renderProfilePageBase(viewModel) {
         }
     }
 
+    // 🔹 Рейтинг по уровню и лиге
+    if (ratingLevelValueEl && typeof level === "number") {
+        ratingLevelValueEl.textContent = level;
+    }
+    if (ratingLeagueChipEl && league) {
+        ratingLeagueChipEl.textContent = `${league.emoji} ${league.name}`;
+    }
+    if (ratingLeagueProgressEl) {
+        ratingLeagueProgressEl.textContent = `${percent}%`;
+    }
+
+    // 🔹 Рейтинг по деньгам
+    if (ratingTotalEarnedEl) {
+        ratingTotalEarnedEl.textContent = totalEarned.toLocaleString("ru-RU");
+    }
+    if (ratingCurrentBalanceEl && typeof balance === "number") {
+        ratingCurrentBalanceEl.textContent = balance.toLocaleString("ru-RU");
+    }
+
+    // Стандартные статы
     if (totalClicksEl) totalClicksEl.textContent = totalClicks.toLocaleString("ru-RU");
     if (clickPowerEl)  clickPowerEl.textContent  = clickPower;
     if (totalEarnedEl) totalEarnedEl.textContent = totalEarned.toLocaleString("ru-RU");
@@ -159,12 +187,20 @@ export function renderProfilePageBase(viewModel) {
 }
 
 /**
- * Обновляем стоимость коллекции (учитывает все копии призов).
+ * Обновляем стоимость коллекции (учитывает все копии призов)
+ * + в рейтинге коллекции.
  */
-export function updateProfileCollectionValue(totalCollectionLM = 0) {
-    const el = document.getElementById("profileCollectionValue");
-    if (!el) return;
-    el.textContent = totalCollectionLM.toLocaleString("ru-RU");
+export function updateProfileCollectionValue(totalCollectionLM = 0, totalPrizesCount = 0) {
+    const mainEl   = document.getElementById("profileCollectionValue");
+    const ratingEl = document.getElementById("profileRatingCollectionValue");
+    const countEl  = document.getElementById("profileRatingCollectionCount");
+
+    const formattedValue = totalCollectionLM.toLocaleString("ru-RU");
+    const formattedCount = totalPrizesCount.toLocaleString("ru-RU");
+
+    if (mainEl)   mainEl.textContent   = formattedValue;
+    if (ratingEl) ratingEl.textContent = formattedValue;
+    if (countEl)  countEl.textContent  = formattedCount;
 }
 
 /**
