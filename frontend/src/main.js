@@ -33,55 +33,6 @@ import {
 
 import { getLeagueForLevel } from "./leagueLogic.js";
 
-// ====== ШАНСЫ ВЫПАДЕНИЯ ПРИЗОВ (по редкости) ======
-const RARITY_WEIGHTS = {
-    common: 1,
-    rare: 0.5,
-    epic: 0.25,
-    legendary: 0.1,
-};
-
-function getPrizeWeightsForMachine(machine) {
-    const weights = [];
-    let total = 0;
-
-    (machine.prizePool || []).forEach((id) => {
-        const cfg = PRIZES[id];
-        if (!cfg) return;
-
-        const rarity = cfg.rarity || "common";
-        const w      = RARITY_WEIGHTS[rarity] ?? 1;
-
-        weights.push({ id, weight: w });
-        total += w;
-    });
-
-    return { weights, total };
-}
-
-function getPrizeChancesForMachine(machine) {
-    const { weights, total } = getPrizeWeightsForMachine(machine);
-    if (total <= 0) return {};
-
-    const map = {};
-    weights.forEach(({ id, weight }) => {
-        map[id] = weight / total; // 0..1
-    });
-    return map;
-}
-
-function pickRandomPrize(machine) {
-    const { weights, total } = getPrizeWeightsForMachine(machine);
-    if (total <= 0 || !weights.length) return null;
-
-    let r = Math.random() * total;
-    for (const { id, weight } of weights) {
-        if (r <= weight) return id;
-        r -= weight;
-    }
-    return weights[weights.length - 1].id;
-}
-
 // ==================== DOM-элементы ====================
 
 // Авторизация
@@ -481,8 +432,6 @@ function recomputeCollectionsAndBonuses(items) {
 
 // ==================== Инвентарь (СТАКИ) ====================
 
-// ==================== Инвентарь (СТАКИ) ====================
-
 function renderInventory(items) {
     if (!inventoryEl) return;
 
@@ -856,8 +805,8 @@ function renderMachines() {
 
 // ==================== Кэш глобальных счётчиков призов ====================
 
-let prizeCountersCache         = {};           // { prizeId: count }
-let prizeCountersLoaded        = false;
+let prizeCountersCache          = {};           // { prizeId: count }
+let prizeCountersLoaded         = false;
 let prizeCountersLoadingPromise = null;
 
 async function ensurePrizeCountersCache() {
@@ -901,7 +850,7 @@ async function grantPrizeWithGlobalLimit(machine) {
     const tried = new Set();
 
     while (tried.size < pool.length) {
-        const candidateId = pickRandomPrize(machine);
+        const candidateId = rollPrizeForMachine(machine);
         if (!candidateId || tried.has(candidateId)) continue;
         tried.add(candidateId);
 
@@ -1080,14 +1029,14 @@ async function fillMachinePrizeStrip(machineId) {
     const machine = MACHINES.find((m) => m.id === machineId);
     if (!machine) return;
 
-    const chanceMap = getPrizeChancesForMachine(machine); // { prizeId: 0..1 }
-    const prizeIds  = (machine.prizePool || []).filter((id) => PRIZES[id]);
+    // Используем ту же логику шансов, что и при реальном спине автомата
+    const entries = getMachinePrizeChances(machine); // [{ id, prize, weight, chance }, ...]
 
     await ensurePrizeCountersCache();
     const globalUsedMap = prizeCountersCache || {};
 
-    prizeIds.forEach((id) => {
-        const p = PRIZES[id];
+    entries.forEach(({ id, prize, chance }) => {
+        const p = prize || PRIZES[id];
         if (!p) return;
 
         const rarityKey  = p.rarity || "common";
@@ -1096,8 +1045,7 @@ async function fillMachinePrizeStrip(machineId) {
             color: "#888",
         };
 
-        const chance = chanceMap[id] || 0;
-        const pct    = chance * 100;
+        const pct = (chance || 0) * 100;
         let chanceStr;
 
         if (pct <= 0)      chanceStr = "—";
@@ -1233,8 +1181,6 @@ async function handleMachinePlayClick() {
         machineSpinRunning = false;
     }
 }
-
-// ==================== Продажа предмета ====================
 
 // ==================== Продажа предмета ====================
 

@@ -822,8 +822,15 @@ img {
     align-items: center;
 }
 
-inv-sell-btn {
+.inv-sell-btn {
     background: #0b0b0b;
 }
 
+.machine-hint {
+    margin: 6px 0 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #b0bec5;
+    opacity: 0.9;
+}
 
