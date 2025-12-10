@@ -1574,3 +1574,36 @@ img {
 .btn.danger:hover {
     background: #ef4444;
 }
+
+
+/* === Лигозависимые цвета прогресса (уровень / лига) === */
+
+/* бронза — оставляем как базовый стиль */
+.level-progress-bar.league-bronze,
+.profile-league-progress-fill.league-bronze {
+    background: linear-gradient(90deg, #f97316 0%, #fb923c 40%, #facc15 100%);
+}
+
+/* серебро → фиолетовый */
+.level-progress-bar.league-silver,
+.profile-league-progress-fill.league-silver {
+    background: linear-gradient(90deg, #e5e7eb 0%, #c4b5fd 40%, #a855f7 100%);
+}
+
+/* золото */
+.level-progress-bar.league-gold,
+.profile-league-progress-fill.league-gold {
+    background: linear-gradient(90deg, #facc15 0%, #f97316 40%, #ea580c 100%);
+}
+
+/* платина */
+.level-progress-bar.league-platinum,
+.profile-league-progress-fill.league-platinum {
+    background: linear-gradient(90deg, #e0f2fe 0%, #38bdf8 40%, #6366f1 100%);
+}
+
+/* алмаз */
+.level-progress-bar.league-diamond,
+.profile-league-progress-fill.league-diamond {
+    background: linear-gradient(90deg, #22d3ee 0%, #4ade80 35%, #a855f7 100%);
+}

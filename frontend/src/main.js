@@ -102,6 +102,9 @@ const sellConfirmTextEl   = document.getElementById("sellConfirmText");
 const sellConfirmYesBtn   = document.getElementById("sellConfirmYes");
 const sellConfirmNoBtn    = document.getElementById("sellConfirmNo");
 
+const profileLeagueProgressFill = document.getElementById("profileLeagueProgressFill");
+
+
 // ==================== Состояние ====================
 
 let uid            = null;
@@ -278,6 +281,57 @@ function isTelegramWebApp() {
     return typeof initData === "string" && initData.length > 0;
 }
 
+// ==================== Лигозависимый визуал (кнопка + прогресс) ====================
+
+const LEAGUE_THEME_CONFIG = {
+    bronze: {
+        buttonSrc: "src/assets/LudoMoney.png",
+    },
+    silver: {
+        buttonSrc: "src/assets/LudoMoney_2.png",
+    },
+    gold: {
+        buttonSrc: "src/assets/LudoMoney.png",
+    },
+    platinum: {
+        buttonSrc: "src/assets/LudoMoney.png",
+    },
+    diamond: {
+        buttonSrc: "src/assets/LudoMoney.png",
+    },
+};
+
+const LEAGUE_CLASS_LIST = [
+    "league-bronze",
+    "league-silver",
+    "league-gold",
+    "league-platinum",
+    "league-diamond",
+];
+
+function applyLeagueVisuals(league) {
+    const leagueId = league?.id || "bronze";
+    const cfg      = LEAGUE_THEME_CONFIG[leagueId] || LEAGUE_THEME_CONFIG.bronze;
+
+    // большая кнопка Ludomany
+    const bigClickImg = document.getElementById("bigClick");
+    if (bigClickImg && cfg.buttonSrc) {
+        bigClickImg.src = cfg.buttonSrc;
+    }
+
+    // полоски прогресса: шапка и профиль
+    const bars = [];
+    if (levelProgressBar)            bars.push(levelProgressBar);
+    if (profileLeagueProgressFill)   bars.push(profileLeagueProgressFill);
+
+    bars.forEach((el) => {
+        if (!el) return;
+        LEAGUE_CLASS_LIST.forEach((cls) => el.classList.remove(cls));
+        el.classList.add(`league-${leagueId}`);
+    });
+}
+
+
 // ==================== Визуал приза (emoji / img) ====================
 
 function renderPrizeIcon(targetEl, prizeId, fallbackEmoji = "🎁") {
@@ -369,7 +423,8 @@ function updateUpgradeUI() {
 }
 
 function renderStatsFromState(levelStateOverride) {
-    const ls = levelStateOverride || calculateLevelState(totalClicks);
+    const ls     = levelStateOverride || calculateLevelState(totalClicks);
+    const league = getLeagueForLevel(ls.level);
 
     if (balanceEl)        balanceEl.textContent       = formatLM(balance);
     if (clickPowerEl)     clickPowerEl.textContent    = clickPower;
@@ -377,10 +432,14 @@ function renderStatsFromState(levelStateOverride) {
     if (playerLevelEl)    playerLevelEl.textContent   = ls.level;
     if (headerLevelEl)    headerLevelEl.textContent   = ls.level;
     if (headerBalanceEl)  headerBalanceEl.textContent = formatLM(balance);
+
     if (levelProgressBar) {
         levelProgressBar.style.width =
             `${Math.round((ls.progress || 0) * 100)}%`;
     }
+
+    // применяем визуал в зависимости от лиги
+    applyLeagueVisuals(league);
 
     if (multiplierEl) {
         multiplierEl.textContent = `x${clickMultiplier.toFixed(
@@ -389,7 +448,6 @@ function renderStatsFromState(levelStateOverride) {
     }
 
     if (levelHintEl) {
-        const league        = getLeagueForLevel(ls.level);
         const leftClicks    = Math.max(0, (ls.required ?? 0) - (ls.current ?? 0));
         const percentToNext = Math.round((ls.progress || 0) * 100);
 
