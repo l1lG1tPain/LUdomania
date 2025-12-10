@@ -36,6 +36,12 @@ import { getLeagueForLevel } from "./leagueLogic.js";
 import { initProfileLeaderboards } from "./leaderboardLogic.js";
 import { getCollectorRank } from "./ranksLogic.js";
 
+import imgBronze from "./assets/LudoMoney.png";
+import imgSilver from "./assets/LudoMoney_2.png";
+import imgGold from "./assets/LudoMoney.png";
+import imgPlatinum from "./assets/LudoMoney.png";
+import imgDiamond from "./assets/LudoMoney.png";
+
 // ==================== DOM-элементы ====================
 
 // Авторизация
@@ -284,21 +290,11 @@ function isTelegramWebApp() {
 // ==================== Лигозависимый визуал (кнопка + прогресс) ====================
 
 const LEAGUE_THEME_CONFIG = {
-    bronze: {
-        buttonSrc: "./src/assets/LudoMoney.png",
-    },
-    silver: {
-        buttonSrc: "./src/assets/LudoMoney_2.png",
-    },
-    gold: {
-        buttonSrc: "./src/assets/LudoMoney.png",
-    },
-    platinum: {
-        buttonSrc: "./src/assets/LudoMoney.png",
-    },
-    diamond: {
-        buttonSrc: "./src/assets/LudoMoney.png",
-    },
+    bronze: { buttonSrc: imgBronze },
+    silver: { buttonSrc: imgSilver },
+    gold: { buttonSrc: imgGold },
+    platinum: { buttonSrc: imgPlatinum },
+    diamond: { buttonSrc: imgDiamond },
 };
 
 const LEAGUE_CLASS_LIST = [
