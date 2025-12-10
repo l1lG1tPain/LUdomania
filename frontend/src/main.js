@@ -146,12 +146,12 @@ const API_BASE =
 // порядок редкостей для группировки
 const RARITY_ORDER = {
     legendary: 0,
-    mythic:    0,
     relic:     0,
     epic:      1,
+    mythical:  1,
     rare:      2,
-    uncommon:  3,
-    common:    4,
+    uncommon:  4,
+    common:    5,
 };
 
 // ==================== Буфер кликов ====================
