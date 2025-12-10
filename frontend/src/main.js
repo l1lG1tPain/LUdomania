@@ -724,6 +724,7 @@ async function ensureGameFields(userUid, telegramInfo) {
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
+        // 🔥 создаём нового пользователя со всеми необходимыми полями
         await setDoc(ref, {
             telegram_id: telegramInfo?.id ?? null,
             username:    telegramInfo?.username ?? null,
@@ -733,6 +734,7 @@ async function ensureGameFields(userUid, telegramInfo) {
             createdAt:   serverTimestamp(),
             lastLogin:   serverTimestamp(),
 
+            // базовые игровые поля
             balance:     0,
             clickPower:  1,
             totalClicks: 0,
@@ -740,15 +742,18 @@ async function ensureGameFields(userUid, telegramInfo) {
             totalSpent:  0,
             level:       0,
 
+            // 💿 коллекция для рейтингов
             collectionValue: 0,
             collectionCount: 0,
 
+            // 🏅 tier'ы рангов (пока интересует коллекционер)
             collectorRankTier: 1,
         });
     } else {
         const data  = snap.data();
         const patch = {};
 
+        // старые поля
         if (data.balance     === undefined) patch.balance     = 0;
         if (data.clickPower  === undefined) patch.clickPower  = 1;
         if (data.totalClicks === undefined) patch.totalClicks = 0;
@@ -756,15 +761,38 @@ async function ensureGameFields(userUid, telegramInfo) {
         if (data.totalSpent  === undefined) patch.totalSpent  = 0;
         if (data.level       === undefined) patch.level       = 0;
 
+        // новые поля для коллекции
         if (data.collectionValue === undefined) patch.collectionValue = 0;
         if (data.collectionCount === undefined) patch.collectionCount = 0;
 
+        // rankTier коллекционера
         if (data.collectorRankTier === undefined) patch.collectorRankTier = 1;
+
+        // 🧷 ДОТЯГИВАЕМ TELEGRAM-ПОЛЯ, если пришёл telegramInfo
+        if (telegramInfo) {
+            const tPatch = {};
+
+            if (!data.telegram_id && telegramInfo.id) {
+                tPatch.telegram_id = telegramInfo.id;
+            }
+            if ((!data.username || data.username === null) && telegramInfo.username) {
+                tPatch.username = telegramInfo.username;
+            }
+            if ((!data.firstName || data.firstName === "") && telegramInfo.first_name) {
+                tPatch.firstName = telegramInfo.first_name;
+            }
+            if ((!data.photoUrl || data.photoUrl === null) && telegramInfo.photo_url) {
+                tPatch.photoUrl = telegramInfo.photo_url;
+            }
+
+            Object.assign(patch, tPatch);
+        }
 
         if (Object.keys(patch).length > 0) {
             await updateDoc(ref, patch);
         }
 
+        // всегда обновляем lastLogin
         await updateDoc(ref, { lastLogin: serverTimestamp() });
     }
 }

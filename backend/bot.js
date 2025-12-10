@@ -1,6 +1,6 @@
 // backend/bot.js
 const { Telegraf, Markup } = require("telegraf");
-const axios = require("axios");              // <- обязательно, поэтому нужен npm i axios
+const axios = require("axios");
 require("dotenv").config();
 
 const BOT_TOKEN   = process.env.TELEGRAM_BOT_TOKEN;
@@ -66,7 +66,7 @@ bot.start(async (ctx) => {
     // 1) если есть код из браузера → подтверждаем его
     if (payload) {
         const code = payload.trim();
-        const ok = await confirmBrowserLogin(code, ctx.from);
+        const ok   = await confirmBrowserLogin(code, ctx.from);
 
         if (ok) {
             return ctx.reply(
@@ -77,11 +77,11 @@ bot.start(async (ctx) => {
         }
     }
 
-    // 2) обычный /start без кода → просто регистрируем юзера и показываем кнопку
+    // 2) обычный /start без кода → регистрируем юзера и показываем кнопку
     await registerUserInBackend(ctx.from);
 
     return ctx.reply(
-        "Добро пожаловать в LUdomania!",
+        "✅ Данные записаны.\nДобро пожаловать в LUdomania!",
         Markup.inlineKeyboard([
             Markup.button.webApp("🎮 Играть", WEBAPP_URL),
         ])
@@ -98,7 +98,7 @@ bot.command("login", async (ctx) => {
     }
 
     const code = parts[1].trim();
-    const ok = await confirmBrowserLogin(code, ctx.from);
+    const ok   = await confirmBrowserLogin(code, ctx.from);
 
     if (ok) {
         return ctx.reply("✅ Код подтверждён! Возвращайся в браузер 🔥");
