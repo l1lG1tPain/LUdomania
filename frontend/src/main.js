@@ -114,8 +114,6 @@ const sellConfirmTextEl   = document.getElementById("sellConfirmText");
 const sellConfirmYesBtn   = document.getElementById("sellConfirmYes");
 const sellConfirmNoBtn    = document.getElementById("sellConfirmNo");
 
-const profileLeagueProgressFill = document.getElementById("profileLeagueProgressFill");
-
 
 // ==================== Состояние ====================
 
@@ -316,7 +314,7 @@ const LEAGUE_CLASSES = [
 
 // 2. Потом функция applyLeagueVisuals
 function applyLeagueVisuals(league) {
-    const leagueId = league?.id || "bronze";
+    const leagueId    = league?.id || "bronze";
     const leagueClass = `league-${leagueId}`;
 
     const apply = (el) => {
@@ -325,12 +323,20 @@ function applyLeagueVisuals(league) {
         el.classList.add(leagueClass);
     };
 
+    // градиенты прогресса
     apply(levelProgressBar);
     apply(profileLeagueProgressFillEl);
     apply(bigClickImg);
     apply(profileLvlBadgeEl);
     apply(profileLeagueChipEl);
+
+    // 🔥 смена картинки кнопки по лиге
+    const theme = LEAGUE_THEME_CONFIG[leagueId] || LEAGUE_THEME_CONFIG.bronze;
+    if (bigClickImg && theme?.buttonSrc && bigClickImg.src !== theme.buttonSrc) {
+        bigClickImg.src = theme.buttonSrc;
+    }
 }
+
 
 
 
@@ -1015,7 +1021,6 @@ function handleClick() {
     totalClicks += 1;
     renderStatsFromState();
 
-    const bigClickImg = document.getElementById("bigClick");
     const pulseTarget = bigClickImg || bigClickArea;
 
     if (pulseTarget) {
