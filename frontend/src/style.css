@@ -1626,3 +1626,63 @@ img {
 .big-click-area img.league-diamond {
     box-shadow: 0 0 32px #7effff66, 0 0 16px #72e3c955 inset;
 }
+
+.profile-lvl-badge.league-bronze {
+    background: #ffd52e1f;
+    border: 1px solid rgba(255, 213, 46, .35);
+    color: #ffd52e;
+}
+.profile-lvl-badge.league-silver {
+    background: #c9c9c91a;
+    border: 1px solid rgba(210, 210, 210, .35);
+    color: #e5e7eb;
+}
+.profile-lvl-badge.league-gold {
+    background: #ffec501f;
+    border: 1px solid rgba(255, 212, 77, .55);
+    color: #ffdc5d;
+}
+.profile-lvl-badge.league-platinum {
+    background: #d0f4ff1f;
+    border: 1px solid rgba(168, 220, 255, .45);
+    color: #b4e3ff;
+}
+.profile-lvl-badge.league-diamond {
+    background: #a8fdf41e;
+    border: 1px solid rgba(98, 246, 221, .60);
+    color: #94fff1;
+}
+
+.profile-league-chip.league-bronze {
+    background: #ffffff0a;
+    border: 1px solid rgba(255, 213, 46, .35);
+    color: #ffd52e;
+}
+.profile-league-chip.league-silver {
+    background: #ffffff0a;
+    border: 1px solid rgba(216, 216, 216, .32);
+    color: #e8e9ef;
+}
+.profile-league-chip.league-gold {
+    background: #ffffff0a;
+    border: 1px solid rgba(255, 219, 94, .55);
+    color: #ffdb58;
+}
+.profile-league-chip.league-platinum {
+    background: #ffffff09;
+    border: 1px solid rgba(169, 220, 255, .55);
+    color: #b8e7ff;
+}
+.profile-league-chip.league-diamond {
+    background: #ffffff09;
+    border: 1px solid rgba(115, 255, 236, .60);
+    color: #7dfff1;
+}
+
+.profile-lvl-badge,
+.profile-league-chip,
+.level-progress-bar,
+.big-click-area img,
+.profile-league-progress-fill{
+    transition: background .25s ease, border-color .25s ease, color .25s ease;
+}
