@@ -1316,10 +1316,10 @@ img {
     border-radius: 999px;
 }
 
-/* сетка предметов: 3 карточки в ряд ТОЛЬКО внутри секции */
+/* сетка предметов: 3 карточки в ряд через flex */
 .inventory-section .inventory-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex !important;
+    flex-wrap: wrap;
     gap: 10px;
     width: 100%;
 }
@@ -1336,6 +1336,11 @@ img {
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
+
+    /* 3 карточки в ряд */
+    flex: 0 0 calc(33.333% - 8px);
+    max-width: calc(33.333% - 8px);
+
     min-height: 104px;
     transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
 }
@@ -1573,4 +1578,3 @@ img {
 .btn.danger:hover {
     background: #ef4444;
 }
-
