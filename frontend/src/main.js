@@ -285,19 +285,19 @@ function isTelegramWebApp() {
 
 const LEAGUE_THEME_CONFIG = {
     bronze: {
-        buttonSrc: "src/assets/LudoMoney.png",
+        buttonSrc: "./src/assets/LudoMoney.png",
     },
     silver: {
-        buttonSrc: "src/assets/LudoMoney_2.png",
+        buttonSrc: "./src/assets/LudoMoney_2.png",
     },
     gold: {
-        buttonSrc: "src/assets/LudoMoney.png",
+        buttonSrc: "./src/assets/LudoMoney.png",
     },
     platinum: {
-        buttonSrc: "src/assets/LudoMoney.png",
+        buttonSrc: "./src/assets/LudoMoney.png",
     },
     diamond: {
-        buttonSrc: "src/assets/LudoMoney.png",
+        buttonSrc: "./src/assets/LudoMoney.png",
     },
 };
 
