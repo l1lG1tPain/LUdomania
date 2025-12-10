@@ -92,18 +92,13 @@ let totalClicks    = 0;
 let currentLevel   = 0;
 let authInProgress = false;
 
-let clickMultiplier      = 1; // множитель от коллекций
-let totalCollectionValue = 0; // общая стоимость коллекции (включая все копии)
+let clickMultiplier      = 1;
+let totalCollectionValue = 0;
 
-// кэш последнего инвентаря (для sellItem по кнопке)
 let lastInventoryItems = [];
 
-// флаг, что сейчас идёт продажа (чтобы не было гонок)
-let sellInProgress = false;
-
-// статистика автоматов
-let globalMachineStats = {}; // { machineId: { totalSpins, totalWins } }
-let userMachineStats   = {}; // { machineId: { spins, wins } }
+let globalMachineStats = {};
+let userMachineStats   = {};
 
 const BOT_USERNAME = "LUdomania_app_bot";
 
@@ -116,13 +111,13 @@ const API_BASE =
 // ==================== Буфер кликов ====================
 
 // активный интервал (много кликов подряд)
-const ACTIVE_FLUSH_MS = 7000;   // 7 секунд
+const ACTIVE_FLUSH_MS = 7000;
 
 // "редкий" режим — когда кликов мало и редко
-const PASSIVE_FLUSH_MS = 15000; // 15 секунд
+const PASSIVE_FLUSH_MS = 15000;
 
-// сколько накопленных кликов = считаем активным игром
-const FLUSH_BATCH_THRESHOLD = 300; // 300 кликов — сразу отправляем
+// порог батча
+const FLUSH_BATCH_THRESHOLD = 300;
 
 // буфер
 let farmBuffer = {
@@ -143,13 +138,11 @@ async function flushFarmBuffer(reason = "timer") {
         totalEarnedDelta,
     } = farmBuffer;
 
-    // если буфер пуст — ничего не шлём
     if (!balanceDelta && !totalClicksDelta && !totalEarnedDelta) {
         farmBufferFlushTimer = null;
         return;
     }
 
-    // сбрасываем буфер перед запросом
     farmBuffer = {
         balanceDelta:     0,
         totalClicksDelta: 0,
@@ -173,13 +166,11 @@ function scheduleFarmBufferFlush() {
 
     const now = Date.now();
 
-    // если накопили 300+ кликов — отправляем сразу
     if (farmBuffer.totalClicksDelta >= FLUSH_BATCH_THRESHOLD) {
         flushFarmBuffer("threshold");
         return;
     }
 
-    // если таймер уже стоит — не ставим второй
     if (farmBufferFlushTimer) return;
 
     const msSinceLastClick = now - lastClickTimestamp;
@@ -691,18 +682,14 @@ function subscribeToUser(userUid) {
         clickPower  = data.clickPower  ?? 1;
         totalClicks = data.totalClicks ?? 0;
 
-        const storedLevel = data.level ?? 0;
-        const levelState  = calculateLevelState(totalClicks);
+        const levelState = calculateLevelState(totalClicks);
+        currentLevel     = levelState.level;
 
-        if (levelState.level > storedLevel) {
-            onLevelChange(storedLevel, levelState.level, levelState);
+        if ((data.level ?? 0) !== levelState.level) {
             updateDoc(userRef, { level: levelState.level }).catch((e) =>
                 console.error("update level error", e)
             );
         }
-
-        // локальный текущий уровень всегда равен реальному уровню по кликам
-        currentLevel = levelState.level;
 
         renderStatsFromState(levelState);
 
@@ -794,7 +781,6 @@ function handleClick() {
 
     const gain = clickPower * clickMultiplier;
 
-    // локальное состояние (UI сразу обновляется через renderStatsFromState)
     balance     += gain;
     totalClicks += 1;
     renderStatsFromState();
@@ -807,7 +793,6 @@ function handleClick() {
         setTimeout(() => pulseTarget.classList.remove("pulsing"), 80);
     }
 
-    // копим в буфере для Firebase
     farmBuffer.balanceDelta     += gain;
     farmBuffer.totalClicksDelta += 1;
     farmBuffer.totalEarnedDelta += gain;
@@ -1173,6 +1158,13 @@ async function spinMachine(machineId) {
         return { outcome: "no-auth" };
     }
 
+    // перед игрой пытаемся добросить буфер, но не блокируем UX, если ошибка
+    try {
+        await flushFarmBuffer("before-spin");
+    } catch (e) {
+        console.error("flush before spin error", e);
+    }
+
     const machine = MACHINES.find((m) => m.id === machineId);
     if (!machine) return { outcome: "error" };
 
@@ -1385,10 +1377,6 @@ async function handleMachinePlayClick() {
         showToast(`Этот автомат доступен с ${machine.minLevel}-го уровня`);
         return;
     }
-
-    // перед проверкой баланса и списанием — флашим буфер кликов
-    await flushFarmBuffer("before-spin");
-
     if (balance < machine.price) {
         showToast("Не хватает ЛудоМани для этой игры 🪙");
         return;
@@ -1444,10 +1432,13 @@ async function handleMachinePlayClick() {
 
 // ==================== Продажа предмета ====================
 
-async function sellItem(item, requestedAmount = 1) {
-    if (!userRef || !uid || sellInProgress) return;
+let sellInProgress = false;
 
-    const invDocRef = doc(db, "users", uid, "inventory", item.id);
+async function sellItem(item, requestedAmount = 1) {
+    if (!userRef || !uid) return;
+    if (sellInProgress) return;
+
+    const invDocRef  = doc(db, "users", uid, "inventory", item.id);
     const totalCount = item.count ?? 1;
 
     let sellCount;
@@ -1467,9 +1458,6 @@ async function sellItem(item, requestedAmount = 1) {
     const totalValue = baseValue * sellCount;
 
     sellInProgress = true;
-    if (inventoryEl) {
-        inventoryEl.classList.add("inventory-busy");
-    }
 
     try {
         if (sellCount >= totalCount) {
@@ -1484,6 +1472,21 @@ async function sellItem(item, requestedAmount = 1) {
             balance:     increment(totalValue),
             totalEarned: increment(totalValue),
         });
+
+        balance += totalValue;
+
+        const updatedItems = lastInventoryItems.map((it) => {
+            if (it.id !== item.id) return it;
+            const newCount = (it.count ?? 1) - sellCount;
+            return {
+                ...it,
+                count: newCount > 0 ? newCount : 0,
+            };
+        }).filter(it => (it.count ?? 0) > 0);
+
+        lastInventoryItems = updatedItems;
+        recomputeCollectionsAndBonuses(updatedItems);
+        renderStatsFromState();
 
         const counterRef = doc(db, "prize_counters", prizeId);
 
@@ -1502,52 +1505,42 @@ async function sellItem(item, requestedAmount = 1) {
             );
         });
 
-        // локальный апдейт баланса и мультипликаторов, без доп. запросов
-        balance += totalValue;
-
-        if (lastInventoryItems && lastInventoryItems.length) {
-            const updatedItems = lastInventoryItems
-                .map((it) => {
-                    if (it.id !== item.id) return it;
-                    const nextCount = (it.count ?? 1) - sellCount;
-                    return { ...it, count: nextCount };
-                })
-                .filter((it) => (it.count ?? 1) > 0);
-
-            lastInventoryItems = updatedItems;
-
-            recomputeCollectionsAndBonuses(updatedItems);
-        }
-
-        // локально обновляем кеш глобальных счётчиков, чтобы стрип был актуален
-        if (prizeCountersLoaded) {
+        if (prizeCountersLoaded && prizeCountersCache) {
             const prev = prizeCountersCache[prizeId] ?? 0;
-            const next = Math.max(0, prev - sellCount);
-            prizeCountersCache = {
-                ...prizeCountersCache,
-                [prizeId]: next,
-            };
+            prizeCountersCache[prizeId] = Math.max(0, prev - sellCount);
         }
-
-        renderStatsFromState();
     } catch (e) {
         console.error("sellItem error", e);
         showToast("Не удалось продать предмет, попробуй ещё раз");
     } finally {
         sellInProgress = false;
-        if (inventoryEl) {
-            inventoryEl.classList.remove("inventory-busy");
-        }
     }
 }
 
 // ==================== Интерактив: события UI ====================
 
 if (bigClickArea) {
-    bigClickArea.addEventListener("click", (e) => {
+    const handleTap = (x, y) => {
         const gain = clickPower * clickMultiplier;
-        spawnClickBubble(e.clientX, e.clientY, gain);
+        spawnClickBubble(x, y, gain);
         handleClick();
+    };
+
+    let isTouchActive = false;
+
+    bigClickArea.addEventListener("touchstart", (e) => {
+        isTouchActive = true;
+        if (e.changedTouches && e.changedTouches.length) {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                handleTap(t.clientX, t.clientY);
+            }
+        }
+    }, { passive: true });
+
+    bigClickArea.addEventListener("click", (e) => {
+        if (isTouchActive) return;
+        handleTap(e.clientX, e.clientY);
     });
 }
 
@@ -1559,8 +1552,6 @@ if (upgradeBtn) {
 
 if (inventoryEl) {
     inventoryEl.addEventListener("click", (e) => {
-        if (sellInProgress) return;
-
         const btn = e.target.closest(".inv-sell-btn");
         if (!btn) return;
 
@@ -1617,7 +1608,7 @@ async function loginWithTelegram() {
             return;
         }
 
-        const data = await res.json();
+        const data  = await res.json();
         const token = data.token;
         if (!token) {
             showToast("Не удалось получить токен авторизации");
@@ -1646,10 +1637,19 @@ onAuthStateChanged(auth, async (user) => {
         uid     = null;
         userRef = null;
         setActivePage("pageFarm");
+        if (loginBtn) {
+            loginBtn.classList.remove("hidden");
+            loginBtn.disabled = false;
+        }
         return;
     }
 
     uid = user.uid;
+
+    if (loginBtn) {
+        loginBtn.classList.add("hidden");
+        loginBtn.disabled = true;
+    }
 
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user || null;
     try {
@@ -1678,15 +1678,14 @@ document.addEventListener("visibilitychange", () => {
     }
 });
 
-// флаш при нажатии TG back-button, чтобы не терять клики
-if (
-    window.Telegram &&
-    window.Telegram.WebApp &&
-    typeof window.Telegram.WebApp.onEvent === "function"
-) {
-    window.Telegram.WebApp.onEvent("backButtonClicked", () => {
-        flushFarmBuffer("tg-back");
-    });
+if (window.Telegram?.WebApp) {
+    try {
+        window.Telegram.WebApp.onEvent("backButtonClicked", () => {
+            flushFarmBuffer("tg-back");
+        });
+    } catch (e) {
+        console.error("tg backButton handler error", e);
+    }
 }
 
 // ==================== Стартовое состояние ====================
