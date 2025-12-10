@@ -1607,3 +1607,23 @@ img {
 .profile-league-progress-fill.league-diamond {
     background: linear-gradient(90deg, #22d3ee 0%, #4ade80 35%, #a855f7 100%);
 }
+
+.big-click.league-bronze {
+    box-shadow: 0 0 22px #ffb73b55, 0 0 10px #ffc81e22 inset;
+}
+
+.big-click.league-silver {
+    box-shadow: 0 0 22px #c4c4c455, 0 0 10px #bbbbff33 inset;
+}
+
+.big-click.league-gold {
+    box-shadow: 0 0 26px #ffcc3355, 0 0 14px #ffd84b44 inset;
+}
+
+.big-click.league-platinum {
+    box-shadow: 0 0 28px #9fdcff55, 0 0 14px #71bbff33 inset;
+}
+
+.big-click.league-diamond {
+    box-shadow: 0 0 32px #7effff66, 0 0 16px #72e3c955 inset;
+}
