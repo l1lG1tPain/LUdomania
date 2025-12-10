@@ -1306,7 +1306,7 @@ img {
 }
 
 /* сетка предметов: 3 карточки в ряд через flex */
-.inventory-section .inventory-grid {
+.inventory-grid {
     display: flex !important;
     flex-wrap: wrap;
     gap: 10px;
