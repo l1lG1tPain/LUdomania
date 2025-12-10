@@ -65,9 +65,9 @@ const levelHintEl      = document.getElementById("levelHint");
 
 // Визуал, завязанный на лигу
 const bigClickImg                  = document.getElementById("bigClick");
-const profileLvlBadgeEl            = document.querySelector(".profile-lvl-badge");
-const profileLeagueChipEl          = document.getElementById("profilePageLeague");
-const profileLeagueProgressFillEl  = document.getElementById("profileLeagueProgressFill");
+const profileLvlBadgeEls = document.querySelectorAll(".profile-lvl-badge");
+const profileLeagueChipEl         = document.getElementById("profilePageLeague");
+const profileLeagueProgressFillEl = document.getElementById("profileLeagueProgressFill");
 
 // Игровые элементы
 const bigClickArea  = document.getElementById("bigClickArea");
@@ -291,46 +291,47 @@ function isTelegramWebApp() {
     return typeof initData === "string" && initData.length > 0;
 }
 
-// ==================== Лигозависимый визуал (кнопка + прогресс) ====================
-
-const LEAGUE_THEME_CONFIG = {
-    bronze: { buttonSrc: imgBronze },
-    silver: { buttonSrc: imgSilver },
-    gold: { buttonSrc: imgGold },
-    platinum: { buttonSrc: imgPlatinum },
-    diamond: { buttonSrc: imgDiamond },
-};
-
 // ==================== Лигозависимый визуал ====================
-
-// 1. Сначала объявляем классы
+// --- классы лиг
 const LEAGUE_CLASSES = [
     "league-bronze",
     "league-silver",
     "league-gold",
     "league-platinum",
-    "league-diamond"
+    "league-diamond",
 ];
 
-// 2. Потом функция applyLeagueVisuals
+// цвета/картинки по лигам уже есть выше:
+const LEAGUE_THEME_CONFIG = {
+    bronze:   { buttonSrc: imgBronze },
+    silver:   { buttonSrc: imgSilver },
+    gold:     { buttonSrc: imgGold },
+    platinum: { buttonSrc: imgPlatinum },
+    diamond:  { buttonSrc: imgDiamond },
+};
+
+// === применяем визуал лиги ===
 function applyLeagueVisuals(league) {
     const leagueId    = league?.id || "bronze";
     const leagueClass = `league-${leagueId}`;
 
-    const apply = (el) => {
-        if (!el) return;
-        LEAGUE_CLASSES.forEach(cls => el.classList.remove(cls));
+    const applyToEl = (el) => {
+        if (!el || !el.classList) return;
+        LEAGUE_CLASSES.forEach((cls) => el.classList.remove(cls));
         el.classList.add(leagueClass);
     };
 
-    // градиенты прогресса
-    apply(levelProgressBar);
-    apply(profileLeagueProgressFillEl);
-    apply(bigClickImg);
-    apply(profileLvlBadgeEl);
-    apply(profileLeagueChipEl);
+    // прогресс-бар уровня и прогресс лиги
+    applyToEl(levelProgressBar);
+    applyToEl(profileLeagueProgressFillEl);
 
-    // 🔥 смена картинки кнопки по лиге
+    // все бейджи уровня (в хедере и в профиле)
+    profileLvlBadgeEls.forEach(applyToEl);
+
+    // чип лиги в профиле
+    applyToEl(profileLeagueChipEl);
+
+    // большая кнопка (монета) — картинка по лиге
     const theme = LEAGUE_THEME_CONFIG[leagueId] || LEAGUE_THEME_CONFIG.bronze;
     if (bigClickImg && theme?.buttonSrc && bigClickImg.src !== theme.buttonSrc) {
         bigClickImg.src = theme.buttonSrc;

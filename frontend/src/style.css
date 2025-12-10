@@ -1255,8 +1255,8 @@ img {
 }
 
 .prize-icon-img {
-    width: 40px;
-    height: 40px;
+    width: 100%;
+    height: 60px;
     border-radius: 10px;
     object-fit: cover;
 }
@@ -1340,13 +1340,13 @@ img {
 
 /* большая картинка / эмодзи */
 .inv-emoji {
-    width: 56px;
-    height: 56px;
+    width: auto;
+    height: 101px;
     border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.5rem;
+    font-size: 2.3rem;
     overflow: hidden;
     margin-bottom: 6px;
 }
@@ -1445,7 +1445,7 @@ img {
     border-radius: 20px;
     padding: 20px 18px 18px;
     border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 20px 60px #000000;
     position: relative;
 }
 
@@ -1474,14 +1474,15 @@ img {
 
 /* большая картинка в модалке */
 .inventory-modal-emoji {
-    width: 150px;
-    height: 150px;
+    width: auto;
+    height: 350px;
     border-radius: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 3rem;
+    font-size: 7rem;
     overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .06);
 }
 
 .inventory-modal-emoji img.prize-icon-img,
