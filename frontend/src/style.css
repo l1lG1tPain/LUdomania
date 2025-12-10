@@ -222,12 +222,6 @@ img {
 
 /* ======== INVENTORY ======== */
 
-.inventory-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
 .inv-card {
     background: #161616;
     padding: 10px 6px;
@@ -272,12 +266,6 @@ img {
     height: 100%;
     background: linear-gradient(90deg, #ffd54f, #ff9100);
     border-radius: inherit;
-}
-
-.inv-progress-text {
-    margin-top: 2px;
-    font-size: 10px;
-    opacity: 0.7;
 }
 
 /* ======== MINI-GAMES ======== */
@@ -357,7 +345,8 @@ img {
     width: 100%;
     padding: 12px;
     border-radius: 14px;
-    font-size: 14px;
+    font-size: 16px;
+    font-weight: bold;
     background: #222;
     color: #fff;
     border: none;
@@ -1338,8 +1327,8 @@ img {
     justify-content: flex-start;
 
     /* 3 карточки в ряд */
-    flex: 0 0 calc(33.333% - 8px);
-    max-width: calc(33.333% - 8px);
+    flex: 0 0 calc(30% - 8px);
+    max-width: calc(30% - 8px);
 
     min-height: 104px;
     transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
@@ -1418,9 +1407,17 @@ img {
 }
 
 .inv-progress-text {
-    margin-top: 2px;
-    font-size: 10px;
+    /*margin-top: 2px;*/
+    font-size: 12px;
     opacity: 0.7;
+    padding: 3px 10px !important;
+    text-align: center;
+}
+
+.inv-rarity-title {
+    font-size: 18px;
+    font-weight: bold;
+    padding: 5px;
 }
 
 /* ============================== */
@@ -1442,9 +1439,10 @@ img {
 }
 
 .inventory-modal-dialog {
-    width: min(460px, 92vw);
+    width: min(400px, 80vw);
+    margin: 0 auto;
     max-width: 460px;
-    background: rgba(5, 9, 24, 0.98);
+    background: #000;
     border-radius: 20px;
     padding: 20px 18px 18px;
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1477,10 +1475,9 @@ img {
 
 /* большая картинка в модалке */
 .inventory-modal-emoji {
-    width: 120px;
-    height: 120px;
+    width: 150px;
+    height: 150px;
     border-radius: 28px;
-    background: radial-gradient(circle at 30% 20%, #ffe9a3, #f97316);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1516,15 +1513,13 @@ img {
 }
 
 .inventory-modal-rarity {
-    font-size: 0.8rem;
+    font-size: 1rem;
     font-weight: 600;
-    opacity: 0.9;
 }
 
 .inventory-modal-value {
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 600;
-    opacity: 0.9;
 }
 
 .inventory-modal-progress {
@@ -1538,6 +1533,7 @@ img {
     letter-spacing: 0.04em;
     opacity: 0.75;
     margin-bottom: 6px;
+    text-align: center;
 }
 
 .inventory-modal-sell-buttons {
