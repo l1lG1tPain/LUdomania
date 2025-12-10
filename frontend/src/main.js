@@ -98,6 +98,9 @@ let totalCollectionValue = 0; // общая стоимость коллекци�
 // кэш последнего инвентаря (для sellItem по кнопке)
 let lastInventoryItems = [];
 
+// флаг, что сейчас идёт продажа (чтобы не было гонок)
+let sellInProgress = false;
+
 // статистика автоматов
 let globalMachineStats = {}; // { machineId: { totalSpins, totalWins } }
 let userMachineStats   = {}; // { machineId: { spins, wins } }
@@ -112,20 +115,24 @@ const API_BASE =
 
 // ==================== Буфер кликов ====================
 
+// активный интервал (много кликов подряд)
+const ACTIVE_FLUSH_MS = 7000;   // 7 секунд
+
+// "редкий" режим — когда кликов мало и редко
+const PASSIVE_FLUSH_MS = 15000; // 15 секунд
+
+// сколько накопленных кликов = считаем активным игром
+const FLUSH_BATCH_THRESHOLD = 300; // 300 кликов — сразу отправляем
+
+// буфер
 let farmBuffer = {
-    balanceDelta: 0,
+    balanceDelta:     0,
     totalClicksDelta: 0,
     totalEarnedDelta: 0,
 };
 
 let farmBufferFlushTimer = null;
-
-function scheduleFarmBufferFlush() {
-    if (farmBufferFlushTimer) return;
-    farmBufferFlushTimer = setTimeout(() => {
-        flushFarmBuffer("timer");
-    }, 2000);
-}
+let lastClickTimestamp   = 0;
 
 async function flushFarmBuffer(reason = "timer") {
     if (!userRef || !uid) return;
@@ -136,13 +143,15 @@ async function flushFarmBuffer(reason = "timer") {
         totalEarnedDelta,
     } = farmBuffer;
 
+    // если буфер пуст — ничего не шлём
     if (!balanceDelta && !totalClicksDelta && !totalEarnedDelta) {
         farmBufferFlushTimer = null;
         return;
     }
 
+    // сбрасываем буфер перед запросом
     farmBuffer = {
-        balanceDelta: 0,
+        balanceDelta:     0,
         totalClicksDelta: 0,
         totalEarnedDelta: 0,
     };
@@ -157,6 +166,31 @@ async function flushFarmBuffer(reason = "timer") {
     } catch (e) {
         console.error("flushFarmBuffer error", reason, e);
     }
+}
+
+function scheduleFarmBufferFlush() {
+    if (!userRef || !uid) return;
+
+    const now = Date.now();
+
+    // если накопили 300+ кликов — отправляем сразу
+    if (farmBuffer.totalClicksDelta >= FLUSH_BATCH_THRESHOLD) {
+        flushFarmBuffer("threshold");
+        return;
+    }
+
+    // если таймер уже стоит — не ставим второй
+    if (farmBufferFlushTimer) return;
+
+    const msSinceLastClick = now - lastClickTimestamp;
+
+    const useActiveTimer =
+        farmBuffer.totalClicksDelta > 0 &&
+        msSinceLastClick <= ACTIVE_FLUSH_MS;
+
+    farmBufferFlushTimer = setTimeout(() => {
+        flushFarmBuffer(useActiveTimer ? "active-timer" : "passive-timer");
+    }, useActiveTimer ? ACTIVE_FLUSH_MS : PASSIVE_FLUSH_MS);
 }
 
 // ==================== Утилиты ====================
@@ -665,10 +699,10 @@ function subscribeToUser(userUid) {
             updateDoc(userRef, { level: levelState.level }).catch((e) =>
                 console.error("update level error", e)
             );
-            currentLevel = levelState.level;
-        } else {
-            currentLevel = storedLevel;
         }
+
+        // локальный текущий уровень всегда равен реальному уровню по кликам
+        currentLevel = levelState.level;
 
         renderStatsFromState(levelState);
 
@@ -756,8 +790,11 @@ function handleClick() {
         return;
     }
 
+    lastClickTimestamp = Date.now();
+
     const gain = clickPower * clickMultiplier;
 
+    // локальное состояние (UI сразу обновляется через renderStatsFromState)
     balance     += gain;
     totalClicks += 1;
     renderStatsFromState();
@@ -770,6 +807,7 @@ function handleClick() {
         setTimeout(() => pulseTarget.classList.remove("pulsing"), 80);
     }
 
+    // копим в буфере для Firebase
     farmBuffer.balanceDelta     += gain;
     farmBuffer.totalClicksDelta += 1;
     farmBuffer.totalEarnedDelta += gain;
@@ -1347,6 +1385,10 @@ async function handleMachinePlayClick() {
         showToast(`Этот автомат доступен с ${machine.minLevel}-го уровня`);
         return;
     }
+
+    // перед проверкой баланса и списанием — флашим буфер кликов
+    await flushFarmBuffer("before-spin");
+
     if (balance < machine.price) {
         showToast("Не хватает ЛудоМани для этой игры 🪙");
         return;
@@ -1403,7 +1445,7 @@ async function handleMachinePlayClick() {
 // ==================== Продажа предмета ====================
 
 async function sellItem(item, requestedAmount = 1) {
-    if (!userRef || !uid) return;
+    if (!userRef || !uid || sellInProgress) return;
 
     const invDocRef = doc(db, "users", uid, "inventory", item.id);
     const totalCount = item.count ?? 1;
@@ -1423,6 +1465,11 @@ async function sellItem(item, requestedAmount = 1) {
     const cfg        = PRIZES[prizeId] || {};
     const baseValue  = item.value ?? cfg.value ?? 0;
     const totalValue = baseValue * sellCount;
+
+    sellInProgress = true;
+    if (inventoryEl) {
+        inventoryEl.classList.add("inventory-busy");
+    }
 
     try {
         if (sellCount >= totalCount) {
@@ -1454,9 +1501,43 @@ async function sellItem(item, requestedAmount = 1) {
                 { merge: true }
             );
         });
+
+        // локальный апдейт баланса и мультипликаторов, без доп. запросов
+        balance += totalValue;
+
+        if (lastInventoryItems && lastInventoryItems.length) {
+            const updatedItems = lastInventoryItems
+                .map((it) => {
+                    if (it.id !== item.id) return it;
+                    const nextCount = (it.count ?? 1) - sellCount;
+                    return { ...it, count: nextCount };
+                })
+                .filter((it) => (it.count ?? 1) > 0);
+
+            lastInventoryItems = updatedItems;
+
+            recomputeCollectionsAndBonuses(updatedItems);
+        }
+
+        // локально обновляем кеш глобальных счётчиков, чтобы стрип был актуален
+        if (prizeCountersLoaded) {
+            const prev = prizeCountersCache[prizeId] ?? 0;
+            const next = Math.max(0, prev - sellCount);
+            prizeCountersCache = {
+                ...prizeCountersCache,
+                [prizeId]: next,
+            };
+        }
+
+        renderStatsFromState();
     } catch (e) {
         console.error("sellItem error", e);
         showToast("Не удалось продать предмет, попробуй ещё раз");
+    } finally {
+        sellInProgress = false;
+        if (inventoryEl) {
+            inventoryEl.classList.remove("inventory-busy");
+        }
     }
 }
 
@@ -1478,6 +1559,8 @@ if (upgradeBtn) {
 
 if (inventoryEl) {
     inventoryEl.addEventListener("click", (e) => {
+        if (sellInProgress) return;
+
         const btn = e.target.closest(".inv-sell-btn");
         if (!btn) return;
 
@@ -1594,6 +1677,17 @@ document.addEventListener("visibilitychange", () => {
         flushFarmBuffer("hidden");
     }
 });
+
+// флаш при нажатии TG back-button, чтобы не терять клики
+if (
+    window.Telegram &&
+    window.Telegram.WebApp &&
+    typeof window.Telegram.WebApp.onEvent === "function"
+) {
+    window.Telegram.WebApp.onEvent("backButtonClicked", () => {
+        flushFarmBuffer("tg-back");
+    });
+}
 
 // ==================== Стартовое состояние ====================
 
