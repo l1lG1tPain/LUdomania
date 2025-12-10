@@ -6,7 +6,7 @@ const admin = require('firebase-admin');
 require('dotenv').config();
 
 // ==== Game config (Машины, призы, рарности) ====
-const { MACHINES, PRIZES, RARITY_META } = require('./gameConfig');
+const { MACHINES, PRIZES, RARITY_META } = require('./gameConfig.backend');
 
 // ==== Утилита генерации короткого кода для браузерной авторизации ====
 function generateCode(length = 6) {
@@ -25,11 +25,12 @@ function makeAkulkaId(telegramId) {
     const raw = crypto
         .createHmac('sha256', AKULKA_ID_SECRET)
         .update(String(telegramId))
-        .digest('base64url');
+        .digest('hex'); // ✅ поддерживается везде
 
     const clean = raw.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     return clean.slice(0, 6) || 'akulka';
 }
+
 
 const app = express();
 app.use(express.json());
