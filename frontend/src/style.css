@@ -1285,3 +1285,263 @@ img {
 }
 
 
+/* ============================== */
+/* 👛 Инвентарь — группы по редкости */
+/* ============================== */
+
+.inventory-section {
+    margin-bottom: 16px;
+}
+
+.inventory-section-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 4px 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.inventory-section-title span.rarity-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+}
+
+/* карточка стала проще – крупный эмоджи + имя + цена + прогресс */
+
+.inv-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(14, 16, 30, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    transition: transform 0.08s ease-out, box-shadow 0.08s ease-out,
+    border-color 0.08s ease-out;
+}
+
+.inv-card:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.inv-emoji {
+    font-size: 2rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.inv-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.inv-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.inv-meta-main {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.inv-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+/* прогресс как был, переиспользуем */
+
+.inv-progress {
+    margin-top: 2px;
+}
+
+.inv-progress-bar {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.inv-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ffcf4a, #ff7b39);
+    width: 0%;
+    transition: width 0.2s ease-out;
+}
+
+.inv-progress-text {
+    margin-top: 2px;
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+/* ============================== */
+/* 👛 Модалка предмета инвентаря */
+/* ============================== */
+
+.inventory-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at top, rgba(24, 32, 56, 0.94), rgba(2, 6, 18, 0.98));
+}
+
+.inventory-modal.hidden {
+    display: none;
+}
+
+.inventory-modal-dialog {
+    width: min(440px, 90vw);
+    max-width: 440px;
+    background: rgba(5, 9, 24, 0.98);
+    border-radius: 18px;
+    padding: 14px 14px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
+}
+
+.inventory-modal-body {
+    display: flex;
+    gap: 12px;
+}
+
+.inventory-modal-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.inventory-modal-close:hover {
+    opacity: 1;
+}
+
+.inventory-modal-emoji {
+    flex-shrink: 0;
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    background: radial-gradient(circle at 30% 20%, #ffe9a3, #f97316);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.4rem;
+    overflow: hidden;
+}
+
+.inventory-modal-emoji img.prize-icon-img,
+.inventory-modal-emoji .prize-icon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.inventory-modal-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.inventory-modal-name {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.inventory-modal-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.inventory-modal-rarity {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.inventory-modal-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.inventory-modal-progress {
+    margin-bottom: 10px;
+}
+
+.inventory-modal-sell-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.75;
+    margin-bottom: 6px;
+}
+
+.inventory-modal-sell-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn.small {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+}
+
+/* ============================== */
+/* ❓ Модалка подтверждения продажи */
+/* ============================== */
+
+.inventory-confirm .inventory-modal-dialog {
+    text-align: center;
+}
+
+.inventory-confirm-text {
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+}
+
+.inventory-confirm-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn.danger {
+    background: #dc2626;
+    color: #fff;
+}
+
+.btn.danger:hover {
+    background: #ef4444;
+}

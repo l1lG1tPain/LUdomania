@@ -270,6 +270,71 @@
     </main>
 
     <!-- =============================== -->
+    <!-- 👛 МОДАЛКА ПРЕДМЕТА ИНВЕНТАРЯ  -->
+    <!-- =============================== -->
+    <div id="inventoryModal" class="inventory-modal hidden">
+        <div class="inventory-modal-dialog">
+            <button id="inventoryModalClose" class="inventory-modal-close">✕</button>
+
+            <div class="inventory-modal-body">
+                <div id="inventoryModalEmoji" class="inventory-modal-emoji"></div>
+
+                <div class="inventory-modal-main">
+                    <div id="inventoryModalName" class="inventory-modal-name">
+                        Название приза
+                    </div>
+
+                    <div class="inventory-modal-row">
+                        <span id="inventoryModalRarity" class="inventory-modal-rarity">
+                            Редкость
+                        </span>
+                        <span id="inventoryModalValue" class="inventory-modal-value">
+                            0 LM
+                        </span>
+                    </div>
+
+                    <div class="inventory-modal-progress">
+                        <div class="inv-progress">
+                            <div class="inv-progress-bar">
+                                <div id="inventoryModalProgressFill" class="inv-progress-fill"></div>
+                            </div>
+                            <div id="inventoryModalProgressText" class="inv-progress-text">
+                                0 / 0
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="inventory-modal-sell">
+                        <div class="inventory-modal-sell-title">Продать</div>
+                        <div class="inventory-modal-sell-buttons">
+                            <button id="inventorySell1" class="btn tertiary small">x1</button>
+                            <button id="inventorySell10" class="btn tertiary small">x10</button>
+                            <button id="inventorySellAll" class="btn tertiary small">All</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =============================== -->
+    <!-- ❓ ПОДТВЕРЖДЕНИЕ ПРОДАЖИ        -->
+    <!-- =============================== -->
+    <div id="sellConfirmModal" class="inventory-modal inventory-confirm hidden">
+        <div class="inventory-modal-dialog">
+            <div id="sellConfirmText" class="inventory-confirm-text">
+                Продать предмет?
+            </div>
+            <div class="inventory-confirm-buttons">
+                <button id="sellConfirmNo" class="btn secondary">Нет, оставить 🧸</button>
+                <button id="sellConfirmYes" class="btn danger">Да, продать 💸</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- =============================== -->
     <!-- 🎰 ФУЛЛСКРИН ЭКРАН АВТОМАТА    -->
     <!-- =============================== -->
     <div id="machineOverlay" class="machine-overlay hidden">

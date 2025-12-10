@@ -82,6 +82,26 @@ const machineResultEmojiEl  = document.getElementById("machineResultEmoji");
 const machineResultTextEl   = document.getElementById("machineResultText");
 const machineStatsSummaryEl = document.getElementById("machineStatsSummary");
 
+// inventory модалки
+const inventoryModalEl              = document.getElementById("inventoryModal");
+const inventoryModalCloseBtn        = document.getElementById("inventoryModalClose");
+const inventoryModalEmojiEl         = document.getElementById("inventoryModalEmoji");
+const inventoryModalNameEl          = document.getElementById("inventoryModalName");
+const inventoryModalRarityEl        = document.getElementById("inventoryModalRarity");
+const inventoryModalValueEl         = document.getElementById("inventoryModalValue");
+const inventoryModalCountEl         = document.getElementById("inventoryModalCount");
+const inventoryModalProgressFillEl  = document.getElementById("inventoryModalProgressFill");
+const inventoryModalProgressTextEl  = document.getElementById("inventoryModalProgressText");
+const invSellBtn1  = document.getElementById("inventorySell1");
+const invSellBtn10 = document.getElementById("inventorySell10");
+const invSellBtnAll= document.getElementById("inventorySellAll");
+
+// модалка подтверждения продажи
+const sellConfirmModalEl  = document.getElementById("sellConfirmModal");
+const sellConfirmTextEl   = document.getElementById("sellConfirmText");
+const sellConfirmYesBtn   = document.getElementById("sellConfirmYes");
+const sellConfirmNoBtn    = document.getElementById("sellConfirmNo");
+
 // ==================== Состояние ====================
 
 let uid            = null;
@@ -95,7 +115,9 @@ let authInProgress = false;
 let clickMultiplier      = 1;
 let totalCollectionValue = 0;
 
-let lastInventoryItems = [];
+let lastInventoryItems     = [];
+let currentInventoryItem   = null;
+let pendingSellAmount      = null;
 
 let globalMachineStats = {};
 let userMachineStats   = {};
@@ -108,18 +130,23 @@ const API_BASE =
         ? "http://localhost:3000"
         : "https://ludomania.onrender.com";
 
+// порядок редкостей для группировки
+const RARITY_ORDER = {
+    legendary: 0,
+    mythic:    0,
+    relic:     0,
+    epic:      1,
+    rare:      2,
+    uncommon:  3,
+    common:    4,
+};
+
 // ==================== Буфер кликов ====================
 
-// активный интервал (много кликов подряд)
-const ACTIVE_FLUSH_MS = 7000;
-
-// "редкий" режим — когда кликов мало и редко
+const ACTIVE_FLUSH_MS  = 7000;
 const PASSIVE_FLUSH_MS = 15000;
-
-// порог батча
 const FLUSH_BATCH_THRESHOLD = 300;
 
-// буфер
 let farmBuffer = {
     balanceDelta:     0,
     totalClicksDelta: 0,
@@ -525,6 +552,102 @@ function recomputeCollectionsAndBonuses(items) {
 
 // ==================== Инвентарь (СТАКИ) ====================
 
+function openInventoryModal(item) {
+    if (!inventoryModalEl) return;
+
+    currentInventoryItem = item;
+
+    const prizeId    = item.prizeId || item.id;
+    const cfg        = PRIZES[prizeId] || {};
+    const rarityKey  = item.rarity || cfg.rarity || "common";
+    const rarityMeta = RARITY_META[rarityKey] || { label: rarityKey, color: "#888" };
+
+    const count     = item.count ?? 1;
+    const maxGlobal = item.maxCopiesGlobal ?? cfg.maxCopiesGlobal;
+    const percent   = (maxGlobal && Number.isFinite(maxGlobal))
+        ? Math.min(100, Math.round((count / maxGlobal) * 100))
+        : 100;
+
+    const progressLabel = maxGlobal
+        ? `${count} / ${maxGlobal}`
+        : `${count}`;
+
+    const value = item.value ?? cfg.value ?? 0;
+
+    if (inventoryModalNameEl)   inventoryModalNameEl.textContent   = item.name || cfg.name || prizeId;
+    if (inventoryModalRarityEl) {
+        inventoryModalRarityEl.textContent = rarityMeta.label;
+        inventoryModalRarityEl.style.color = rarityMeta.color;
+    }
+    if (inventoryModalValueEl)  inventoryModalValueEl.textContent  = `${value} LM`;
+    if (inventoryModalCountEl)  inventoryModalCountEl.textContent  = `x${count}`;
+    if (inventoryModalProgressFillEl) {
+        inventoryModalProgressFillEl.style.width = `${percent}%`;
+    }
+    if (inventoryModalProgressTextEl) {
+        inventoryModalProgressTextEl.textContent = progressLabel;
+    }
+
+    if (inventoryModalEmojiEl) {
+        renderPrizeIcon(
+            inventoryModalEmojiEl,
+            prizeId,
+            item.emoji || cfg.emoji || "🎁"
+        );
+    }
+
+    if (invSellBtn10) {
+        invSellBtn10.disabled = count < 10;
+    }
+
+    inventoryModalEl.classList.remove("hidden");
+    inventoryModalEl.classList.add("active");
+}
+
+function closeInventoryModal() {
+    if (!inventoryModalEl) return;
+    inventoryModalEl.classList.remove("active");
+    inventoryModalEl.classList.add("hidden");
+    currentInventoryItem = null;
+    pendingSellAmount    = null;
+}
+
+function openSellConfirmModal(amount) {
+    if (!sellConfirmModalEl || !sellConfirmTextEl || !currentInventoryItem) return;
+
+    pendingSellAmount = amount;
+
+    const prizeId   = currentInventoryItem.prizeId || currentInventoryItem.id;
+    const cfg       = PRIZES[prizeId] || {};
+    const totalCnt  = currentInventoryItem.count ?? 1;
+
+    let sellCount;
+    if (amount === "all") {
+        sellCount = totalCnt;
+    } else {
+        const n = Number(amount);
+        sellCount = Math.min(totalCnt, Number.isFinite(n) && n > 0 ? n : 1);
+    }
+
+    const baseValue  = currentInventoryItem.value ?? cfg.value ?? 0;
+    const totalValue = baseValue * sellCount;
+
+    const name = currentInventoryItem.name || cfg.name || prizeId;
+
+    sellConfirmTextEl.textContent =
+        `🪙 Продать x${sellCount} «${name}» за ${totalValue} LM?`;
+
+    sellConfirmModalEl.classList.remove("hidden");
+    sellConfirmModalEl.classList.add("active");
+}
+
+function closeSellConfirmModal() {
+    if (!sellConfirmModalEl) return;
+    sellConfirmModalEl.classList.remove("active");
+    sellConfirmModalEl.classList.add("hidden");
+    pendingSellAmount = null;
+}
+
 function renderInventory(items) {
     if (!inventoryEl) return;
 
@@ -596,67 +719,95 @@ function renderInventory(items) {
         );
     }
 
+    const groups = new Map();
+
     items.forEach((item) => {
-        const div = document.createElement("div");
-        div.className = "inv-card";
+        const prizeId    = item.prizeId || item.id;
+        const cfg        = PRIZES[prizeId] || {};
+        const rarityKey  = item.rarity || cfg.rarity || "common";
+        const rarityMeta = RARITY_META[rarityKey] || { label: rarityKey, color: "#888" };
 
-        const prizeId = item.prizeId || item.id;
-        const cfg     = PRIZES[prizeId] || {};
+        const key = rarityKey;
+        if (!groups.has(key)) {
+            groups.set(key, { meta: rarityMeta, items: [] });
+        }
+        groups.get(key).items.push(item);
+    });
 
-        const rarityMeta = RARITY_META[item.rarity || cfg.rarity || "common"] || {};
-        const count      = item.count ?? 1;
-        const maxGlobal  = item.maxCopiesGlobal ?? cfg.maxCopiesGlobal;
+    const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
+        const oa = RARITY_ORDER[a] ?? 999;
+        const ob = RARITY_ORDER[b] ?? 999;
+        if (oa !== ob) return oa - ob;
+        return a.localeCompare(b);
+    });
 
-        const percent = (maxGlobal && Number.isFinite(maxGlobal))
-            ? Math.min(100, Math.round((count / maxGlobal) * 100))
-            : 100;
+    sortedKeys.forEach((rarityKey) => {
+        const group = groups.get(rarityKey);
+        if (!group) return;
 
-        const progressLabel = maxGlobal
-            ? `${count} / ${maxGlobal}`
-            : `${count}`;
+        const block = document.createElement("div");
+        block.className = "inv-rarity-block";
 
-        const value = item.value ?? cfg.value ?? 0;
+        const title = document.createElement("div");
+        title.className = "inv-rarity-title";
+        title.textContent = group.meta.label;
+        title.style.color = group.meta.color;
+        block.appendChild(title);
 
-        div.innerHTML = `
-          <div class="inv-emoji"></div>
+        const grid = document.createElement("div");
+        grid.className = "inventory-grid";
 
-          <div class="inv-info">
-            <div class="inv-name">${item.name || cfg.name || prizeId}</div>
+        group.items.forEach((item) => {
+            const div = document.createElement("div");
+            div.className  = "inv-card";
+            div.dataset.id = item.id;
 
-            <div class="inv-meta">
-              <span class="inv-rarity" style="color:${rarityMeta.color}">
-                ${rarityMeta.label}
-              </span>
-              <span class="inv-value">${value} LM</span>
-            </div>
+            const prizeId    = item.prizeId || item.id;
+            const cfg        = PRIZES[prizeId] || {};
+            const count      = item.count ?? 1;
+            const maxGlobal  = item.maxCopiesGlobal ?? cfg.maxCopiesGlobal;
 
-            <div class="inv-count-row">
-              <span class="inv-count">x${count}</span>
-            </div>
+            const percent = (maxGlobal && Number.isFinite(maxGlobal))
+                ? Math.min(100, Math.round((count / maxGlobal) * 100))
+                : 100;
 
-            <div class="inv-progress">
-                <div class="inv-progress-bar">
-                    <div class="inv-progress-fill" style="width:${percent}%;"></div>
+            const progressLabel = maxGlobal
+                ? `${count} / ${maxGlobal}`
+                : `${count}`;
+
+            const value = item.value ?? cfg.value ?? 0;
+
+            div.innerHTML = `
+              <div class="inv-emoji"></div>
+
+              <div class="inv-info">
+                <div class="inv-name">${item.name || cfg.name || prizeId}</div>
+
+                <div class="inv-meta">
+                  <span class="inv-value">${value} LM</span>
                 </div>
-                <div class="inv-progress-text">${progressLabel}</div>
-            </div>
 
-            <div class="inv-actions">
-              <button class="inv-sell-btn" data-id="${item.id}" data-amount="1">🗑 x1</button>
-              ${count >= 10 ? `<button class="inv-sell-btn" data-id="${item.id}" data-amount="10">🗑 x10</button>` : ""}
-              <button class="inv-sell-btn" data-id="${item.id}" data-amount="all">🗑 All</button>
-            </div>
-          </div>
-        `;
+                <div class="inv-progress">
+                    <div class="inv-progress-bar">
+                        <div class="inv-progress-fill" style="width:${percent}%;"></div>
+                    </div>
+                    <div class="inv-progress-text">${progressLabel}</div>
+                </div>
+              </div>
+            `;
 
-        const emojiContainer = div.querySelector(".inv-emoji");
-        renderPrizeIcon(
-            emojiContainer,
-            prizeId,
-            item.emoji || cfg.emoji || "🎁"
-        );
+            const emojiContainer = div.querySelector(".inv-emoji");
+            renderPrizeIcon(
+                emojiContainer,
+                prizeId,
+                item.emoji || cfg.emoji || "🎁"
+            );
 
-        inventoryEl.appendChild(div);
+            grid.appendChild(div);
+        });
+
+        block.appendChild(grid);
+        inventoryEl.appendChild(block);
     });
 }
 
@@ -724,7 +875,6 @@ async function ensureGameFields(userUid, telegramInfo) {
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
-        // 🔥 создаём нового пользователя со всеми необходимыми полями
         await setDoc(ref, {
             telegram_id: telegramInfo?.id ?? null,
             username:    telegramInfo?.username ?? null,
@@ -734,7 +884,6 @@ async function ensureGameFields(userUid, telegramInfo) {
             createdAt:   serverTimestamp(),
             lastLogin:   serverTimestamp(),
 
-            // базовые игровые поля
             balance:     0,
             clickPower:  1,
             totalClicks: 0,
@@ -742,18 +891,15 @@ async function ensureGameFields(userUid, telegramInfo) {
             totalSpent:  0,
             level:       0,
 
-            // 💿 коллекция для рейтингов
             collectionValue: 0,
             collectionCount: 0,
 
-            // 🏅 tier'ы рангов (пока интересует коллекционер)
             collectorRankTier: 1,
         });
     } else {
         const data  = snap.data();
         const patch = {};
 
-        // старые поля
         if (data.balance     === undefined) patch.balance     = 0;
         if (data.clickPower  === undefined) patch.clickPower  = 1;
         if (data.totalClicks === undefined) patch.totalClicks = 0;
@@ -761,14 +907,11 @@ async function ensureGameFields(userUid, telegramInfo) {
         if (data.totalSpent  === undefined) patch.totalSpent  = 0;
         if (data.level       === undefined) patch.level       = 0;
 
-        // новые поля для коллекции
         if (data.collectionValue === undefined) patch.collectionValue = 0;
         if (data.collectionCount === undefined) patch.collectionCount = 0;
 
-        // rankTier коллекционера
         if (data.collectorRankTier === undefined) patch.collectorRankTier = 1;
 
-        // 🧷 ДОТЯГИВАЕМ TELEGRAM-ПОЛЯ, если пришёл telegramInfo
         if (telegramInfo) {
             const tPatch = {};
 
@@ -792,7 +935,6 @@ async function ensureGameFields(userUid, telegramInfo) {
             await updateDoc(ref, patch);
         }
 
-        // всегда обновляем lastLogin
         await updateDoc(ref, { lastLogin: serverTimestamp() });
     }
 }
@@ -845,21 +987,63 @@ async function handleUpgrade() {
     }
 
     const cost = getUpgradeCost(clickPower);
-    if (balance < cost) {
-        showToast("Недостаточно ЛудоМани для апгрейда 💸");
-        return;
-    }
 
     if (upgradeBtn) upgradeBtn.disabled = true;
 
     try {
-        await updateDoc(userRef, {
-            balance:    increment(-cost),
-            clickPower: increment(1),
-            totalSpent: increment(cost),
+        const result = await runTransaction(db, async (tx) => {
+            const snap = await tx.get(userRef);
+            if (!snap.exists()) {
+                throw new Error("user-not-found");
+            }
+
+            const data           = snap.data() || {};
+            const currentBalance = data.balance    ?? 0;
+            const currentPower   = data.clickPower ?? 1;
+            const storedLevel    = data.level      ?? currentLevel;
+            const txMaxPower     = getMaxClickPower(storedLevel);
+            const txUpgradeCost  = getUpgradeCost(currentPower);
+
+            if (currentPower >= txMaxPower) {
+                throw new Error("power-cap");
+            }
+
+            if (currentBalance < txUpgradeCost) {
+                throw new Error("no-money");
+            }
+
+            const newBalance = currentBalance - txUpgradeCost;
+            const newPower   = currentPower + 1;
+
+            tx.update(userRef, {
+                balance:    newBalance,
+                clickPower: newPower,
+                totalSpent: increment(txUpgradeCost),
+            });
+
+            return {
+                balance:    newBalance,
+                clickPower: newPower,
+            };
         });
+
+        balance    = result.balance;
+        clickPower = result.clickPower;
+        renderStatsFromState();
     } catch (e) {
-        console.error("upgrade error", e);
+        if (e.message === "no-money") {
+            showToast("Недостаточно ЛудоМани для апгрейда 💸");
+        } else if (e.message === "power-cap") {
+            showToast(
+                `Лимит силы клика на уровне ${currentLevel}. Накликай до следующего уровня!`
+            );
+        } else if (e.message === "user-not-found") {
+            showToast("Профиль не найден, перезайди в игру");
+            console.error("upgrade error: user not found");
+        } else {
+            console.error("upgrade tx error", e);
+            showToast("Ошибка апгрейда, попробуй ещё раз");
+        }
     } finally {
         if (upgradeBtn) upgradeBtn.disabled = false;
     }
@@ -1186,7 +1370,6 @@ async function spinMachine(machineId) {
         return { outcome: "no-auth" };
     }
 
-    // перед игрой пытаемся добросить буфер, но не блокируем UX, если ошибка
     try {
         await flushFarmBuffer("before-spin");
     } catch (e) {
@@ -1201,22 +1384,52 @@ async function spinMachine(machineId) {
         return { outcome: "locked" };
     }
 
-    if (balance < machine.price) {
-        showToast("Не хватает ЛудоМани для этой игры 🪙");
-        return { outcome: "no-money" };
-    }
+    let newBalance = balance;
 
     try {
-        await updateDoc(userRef, {
-            balance:    increment(-machine.price),
-            totalSpent: increment(machine.price),
+        const txResult = await runTransaction(db, async (tx) => {
+            const snap = await tx.get(userRef);
+            if (!snap.exists()) {
+                throw new Error("user-not-found");
+            }
+
+            const data           = snap.data() || {};
+            const currentBalance = data.balance ?? 0;
+            const price          = machine.price;
+
+            if (currentBalance < price) {
+                throw new Error("no-money");
+            }
+
+            const updatedBalance = currentBalance - price;
+
+            tx.update(userRef, {
+                balance:    updatedBalance,
+                totalSpent: increment(price),
+            });
+
+            return updatedBalance;
         });
+
+        newBalance = txResult;
     } catch (e) {
-        console.error("play: balance update error", e);
+        if (e.message === "no-money") {
+            showToast("Не хватает ЛудоМани для этой игры 🪙");
+            return { outcome: "no-money" };
+        }
+        if (e.message === "user-not-found") {
+            showToast("Профиль не найден, перезайди в игру");
+            console.error("spinMachine error: user not found");
+            return { outcome: "error" };
+        }
+
+        console.error("play: balance tx error", e);
+        showToast("Ошибка списания, попробуй ещё раз");
         return { outcome: "error" };
     }
 
-    balance -= machine.price;
+    balance = newBalance;
+    if (balance < 0) balance = 0;
     renderStatsFromState();
 
     const roll = Math.random();
@@ -1580,15 +1793,72 @@ if (upgradeBtn) {
 
 if (inventoryEl) {
     inventoryEl.addEventListener("click", (e) => {
-        const btn = e.target.closest(".inv-sell-btn");
-        if (!btn) return;
+        const card = e.target.closest(".inv-card");
+        if (!card) return;
 
-        const id      = btn.dataset.id;
-        const amount  = btn.dataset.amount || "1";
-        const item    = lastInventoryItems.find((it) => it.id === id);
+        const id   = card.dataset.id;
+        const item = lastInventoryItems.find((it) => it.id === id);
         if (!item) return;
 
-        sellItem(item, amount);
+        openInventoryModal(item);
+    });
+}
+
+if (inventoryModalCloseBtn) {
+    inventoryModalCloseBtn.addEventListener("click", () => {
+        closeInventoryModal();
+    });
+}
+if (inventoryModalEl) {
+    inventoryModalEl.addEventListener("click", (e) => {
+        if (e.target === inventoryModalEl) {
+            closeInventoryModal();
+        }
+    });
+}
+
+if (invSellBtn1) {
+    invSellBtn1.addEventListener("click", () => {
+        if (!currentInventoryItem) return;
+        openSellConfirmModal(1);
+    });
+}
+if (invSellBtn10) {
+    invSellBtn10.addEventListener("click", () => {
+        if (!currentInventoryItem) return;
+        openSellConfirmModal(10);
+    });
+}
+if (invSellBtnAll) {
+    invSellBtnAll.addEventListener("click", () => {
+        if (!currentInventoryItem) return;
+        openSellConfirmModal("all");
+    });
+}
+
+if (sellConfirmYesBtn) {
+    sellConfirmYesBtn.addEventListener("click", async () => {
+        if (!currentInventoryItem || pendingSellAmount == null) {
+            closeSellConfirmModal();
+            return;
+        }
+        const item  = currentInventoryItem;
+        const amount = pendingSellAmount;
+        closeSellConfirmModal();
+        await sellItem(item, amount);
+        closeInventoryModal();
+    });
+}
+if (sellConfirmNoBtn) {
+    sellConfirmNoBtn.addEventListener("click", () => {
+        closeSellConfirmModal();
+    });
+}
+if (sellConfirmModalEl) {
+    sellConfirmModalEl.addEventListener("click", (e) => {
+        if (e.target === sellConfirmModalEl) {
+            closeSellConfirmModal();
+        }
     });
 }
 
