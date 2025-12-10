@@ -1288,10 +1288,17 @@ img {
 /* 👛 Инвентарь — группы по редкости */
 /* ============================== */
 
-.inventory-section {
-    margin-bottom: 24px;
+/* корневой контейнер инвентаря — просто колонка */
+#inventory {
+    display: block;
 }
 
+/* отдельный блок под каждую редкость */
+.inventory-section {
+    margin-bottom: 32px;
+}
+
+/* заголовок редкости */
 .inventory-section-title {
     font-size: 0.9rem;
     font-weight: 600;
@@ -1309,11 +1316,12 @@ img {
     border-radius: 999px;
 }
 
-/* сетка предметов: 3 карточки в ряд */
-.inventory-grid {
+/* сетка предметов: 3 карточки в ряд ТОЛЬКО внутри секции */
+.inventory-section .inventory-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
+    width: 100%;
 }
 
 /* карточка: всё по вертикали */
@@ -1327,6 +1335,8 @@ img {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: flex-start;
+    min-height: 104px;
     transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
 }
 
@@ -1337,13 +1347,13 @@ img {
 
 /* большая картинка / эмодзи */
 .inv-emoji {
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.2rem;
+    font-size: 2.5rem;
     overflow: hidden;
     margin-bottom: 6px;
 }
@@ -1563,3 +1573,4 @@ img {
 .btn.danger:hover {
     background: #ef4444;
 }
+
