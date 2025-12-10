@@ -63,6 +63,12 @@ const levelProgressBar = document.getElementById("levelProgressBar");
 const multiplierEl     = document.getElementById("multiplier");
 const levelHintEl      = document.getElementById("levelHint");
 
+// Визуал, завязанный на лигу
+const bigClickImg                  = document.getElementById("bigClick");
+const profileLvlBadgeEl            = document.querySelector(".profile-lvl-badge");
+const profileLeagueChipEl          = document.getElementById("profilePageLeague");
+const profileLeagueProgressFillEl  = document.getElementById("profileLeagueProgressFill");
+
 // Игровые элементы
 const bigClickArea  = document.getElementById("bigClickArea");
 const upgradeBtn    = document.getElementById("upgradeBtn");
@@ -297,35 +303,35 @@ const LEAGUE_THEME_CONFIG = {
     diamond: { buttonSrc: imgDiamond },
 };
 
-const LEAGUE_CLASS_LIST = [
+// ==================== Лигозависимый визуал ====================
+
+// 1. Сначала объявляем классы
+const LEAGUE_CLASSES = [
     "league-bronze",
     "league-silver",
     "league-gold",
     "league-platinum",
-    "league-diamond",
+    "league-diamond"
 ];
 
+// 2. Потом функция applyLeagueVisuals
 function applyLeagueVisuals(league) {
     const leagueId = league?.id || "bronze";
-    const cfg      = LEAGUE_THEME_CONFIG[leagueId] || LEAGUE_THEME_CONFIG.bronze;
+    const leagueClass = `league-${leagueId}`;
 
-    // большая кнопка Ludomany
-    const bigClickImg = document.getElementById("bigClick");
-    if (bigClickImg && cfg.buttonSrc) {
-        bigClickImg.src = cfg.buttonSrc;
-    }
-
-    // полоски прогресса: шапка и профиль
-    const bars = [];
-    if (levelProgressBar)            bars.push(levelProgressBar);
-    if (profileLeagueProgressFill)   bars.push(profileLeagueProgressFill);
-
-    bars.forEach((el) => {
+    const apply = (el) => {
         if (!el) return;
-        LEAGUE_CLASS_LIST.forEach((cls) => el.classList.remove(cls));
-        el.classList.add(`league-${leagueId}`);
-    });
+        LEAGUE_CLASSES.forEach(cls => el.classList.remove(cls));
+        el.classList.add(leagueClass);
+    };
+
+    apply(levelProgressBar);
+    apply(profileLeagueProgressFillEl);
+    apply(bigClickImg);
+    apply(profileLvlBadgeEl);
+    apply(profileLeagueChipEl);
 }
+
 
 
 // ==================== Визуал приза (emoji / img) ====================
@@ -434,7 +440,7 @@ function renderStatsFromState(levelStateOverride) {
             `${Math.round((ls.progress || 0) * 100)}%`;
     }
 
-    // применяем визуал в зависимости от лиги
+    // 🔥 тут привязываем все цвета/тени к текущей лиге
     applyLeagueVisuals(league);
 
     if (multiplierEl) {
