@@ -5,6 +5,9 @@ const crypto = require('crypto');
 const admin = require('firebase-admin');
 require('dotenv').config();
 
+// ==== Game config (Машины, призы, рарности) ====
+const { MACHINES, PRIZES, RARITY_META } = require('./gameConfig');
+
 // ==== Утилита генерации короткого кода для браузерной авторизации ====
 function generateCode(length = 6) {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -16,35 +19,32 @@ function generateCode(length = 6) {
 }
 
 // ==== AkulkaID: глобальный идентификатор пользователя во вселенной Акулки ====
+const AKULKA_ID_SECRET = process.env.AKULKA_ID_SECRET || 'fallback-secret';
+
 function makeAkulkaId(telegramId) {
-    // Детеминированный, но непрозрачный ID
     const raw = crypto
         .createHmac('sha256', AKULKA_ID_SECRET)
         .update(String(telegramId))
-        .digest('base64url'); // буквы, цифры, _ и -
+        .digest('base64url');
 
-    // Оставляем только буквы/цифры и режем до 6 символов
     const clean = raw.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-
-    return clean.slice(0, 6) || 'akulka'; // на всякий пожарный fallback
+    return clean.slice(0, 6) || 'akulka';
 }
 
 const app = express();
 app.use(express.json());
 
-// CORS: локалка + Vercel
 app.use(
     cors({
         origin: [
-            'http://localhost:5173',           // Vite dev
-            'https://ludomania-app.vercel.app' // фронт на Vercel
+            'http://localhost:5173',
+            'https://ludomania-app.vercel.app',
         ],
         methods: ['GET', 'POST', 'OPTIONS'],
     })
 );
 
 // ==== Firebase Admin init ====
-// Локально берём ключ из файла, на Render — из ENV
 let serviceAccount;
 
 if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
@@ -57,12 +57,12 @@ admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
 });
 
-const firestore = admin.firestore();
+const firestore  = admin.firestore();
+const FieldValue = admin.firestore.FieldValue;
 
 // ==== Config ====
 const BOT_TOKEN           = process.env.TELEGRAM_BOT_TOKEN;
 const BROWSER_AUTH_SECRET = process.env.BROWSER_AUTH_SECRET;
-const AKULKA_ID_SECRET    = process.env.AKULKA_ID_SECRET || 'fallback-secret';
 const PORT                = process.env.PORT || 3000;
 
 if (!BOT_TOKEN) {
@@ -123,14 +123,14 @@ app.post('/auth/telegram', async (req, res) => {
         const telegramId = tgUser.id;
         const uid        = `tg_${telegramId}`;
         const akulkaId   = makeAkulkaId(telegramId);
-        const now        = admin.firestore.FieldValue.serverTimestamp();
+        const now        = FieldValue.serverTimestamp();
 
         const userRef = firestore.collection('users').doc(uid);
 
         await userRef.set(
             {
                 telegram_id: telegramId,
-                akulkaId,                                // 🟢 наш глобальный ID
+                akulkaId,
                 username:  tgUser.username || null,
                 firstName: tgUser.first_name || '',
                 photoUrl:  tgUser.photo_url || null,
@@ -142,7 +142,7 @@ app.post('/auth/telegram', async (req, res) => {
 
         const customToken = await admin.auth().createCustomToken(uid, {
             telegram_id: telegramId,
-            akulkaId,                                // 🟢 кидаем в клеймы
+            akulkaId,
             username: tgUser.username || null,
         });
 
@@ -157,8 +157,6 @@ app.post('/auth/telegram', async (req, res) => {
 // 2) ЛОГИН ЧЕРЕЗ БРАУЗЕР С КОДОМ
 // ===================================================================
 
-// 2.1. Браузер просит создать одноразовый код
-// POST /auth/browser/start  -> { code }
 app.post('/auth/browser/start', async (req, res) => {
     try {
         const code = generateCode(6);
@@ -167,7 +165,7 @@ app.post('/auth/browser/start', async (req, res) => {
         await linkRef.set({
             code,
             status: 'pending',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
         });
 
         res.json({ code });
@@ -177,8 +175,6 @@ app.post('/auth/browser/start', async (req, res) => {
     }
 });
 
-// 2.2. Бот подтверждает код и пользователя
-// POST /auth/browser/confirm  { code, user, secret }
 app.post('/auth/browser/confirm', async (req, res) => {
     try {
         const { code, user, secret } = req.body;
@@ -193,7 +189,7 @@ app.post('/auth/browser/confirm', async (req, res) => {
             return res.status(403).json({ error: 'invalid secret' });
         }
 
-        const linkRef = firestore.collection('auth_links').doc(code);
+        const linkRef  = firestore.collection('auth_links').doc(code);
         const linkSnap = await linkRef.get();
 
         if (!linkSnap.exists) {
@@ -214,7 +210,7 @@ app.post('/auth/browser/confirm', async (req, res) => {
         const firstName  = user.first_name || '';
         const photoUrl   = user.photo_url || null;
 
-        const now     = admin.firestore.FieldValue.serverTimestamp();
+        const now     = FieldValue.serverTimestamp();
         const userRef = firestore.collection('users').doc(uid);
 
         await userRef.set(
@@ -252,7 +248,6 @@ app.post('/auth/browser/confirm', async (req, res) => {
     }
 });
 
-// 2.2.1 Бот регистрирует пользователя без браузерного логина (простой /start)
 app.post('/auth/bot/register', async (req, res) => {
     try {
         const { user, secret } = req.body;
@@ -270,7 +265,7 @@ app.post('/auth/bot/register', async (req, res) => {
         const firstName  = user.first_name || "";
         const photoUrl   = user.photo_url || null;
 
-        const now     = admin.firestore.FieldValue.serverTimestamp();
+        const now     = FieldValue.serverTimestamp();
         const userRef = firestore.collection("users").doc(uid);
 
         await userRef.set(
@@ -293,8 +288,6 @@ app.post('/auth/bot/register', async (req, res) => {
     }
 });
 
-// 2.3. Браузер опрашивает статус кода
-// GET /auth/browser/poll?code=XXXX
 app.get('/auth/browser/poll', async (req, res) => {
     try {
         const { code } = req.query;
@@ -315,7 +308,6 @@ app.get('/auth/browser/poll', async (req, res) => {
             return res.json({ status: data.status || 'pending' });
         }
 
-        // Отдаём токен один раз и удаляем документ
         await linkRef.delete();
 
         return res.json({
@@ -329,10 +321,336 @@ app.get('/auth/browser/poll', async (req, res) => {
 });
 
 // ===================================================================
+// 3) ЛОГИКА СПИНА АВТОМАТА — POST /spin
+// ===================================================================
+
+function getPrizeWeight(prizeId) {
+    const prize = PRIZES[prizeId];
+    if (!prize) return 1;
+
+    if (typeof prize.dropWeight === 'number' && prize.dropWeight > 0) {
+        return prize.dropWeight;
+    }
+    const rarityKey  = prize.rarity || 'common';
+    const rarityMeta = RARITY_META[rarityKey] || {};
+    if (typeof rarityMeta.weight === 'number' && rarityMeta.weight > 0) {
+        return rarityMeta.weight;
+    }
+    return 1;
+}
+
+function rollPrizeForMachine(machine) {
+    if (!machine || !Array.isArray(machine.prizePool) || machine.prizePool.length === 0) {
+        return null;
+    }
+
+    const entries = machine.prizePool
+        .map((id) => ({ id, weight: getPrizeWeight(id) }))
+        .filter((e) => e.weight > 0);
+
+    const total = entries.reduce((sum, e) => sum + e.weight, 0);
+    if (!total) {
+        return machine.prizePool[Math.floor(Math.random() * machine.prizePool.length)];
+    }
+
+    let r = Math.random() * total;
+    for (const e of entries) {
+        if (r < e.weight) return e.id;
+        r -= e.weight;
+    }
+    return entries[entries.length - 1].id;
+}
+
+// ---- буфер для глобальной статистики автоматов ----
+const machineStatsBuffer = new Map(); // machineId -> { spinsDelta, winsDelta }
+let machineStatsFlushTimer = null;
+
+function bufferGlobalMachineStats(machineId, win) {
+    let entry = machineStatsBuffer.get(machineId);
+    if (!entry) {
+        entry = { spinsDelta: 0, winsDelta: 0 };
+        machineStatsBuffer.set(machineId, entry);
+    }
+    entry.spinsDelta += 1;
+    if (win) entry.winsDelta += 1;
+}
+
+async function flushGlobalMachineStats(reason = 'timer') {
+    if (machineStatsBuffer.size === 0) {
+        machineStatsFlushTimer = null;
+        return;
+    }
+
+    const batch = firestore.batch();
+
+    machineStatsBuffer.forEach((entry, machineId) => {
+        const ref = firestore.collection('machine_stats').doc(machineId);
+        batch.set(
+            ref,
+            {
+                totalSpins: FieldValue.increment(entry.spinsDelta),
+                totalWins:  FieldValue.increment(entry.winsDelta),
+            },
+            { merge: true }
+        );
+    });
+
+    machineStatsBuffer.clear();
+    machineStatsFlushTimer = null;
+
+    try {
+        await batch.commit();
+    } catch (err) {
+        console.error('flushGlobalMachineStats error', reason, err);
+    }
+}
+
+function scheduleGlobalMachineStatsFlush() {
+    if (machineStatsFlushTimer) return;
+    machineStatsFlushTimer = setTimeout(() => {
+        flushGlobalMachineStats('timer');
+    }, 1500);
+}
+
+// на всякий случай — попытаться слить буфер при остановке процесса
+process.on('SIGINT', async () => {
+    await flushGlobalMachineStats('SIGINT');
+    process.exit(0);
+});
+process.on('SIGTERM', async () => {
+    await flushGlobalMachineStats('SIGTERM');
+    process.exit(0);
+});
+
+async function grantPrizeWithGlobalLimit(uid, machine) {
+    const pool = Array.isArray(machine.prizePool) ? machine.prizePool.slice() : [];
+    if (!pool.length) return { outcome: 'no-prize' };
+
+    const tried = new Set();
+
+    while (tried.size < pool.length) {
+        const candidateId = rollPrizeForMachine(machine);
+        if (!candidateId || tried.has(candidateId)) continue;
+        tried.add(candidateId);
+
+        const cfg = PRIZES[candidateId];
+        if (!cfg) continue;
+
+        const maxGlobal = cfg.maxCopiesGlobal ?? Infinity;
+
+        // безлимитный приз
+        if (!Number.isFinite(maxGlobal)) {
+            const invRef = firestore
+                .collection('users')
+                .doc(uid)
+                .collection('inventory')
+                .doc(cfg.id);
+
+            await invRef.set(
+                {
+                    prizeId:   cfg.id,
+                    name:      cfg.name,
+                    emoji:     cfg.emoji,
+                    rarity:    cfg.rarity,
+                    value:     cfg.value,
+                    createdAt: FieldValue.serverTimestamp(),
+                    count:     FieldValue.increment(1),
+                },
+                { merge: true }
+            );
+
+            return { outcome: 'win', prize: cfg };
+        }
+
+        // лимитированный приз — транзакция prize_counters + inventory
+        try {
+            const txResult = await firestore.runTransaction(async (tx) => {
+                const counterRef  = firestore.collection('prize_counters').doc(cfg.id);
+                const counterSnap = await tx.get(counterRef);
+                const data        = counterSnap.exists ? counterSnap.data() : {};
+                const used        = data && typeof data.count === 'number' ? data.count : 0;
+
+                if (Number.isFinite(maxGlobal) && used >= maxGlobal) {
+                    return { outcome: 'exhausted' };
+                }
+
+                const invRef   = firestore.collection('users').doc(uid).collection('inventory').doc(cfg.id);
+                const invSnap  = await tx.get(invRef);
+                const prevData = invSnap.exists ? invSnap.data() : {};
+                const prevCnt  = prevData && typeof prevData.count === 'number' ? prevData.count : 0;
+
+                tx.set(
+                    counterRef,
+                    { count: used + 1 },
+                    { merge: true }
+                );
+
+                tx.set(
+                    invRef,
+                    {
+                        prizeId:   cfg.id,
+                        name:      cfg.name,
+                        emoji:     cfg.emoji,
+                        rarity:    cfg.rarity,
+                        value:     cfg.value,
+                        createdAt: prevData.createdAt || FieldValue.serverTimestamp(),
+                        count:     prevCnt + 1,
+                    },
+                    { merge: true }
+                );
+
+                return { outcome: 'win', prize: cfg };
+            });
+
+            if (txResult.outcome === 'win') {
+                return txResult;
+            }
+            if (txResult.outcome === 'exhausted') {
+                continue;
+            }
+
+            return { outcome: 'error' };
+        } catch (err) {
+            console.error('grantPrizeWithGlobalLimit tx error', err);
+
+            if (
+                err.code === 'resource-exhausted' ||
+                (typeof err.message === 'string' && err.message.includes('Quota exceeded'))
+            ) {
+                const invRef = firestore
+                    .collection('users')
+                    .doc(uid)
+                    .collection('inventory')
+                    .doc(cfg.id);
+
+                await invRef.set(
+                    {
+                        prizeId:   cfg.id,
+                        name:      cfg.name,
+                        emoji:     cfg.emoji,
+                        rarity:    cfg.rarity,
+                        value:     cfg.value,
+                        createdAt: FieldValue.serverTimestamp(),
+                        count:     FieldValue.increment(1),
+                    },
+                    { merge: true }
+                );
+
+                return { outcome: 'win', prize: cfg };
+            }
+
+            return { outcome: 'error' };
+        }
+    }
+
+    return { outcome: 'no-prize' };
+}
+
+app.post('/spin', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization || '';
+        const token      = authHeader.startsWith('Bearer ')
+            ? authHeader.slice('Bearer '.length)
+            : null;
+
+        if (!token) {
+            return res.status(401).json({ outcome: 'no-auth', error: 'Missing Bearer token' });
+        }
+
+        const decoded = await admin.auth().verifyIdToken(token);
+        const uid     = decoded.uid;
+
+        const { machineId } = req.body;
+        if (!machineId) {
+            return res.status(400).json({ outcome: 'error', error: 'machineId is required' });
+        }
+
+        const machine = MACHINES.find((m) => m.id === machineId);
+        if (!machine) {
+            return res.status(404).json({ outcome: 'error', error: 'machine not found' });
+        }
+
+        const userRef  = firestore.collection('users').doc(uid);
+        const userSnap = await userRef.get();
+
+        if (!userSnap.exists) {
+            return res.status(404).json({ outcome: 'error', error: 'user not found' });
+        }
+
+        const user   = userSnap.data();
+        const level  = user.level ?? 0;
+        const price  = machine.price ?? 0;
+        const minLvl = machine.minLevel ?? 0;
+        const bal    = user.balance ?? 0;
+
+        if (level < minLvl) {
+            return res.status(400).json({
+                outcome: 'locked',
+                message: `Этот автомат доступен с ${minLvl}-го уровня`,
+            });
+        }
+
+        if (bal < price) {
+            return res.status(400).json({
+                outcome: 'no-money',
+                message: 'Не хватает ЛудоМани для этой игры 🪙',
+            });
+        }
+
+        // списываем баланс
+        await userRef.update({
+            balance:    FieldValue.increment(-price),
+            totalSpent: FieldValue.increment(price),
+        });
+
+        const win = Math.random() < (machine.winChance || 0);
+
+        // глобальная статистика — через буфер
+        bufferGlobalMachineStats(machineId, win);
+        scheduleGlobalMachineStatsFlush();
+
+        // пользовательская статистика — сразу
+        const userStatRef = userRef.collection('machineStats').doc(machineId);
+        await userStatRef.set(
+            {
+                spins: FieldValue.increment(1),
+                wins:  win ? FieldValue.increment(1) : FieldValue.increment(0),
+            },
+            { merge: true }
+        );
+
+        if (!win) {
+            return res.json({ outcome: 'lose' });
+        }
+
+        const prizeResult = await grantPrizeWithGlobalLimit(uid, machine);
+
+        if (prizeResult.outcome === 'win' && prizeResult.prize) {
+            return res.json({
+                outcome: 'win',
+                prize: prizeResult.prize,
+            });
+        }
+
+        if (prizeResult.outcome === 'no-prize') {
+            return res.json({
+                outcome: 'no-prize',
+                message: 'Все призы этого автомата уже разобрали 😢',
+            });
+        }
+
+        return res.status(500).json({ outcome: 'error', error: 'Prize error' });
+    } catch (err) {
+        console.error('/spin error', err);
+        return res.status(500).json({ outcome: 'error', error: 'Internal error' });
+    }
+});
+
+// ===================================================================
 // health-check
 // ===================================================================
 app.get('/', (req, res) => {
-    res.send('LUdomania auth server is running');
+    res.send('LUdomania auth/spin server is running');
 });
 
 app.listen(PORT, () => {

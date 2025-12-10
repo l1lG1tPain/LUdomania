@@ -290,7 +290,7 @@ img {
 
 .machine-card {
     background: #161616;
-    padding: 12px;
+    padding: 10px;
     border-radius: 14px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
@@ -739,7 +739,7 @@ img {
 /* карточка автомата */
 .machine-card {
     /* ❗ ВАЖНО: width НЕ УКАЗЫВАЕМ */
-    padding: 12px 10px;
+    /*padding: 12px 10px;*/
     border-radius: 16px;
 
     background: #161616;
@@ -1253,3 +1253,35 @@ img {
     text-align: right;
     font-weight: 600;
 }
+
+
+.prize-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+}
+
+.prize-icon-emoji {
+    font-size: 1.6rem;
+}
+
+.prize-icon-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    object-fit: cover;
+}
+.prize-icon-img-nft {
+    box-shadow: 0 0 12px rgba(0, 255, 255, 0.6);
+    background: radial-gradient(circle at 30% 30%, rgba(0,255,255,0.3), transparent 60%);
+}
+.inv-emoji,
+.pill-emoji,
+#machineResultEmoji {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
