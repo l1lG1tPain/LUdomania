@@ -1707,6 +1707,7 @@ img {
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    font-size: 14px;
 }
 
 .collection-prize-icon img.prize-icon-img {

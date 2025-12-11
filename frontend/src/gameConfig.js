@@ -1600,12 +1600,11 @@ export const MACHINES = [
 // ==========================================
 // 🧩 КОЛЛЕКЦИИ
 // ==========================================
-
 export const COLLECTIONS = {
     duck_collection: {
         id: "duck_collection",
         name: "Утиное братство",
-        emoji: "Duck",
+        emoji: "🦆",
         description: "Собери всех уток — стань королём пруда!",
         requiredPrizeIds: [
             "plush_duck",
@@ -1617,15 +1616,15 @@ export const COLLECTIONS = {
         ],
         bonus: {
             type: "clickMultiplier",
-            value: 1.3,
+            value: 1.3, // x1.3 к силе клика
         },
     },
 
     neon_arcade: {
         id: "neon_arcade",
         name: "Неоновая аркада",
-        emoji: "Arcade",
-        description: "Зажги неоновые огни старой школы",
+        emoji: "🕹️",
+        description: "Зажги неоновые огни старой школы.",
         requiredPrizeIds: [
             "arcade_token",
             "pixel_coin",
@@ -1637,27 +1636,33 @@ export const COLLECTIONS = {
         bonus: {
             type: "machineWinBonus",
             machineId: "street_claw",
-            value: 0.12,
+            percent: 12, // +12% к шансу выигрыша
         },
     },
 
     akula_collection: {
         id: "akula_collection",
         name: "Акулий синдикат",
-        emoji: "Shark",
-        description: "Ты либо акула, либо корм",
-        requiredPrizeIds: ["shark_fin", "pixel_shark", "mega_shark", "ludo_core", "abyss_pearl"],
+        emoji: "🦈",
+        description: "Ты либо акула, либо корм.",
+        requiredPrizeIds: [
+            "shark_fin",
+            "pixel_shark",
+            "mega_shark",
+            "ludo_core",
+            "abyss_pearl",
+        ],
         bonus: {
             type: "clickMultiplier",
-            value: 1.5,
+            value: 1.5, // x1.5 к силе клика
         },
     },
 
     hookah_collection: {
         id: "hookah_collection",
         name: "Кальянный клуб «Дым»",
-        emoji: "Hookah",
-        description: "Расслабься и дыши глубже",
+        emoji: "💨",
+        description: "Расслабься и дыши глубже.",
         requiredPrizeIds: [
             "coal_box",
             "hookah_hose",
@@ -1667,15 +1672,15 @@ export const COLLECTIONS = {
         ],
         bonus: {
             type: "sellBonus",
-            value: 0.25,
+            percent: 25, // +25% к цене продажи призов
         },
     },
 
     retro_collection: {
         id: "retro_collection",
         name: "Ретро-легенды 8-bit",
-        emoji: "Retro Controller",
-        description: "Время, когда игры были сложными, а мы — молодыми",
+        emoji: "👾",
+        description: "Время, когда игры были сложными, а мы — молодыми.",
         requiredPrizeIds: [
             "pixel_controller",
             "retro_joystick",
@@ -1686,40 +1691,50 @@ export const COLLECTIONS = {
         ],
         bonus: {
             type: "upgradeDiscount",
-            value: 0.25,
+            percent: 25, // −25% к стоимости апгрейда клика
         },
     },
 
     space_collection: {
         id: "space_collection",
         name: "Космическая одиссея",
-        emoji: "Rocket",
+        emoji: "🚀",
         description: "До бесконечности и дальше!",
-        requiredPrizeIds: ["space_rocket", "alien_head", "black_hole", "star_crystal"],
+        requiredPrizeIds: [
+            "space_rocket",
+            "alien_head",
+            "black_hole",
+            "star_crystal",
+        ],
         bonus: {
             type: "machineWinBonus",
             machineId: "space_slot",
-            value: 0.15,
+            percent: 15, // +15% к шансу выигрыша
         },
     },
 
     candy_collection: {
         id: "candy_collection",
         name: "Сладкое королевство",
-        emoji: "Candy",
-        description: "Собери все конфеты и никогда не грусти",
-        requiredPrizeIds: ["candy_bar", "lollipop", "gummy_bear", "golden_candy"],
+        emoji: "🍬",
+        description: "Собери все конфеты и никогда не грусти.",
+        requiredPrizeIds: [
+            "candy_bar",
+            "lollipop",
+            "gummy_bear",
+            "golden_candy",
+        ],
         bonus: {
             type: "dailyRewardMultiplier",
-            value: 1.4,
+            value: 1.4, // x1.4 к ежедневной награде
         },
     },
 
     platinum_vault: {
         id: "platinum_vault",
         name: "Платиновый тайник",
-        emoji: "Vault",
-        description: "Только для тех, кто собрал почти всё",
+        emoji: "💎",
+        description: "Только для тех, кто собрал почти всё.",
         requiredPrizeIds: [
             "platinum_cube",
             "diamond_duck",
@@ -1729,15 +1744,15 @@ export const COLLECTIONS = {
         ],
         bonus: {
             type: "globalMultiplier",
-            value: 1.2,
+            value: 1.2, // x1.2 ко всем получаемым LM
         },
     },
 
     ultimate_jackpot: {
         id: "ultimate_jackpot",
         name: "Абсолютный джекпот",
-        emoji: "Jackpot",
-        description: "Легенда среди легенд. Только 100 человек в мире соберут",
+        emoji: "🎰",
+        description: "Легенда среди легенд. Только 100 человек в мире соберут.",
         requiredPrizeIds: [
             "ludo_core",
             "golden_ticket",
@@ -1749,22 +1764,28 @@ export const COLLECTIONS = {
         bonus: {
             type: "machineWinBonus",
             machineId: "akula_jackpot",
-            value: 0.25,
+            percent: 25, // +25% к шансу выигрыша джекпота
         },
     },
 
     golden_era: {
         id: "golden_era",
         name: "Золотая эра",
-        emoji: "Crown",
-        description: "Все золотые призы в одном месте",
-        requiredPrizeIds: ["golden_duck", "gold_cube", "golden_ticket", "golden_candy"],
+        emoji: "👑",
+        description: "Все золотые призы в одном месте.",
+        requiredPrizeIds: [
+            "golden_duck",
+            "gold_cube",
+            "golden_ticket",
+            "golden_candy",
+        ],
         bonus: {
             type: "passiveIncome",
-            value: 5000,
+            value: 5000, // +5000 LM пассивного дохода (как решишь реализовать)
         },
     },
 };
+
 
 // ==========================================
 // 🖼 Хелпер для отображения приза
