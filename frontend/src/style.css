@@ -1341,7 +1341,7 @@ img {
 /* большая картинка / эмодзи */
 .inv-emoji {
     width: auto;
-    height: 101px;
+    min-height: 101px;
     border-radius: 14px;
     display: flex;
     align-items: center;
