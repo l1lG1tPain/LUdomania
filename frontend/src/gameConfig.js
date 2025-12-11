@@ -1779,9 +1779,9 @@ export const COLLECTIONS = {
             "golden_ticket",
             "golden_candy",
             "nft_shark_029",
-            "nft_shark_35",
-            "nft_shark_20",
-            "nft_ebla_20",
+            "nft_shark_035",
+            "nft_shark_020",
+            "nft_ebla_020",
             "nft_ebla_049",
 
         ],
@@ -1789,6 +1789,118 @@ export const COLLECTIONS = {
             type: "passiveIncome",
             value: 500, // +5000 LM пассивного дохода (как решишь реализовать)
         },
+    },
+    // ────────────────────────────────
+    // НОВЫЕ КОЛЛЕКЦИИ (12 шт.)
+    // ────────────────────────────────
+
+    meme_lord: {
+        id: "meme_lord",
+        name: "Мемный Лорд",
+        emoji: "🤡",
+        description: "Кто владеет мемами — владеет миром.",
+        requiredPrizeIds: [
+            "nft_ebla_020", "nft_ebla_021", "nft_ebla_024", "nft_ebla_027",
+            "nft_ebla_034", "nft_ebla_037", "nft_ebla_042", "nft_ebla_048"
+        ],
+        bonus: { type: "globalMultiplier", value: 1.5 },
+    },
+
+    shark_god: {
+        id: "shark_god",
+        name: "Бог Акул",
+        emoji: "🦈⚡",
+        description: "Ты больше не акула. Ты — океан.",
+        requiredPrizeIds: [
+            "nft_shark_058", "nft_shark_057", "nft_shark_056", "nft_shark_050",
+            "nft_shark_049", "nft_shark_048", "abyss_pearl", "ludo_core"
+        ],
+        bonus: { type: "machineWinBonus", machineId: "akula_jackpot", percent: 40 },
+    },
+
+    mythic_hunter: {
+        id: "mythic_hunter",
+        name: "Охотник за Мифами",
+        emoji: "🌙",
+        description: "Ты поймал то, что другие видели только во снах.",
+        requiredPrizeIds: [
+            "nft_shark_041", "nft_shark_044", "nft_shark_049", "nft_shark_058",
+            "nft_ebla_048", "nft_ebla_042", "nft_ebla_037"
+        ],
+        bonus: { type: "clickMultiplier", value: 2.0 },
+    },
+
+    ebla_king: {
+        id: "ebla_king",
+        name: "Король nft",
+        emoji: "👑🤪",
+        description: "Все мемы склоняются перед тобой.",
+        requiredPrizeIds: [
+            "nft_ebla_048", "nft_ebla_047", "nft_ebla_042", "nft_ebla_037",
+            "nft_ebla_034", "nft_ebla_027", "nft_ebla_020"
+        ],
+        bonus: { type: "passiveIncome", value: 700, },
+    },
+
+
+    cosmic_overlord: {
+        id: "cosmic_overlord",
+        name: "Космический Владыка",
+        emoji: "🌌👑",
+        description: "Вселенная — твой личный автомат.",
+        requiredPrizeIds: [
+            "star_crystal", "black_hole", "space_rocket", "alien_head",
+            "nft_shark_045", "nft_shark_026"
+        ],
+        bonus: { type: "globalMultiplier", value: 1.7 },
+    },
+
+    hookah_sultan: {
+        id: "hookah_sultan",
+        name: "Султан Дыма",
+        emoji: "🫧👑",
+        description: "Дым гуще денег.",
+        requiredPrizeIds: [
+            "premium_tobacco", "hookah_flask", "smoke_ring",
+            "coal_box", "hookah_hose"
+        ],
+        bonus: { type: "machineWinBonus", machineId: "hookah_street", percent: 50 },
+    },
+
+    neon_syndicate: {
+        id: "neon_syndicate",
+        name: "Неоновый Синдикат",
+        emoji: "🌃💜",
+        description: "Город спит. Мы зажигаем.",
+        requiredPrizeIds: [
+            "neon_cat", "neon_dog", "gold_cube", "platinum_cube",
+            "arcade_token", "pixel09_coin"
+        ],
+        bonus: { type: "machineWinBonus", machineId: "neon_grabber", percent: 35 },
+    },
+
+    absolute_chad: {
+        id: "absolute_chad",
+        name: "Абсолютный ЧАД",
+        emoji: "😎💪",
+        description: "Да, бро. Именно ты.",
+        requiredPrizeIds: [
+            "nft_ebla_020", "nft_ebla_027", "nft_ebla_044",
+            "nft_ebla_049", "nft_shark_050", "nft_shark_058"
+        ],
+        bonus: { type: "globalMultiplier", value: 2.0 },
+    },
+
+    ludo_apocalypse: {
+        id: "ludo_apocalypse",
+        name: "Лудо Апокалипсис",
+        emoji: "💀🔥",
+        description: "Ты не играешь в ЛудоМанию. ЛудоМания играет в тебя.",
+        requiredPrizeIds: [
+            "nft_shark_058", "nft_shark_057", "nft_ebla_048",
+            "ludo_core", "abyss_pearl", "legendary_game", "star_crystal"
+        ],
+        bonus: { type: "globalMultiplier", value: 2.5 },
     },
 };
 
