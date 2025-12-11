@@ -642,7 +642,7 @@ img {
 }
 
 .pill-emoji {
-    font-size: 30px;
+    font-size: 24px;
 }
 
 .pill-text {
@@ -1686,4 +1686,24 @@ img {
 .big-click-area img,
 .profile-league-progress-fill{
     transition: background .25s ease, border-color .25s ease, color .25s ease;
+}
+
+/* контейнер под иконку в списке призов */
+.machine-prize-pill .pill-emoji {
+    flex: 0 0 70px;       /* фикс ширины во флексе */
+    width: auto;
+    height: 70px;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* картинка внутри — растянуть на весь контейнер */
+.machine-prize-pill .pill-emoji .prize-icon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
