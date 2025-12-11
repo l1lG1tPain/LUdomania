@@ -1081,6 +1081,7 @@ export const PRIZE_PACKS = {
             { id: "nft_ebla_046", name: "Skull Kid",               rarity: "mythical", value: 7000, weight: 0.3, maxCopiesGlobal: 300 },
             { id: "nft_ebla_047", name: "Pepe Chef",               rarity: "mythical", value: 7200, weight: 0.25,maxCopiesGlobal: 250 },
             { id: "nft_ebla_048", name: "Doge Chef",               rarity: "mythical", value: 7500, weight: 0.2, maxCopiesGlobal: 200 },
+            { id: "nft_ebla_049", name: "Beer Bear",               rarity: "mythical", value: 7777, weight: 0.00001, maxCopiesGlobal: 77 },
         ],
     },
 };
