@@ -137,7 +137,7 @@ img {
 
 .page {
     display: none;
-    padding: 12px 4px 16px;
+    padding: 5px 0 16px;
 }
 
 .page.active {
@@ -836,7 +836,7 @@ img {
 .profile-page-main-card {
     margin-top: 8px;
     margin-bottom: 14px;
-    padding: 14px 14px 16px;
+    padding: 10px;
     border-radius: 20px;
     background:
             radial-gradient(circle at top left, #262626 0%, #111 55%, #050505 100%);
@@ -944,7 +944,7 @@ img {
 }
 
 .profile-rating-card {
-    padding: 8px 8px 9px;
+    padding: 8px 4px 9px;
     border-radius: 14px;
     background: #151515;
     border: 1px solid rgba(255,255,255,0.06);
@@ -1647,14 +1647,14 @@ img {
 }
 
 .collection-emoji {
-    width: 40px;
-    height: 40px;
+    width: 60px;
+    height: 60px;
     border-radius: 14px;
-    background: radial-gradient(circle at 30% 20%, #facc15, #f97316);
+    background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    font-size: 40px;
     flex-shrink: 0;
     overflow: hidden;
 }
@@ -1699,15 +1699,15 @@ img {
 }
 
 .collection-prize-icon {
-    width: 42px;
-    height: 42px;
+    width: 50px;
+    height: 50px;
     border-radius: 12px;
     background: #020617;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    font-size: 14px;
+    font-size: 18px;
 }
 
 .collection-prize-icon img.prize-icon-img {

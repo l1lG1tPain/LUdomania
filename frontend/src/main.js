@@ -129,8 +129,14 @@ let balance        = 0;
 let totalClicks    = 0;
 let currentLevel   = 0;
 let authInProgress = false;
+// бонусы от коллекций
+let clickMultiplier          = 1;
+let sellBonusMultiplier      = 1;
+let upgradeDiscountMultiplier= 1;
+let machineWinBonusMap       = {};
+let dailyRewardMultiplier    = 1;
+let passiveIncomePerClick    = 0;
 
-let clickMultiplier      = 1;
 let totalCollectionValue = 0;
 
 let lastInventoryItems     = [];
@@ -427,7 +433,10 @@ if (profileIdEl) {
 // ==================== Игровые утилиты ====================
 
 function getUpgradeCost(power) {
-    return Math.round(10 * Math.pow(power, 1.5));
+    const baseCost   = Math.round(10 * Math.pow(power, 1.5));
+    const multiplier = upgradeDiscountMultiplier || 1;
+    const discounted = Math.round(baseCost * multiplier);
+    return Math.max(1, discounted);
 }
 
 function updateUpgradeUI() {
@@ -603,9 +612,13 @@ function describeCollectionBonus(bonus) {
     if (bonus.type === "machineWinBonus") {
         const machine = MACHINES.find(m => m.id === bonus.machineId);
         const name = machine?.name || "автомата";
-        const pct  = bonus.percent ?? 0;
+
+        const v   = bonus.value ?? 0;
+        const pct = Math.round(v * 100); // 0.12 → 12
+
         return `Бонус: +${pct}% к шансу выигрыша ${name}`;
     }
+
 
     if (bonus.type === "passiveIncome") {
         const v = bonus.value ?? 0;
@@ -619,7 +632,13 @@ function describeCollectionBonus(bonus) {
 // ==================== Коллекции и бонусы ====================
 
 function recomputeCollectionsAndBonuses(items) {
-    let newClickMultiplier = 1;
+    let clickMult        = 1;
+    let sellMult         = 1;
+    let upgradeDiscMult  = 1;
+    let machineBonuses   = {};
+    let dailyMult        = 1;
+    let globalMult       = 1;
+    let passiveIncomeSum = 0;
 
     const itemByPrizeId = new Map();
     items.forEach((it) => {
@@ -639,13 +658,57 @@ function recomputeCollectionsAndBonuses(items) {
         const bonus = collection.bonus;
         if (!bonus) return;
 
-        if (bonus.type === "clickMultiplier") {
-            const value = bonus.value ?? 1;
-            newClickMultiplier *= value;
+        const v = bonus.value ?? 0;
+
+        switch (bonus.type) {
+            case "clickMultiplier": {
+                const mult = v || 1;
+                clickMult *= mult;
+                break;
+            }
+            case "sellBonus": {
+                // v = 0.25 → +25% к продаже
+                sellMult *= 1 + v;
+                break;
+            }
+            case "upgradeDiscount": {
+                // v = 0.25 → -25% от стоимости
+                const factor = Math.max(0, 1 - v);
+                upgradeDiscMult *= factor;
+                break;
+            }
+            case "machineWinBonus": {
+                if (bonus.machineId) {
+                    machineBonuses[bonus.machineId] =
+                        (machineBonuses[bonus.machineId] ?? 0) + v;
+                }
+                break;
+            }
+            case "dailyRewardMultiplier": {
+                const mult = v || 1;
+                dailyMult *= mult;
+                break;
+            }
+            case "globalMultiplier": {
+                const mult = v || 1;
+                globalMult *= mult;
+                break;
+            }
+            case "passiveIncome": {
+                passiveIncomeSum += v || 0;
+                break;
+            }
+            default:
+                break;
         }
     });
 
-    clickMultiplier = newClickMultiplier;
+    clickMultiplier           = clickMult * globalMult;
+    sellBonusMultiplier       = sellMult * globalMult;
+    upgradeDiscountMultiplier = upgradeDiscMult;
+    machineWinBonusMap        = machineBonuses;
+    dailyRewardMultiplier     = dailyMult * globalMult;
+    passiveIncomePerClick     = passiveIncomeSum;
 }
 
 
@@ -1385,15 +1448,24 @@ function renderMachines() {
 
             const imgSrc = m.image || "public/assets/machine.png";
 
+            const baseChance   = m.winChance || 0;
+            const bonusChance  = machineWinBonusMap[m.id] || 0;
+            let effectiveChance = baseChance + bonusChance;
+            if (effectiveChance > 0.95) effectiveChance = 0.95;
+            if (effectiveChance < 0)    effectiveChance = 0;
+
+            const chanceText = `${Math.round(effectiveChance * 100)}%`;
+
             card.innerHTML = `
-                <div class="machine-image">
-                    <img src="${imgSrc}" alt="${m.name}">
-                </div>
-                <div class="machine-name">${m.name}</div>
-                <div class="machine-meta">${m.price} LM / игра • доступен с ${m.minLevel}-го уровня</div>
-                <div class="machine-meta">Шанс выигрыша: ${(m.winChance * 100).toFixed(0)}%</div>
-                <div class="machine-meta">Всего игр: ${totalSpins}${userPart}</div>
+            <div class="machine-image">
+                <img src="${imgSrc}" alt="${m.name}">
+            </div>
+            <div class="machine-name">${m.name}</div>
+            <div class="machine-meta">${m.price} LM / игра • доступен с ${m.minLevel}-го уровня</div>
+            <div class="machine-meta">Шанс выигрыша: ${chanceText}</div>
+            <div class="machine-meta">Всего игр: ${totalSpins}${userPart}</div>
             `;
+
 
             grid.appendChild(card);
         });
@@ -1657,7 +1729,17 @@ async function spinMachine(machineId) {
     renderStatsFromState();
 
     const roll = Math.random();
-    const win  = roll < machine.winChance;
+
+    const baseChance   = machine.winChance || 0;
+    const bonusChance  = machineWinBonusMap[machine.id] || 0;
+    let effectiveChance = baseChance + bonusChance;
+
+// ограничимся безопасным максимумом
+    if (effectiveChance > 0.95) effectiveChance = 0.95;
+    if (effectiveChance < 0)    effectiveChance = 0;
+
+    const win = roll < effectiveChance;
+
 
     try {
         const globalRef   = doc(db, "machine_stats", machineId);
@@ -1919,8 +2001,10 @@ async function sellItem(item, requestedAmount = 1) {
 
     const prizeId    = item.prizeId || item.id;
     const cfg        = PRIZES[prizeId] || {};
-    const baseValue  = item.value ?? cfg.value ?? 0;
-    const totalValue = baseValue * sellCount;
+    const baseValue = currentInventoryItem.value ?? cfg.value ?? 0;
+    const sellMult  = sellBonusMultiplier || 1;
+    const totalValue = Math.round(baseValue * sellCount * sellMult);
+
 
     sellInProgress = true;
 
