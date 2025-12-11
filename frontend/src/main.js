@@ -604,6 +604,13 @@ function describeCollectionBonus(bonus) {
         return "Особый бонус коллекции";
     }
 
+    // удобный хелпер: берём percent, если задан, иначе считаем из value (0.12 -> 12%)
+    const getPercent = () => {
+        if (bonus.percent != null) return bonus.percent;
+        if (bonus.value   != null) return bonus.value * 100;
+        return 0;
+    };
+
     if (bonus.type === "clickMultiplier") {
         const value = bonus.value ?? 1;
         return `Бонус: множитель клика x${value}`;
@@ -612,21 +619,38 @@ function describeCollectionBonus(bonus) {
     if (bonus.type === "machineWinBonus") {
         const machine = MACHINES.find(m => m.id === bonus.machineId);
         const name = machine?.name || "автомата";
-
-        const v   = bonus.value ?? 0;
-        const pct = Math.round(v * 100); // 0.12 → 12
-
-        return `Бонус: +${pct}% к шансу выигрыша ${name}`;
+        const pct  = getPercent();
+        return `Бонус: +${pct.toFixed(0)}% к шансу выигрыша ${name}`;
     }
 
+    if (bonus.type === "sellBonus") {
+        const pct = getPercent();
+        return `Бонус: +${pct.toFixed(0)}% к цене продажи предметов`;
+    }
+
+    if (bonus.type === "upgradeDiscount") {
+        const pct = getPercent();
+        return `Бонус: −${pct.toFixed(0)}% к стоимости апгрейда клика`;
+    }
+
+    if (bonus.type === "dailyRewardMultiplier") {
+        const value = bonus.value ?? 1;
+        return `Бонус: ежедневная награда x${value.toFixed(1)}`;
+    }
+
+    if (bonus.type === "globalMultiplier") {
+        const value = bonus.value ?? 1;
+        return `Бонус: глобальный множитель наград x${value.toFixed(2)}`;
+    }
 
     if (bonus.type === "passiveIncome") {
         const v = bonus.value ?? 0;
-        return `Бонус: пассивный доход +${formatLM(v)} LM`;
+        return `Бонус: пассивный доход +${formatLM(v)} LM за клик`;
     }
 
     return bonus.description || "Особый бонус коллекции";
 }
+
 
 
 // ==================== Коллекции и бонусы ====================
