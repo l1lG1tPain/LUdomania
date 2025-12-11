@@ -39,7 +39,7 @@ import { getCollectorRank } from "./ranksLogic.js";
 import imgBronze from "./assets/LudoMoney.png";
 import imgSilver from "./assets/LudoMoney_2.png";
 import imgGold from "./assets/LudoMoney.png";
-import imgPlatinum from "./assets/LudoMoney.png";
+import imgPlatinum from "./assets/LudoMoney_4.png";
 import imgDiamond from "./assets/LudoMoney.png";
 
 // ==================== DOM-элементы ====================
@@ -266,13 +266,18 @@ function recomputeAggregateMachineStats() {
     });
 }
 
-function formatLM(num) {
+function formatLM(raw) {
+    // всегда округляем баланс до целого перед отображением
+    const num = Math.round(raw);
+
     if (num < 10000) return String(num);
+
     const units = [
         { v: 1e9, s: "b" },
         { v: 1e6, s: "m" },
         { v: 1e3, s: "k" },
     ];
+
     for (const u of units) {
         if (num >= u.v) {
             const base = num / u.v;
@@ -281,8 +286,10 @@ function formatLM(num) {
             return txt;
         }
     }
+
     return String(num);
 }
+
 
 function getMaxClickPower(level) {
     return 1 + (level + 1) * 3;
@@ -579,6 +586,9 @@ function updateMachineStatsSummary(machineId) {
     const userWinRate   = totalSpinsUser   > 0 ? (totalWinsUser   / totalSpinsUser)   * 100 : 0;
     const globalWinRate = totalSpinsGlobal > 0 ? (totalWinsGlobal / totalSpinsGlobal) * 100 : 0;
 
+    const bonusChance = machineWinBonusMap[machineId] || 0;
+    const bonusPct    = Math.round(bonusChance * 100);
+
     machineStatsSummaryEl.innerHTML = `
       <div class="machine-stats-row">
         <span class="label">Баланс:</span>
@@ -596,6 +606,11 @@ function updateMachineStatsSummary(machineId) {
         <span class="label">Всего побед:</span>
         <span class="value">${totalWinsGlobal} (${globalWinRate.toFixed(0)}%)</span>
       </div>
+      ${bonusPct > 0 ? `
+      <div class="machine-stats-row">
+        <span class="label">Бонус от коллекций:</span>
+        <span class="value">+${bonusPct}% к шансу</span>
+      </div>` : ``}
     `;
 }
 
@@ -1141,7 +1156,7 @@ function subscribeToUser(userUid) {
         if (!snap.exists()) return;
         const data = snap.data();
 
-        balance     = data.balance     ?? 0;
+        balance     = Math.round(data.balance ?? 0);
         clickPower  = data.clickPower  ?? 1;
         totalClicks = data.totalClicks ?? 0;
 
@@ -1261,7 +1276,8 @@ function handleClick() {
 
     lastClickTimestamp = Date.now();
 
-    const gain = clickPower * clickMultiplier;
+    const gainRaw = clickPower * clickMultiplier + (passiveIncomePerClick || 0);
+    const gain = Math.max(1, Math.round(gainRaw));
 
     balance     += gain;
     totalClicks += 1;
@@ -1474,11 +1490,21 @@ function renderMachines() {
 
             const baseChance   = m.winChance || 0;
             const bonusChance  = machineWinBonusMap[m.id] || 0;
+
             let effectiveChance = baseChance + bonusChance;
             if (effectiveChance > 0.95) effectiveChance = 0.95;
             if (effectiveChance < 0)    effectiveChance = 0;
 
-            const chanceText = `${Math.round(effectiveChance * 100)}%`;
+            const basePct   = Math.round(baseChance * 100);
+            const bonusPct  = Math.round(bonusChance * 100);
+            const effPct    = Math.round(effectiveChance * 100);
+
+            let chanceText;
+            if (bonusPct > 0) {
+                chanceText = `${effPct}% (база ${basePct}% +${bonusPct}% от коллекций)`;
+            } else {
+                chanceText = `${effPct}%`;
+            }
 
             card.innerHTML = `
             <div class="machine-image">
@@ -1748,9 +1774,10 @@ async function spinMachine(machineId) {
         return { outcome: "error" };
     }
 
-    balance = newBalance;
+    balance = Math.round(newBalance);
     if (balance < 0) balance = 0;
     renderStatsFromState();
+
 
     const roll = Math.random();
 
