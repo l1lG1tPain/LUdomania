@@ -77,6 +77,11 @@ const upgradeCostEl = document.getElementById("upgradeCost");
 // Mini-games / Inventory
 const machinesEl  = document.getElementById("machines");
 const inventoryEl = document.getElementById("inventory");
+// табы и вьюхи инвентаря
+const inventoryTabAllBtn         = document.getElementById("inventoryTabAll");
+const inventoryTabCollectionsBtn = document.getElementById("inventoryTabCollections");
+const inventoryAllViewEl         = document.getElementById("inventoryAll");
+const inventoryCollectionsEl     = document.getElementById("inventoryCollections");
 
 // Навигация
 const bottomNavItems = document.querySelectorAll(".bottom-nav .nav-item");
@@ -585,6 +590,32 @@ function updateMachineStatsSummary(machineId) {
     `;
 }
 
+function describeCollectionBonus(bonus) {
+    if (!bonus || typeof bonus !== "object") {
+        return "Особый бонус коллекции";
+    }
+
+    if (bonus.type === "clickMultiplier") {
+        const value = bonus.value ?? 1;
+        return `Бонус: множитель клика x${value}`;
+    }
+
+    if (bonus.type === "machineWinBonus") {
+        const machine = MACHINES.find(m => m.id === bonus.machineId);
+        const name = machine?.name || "автомата";
+        const pct  = bonus.percent ?? 0;
+        return `Бонус: +${pct}% к шансу выигрыша ${name}`;
+    }
+
+    if (bonus.type === "passiveIncome") {
+        const v = bonus.value ?? 0;
+        return `Бонус: пассивный доход +${formatLM(v)} LM`;
+    }
+
+    return bonus.description || "Особый бонус коллекции";
+}
+
+
 // ==================== Коллекции и бонусы ====================
 
 function recomputeCollectionsAndBonuses(items) {
@@ -615,6 +646,128 @@ function recomputeCollectionsAndBonuses(items) {
     });
 
     clickMultiplier = newClickMultiplier;
+}
+
+
+function renderCollectionsFromInventory(items) {
+    if (!inventoryCollectionsEl) return;
+
+    const collectionsRoot = inventoryCollectionsEl;
+    collectionsRoot.innerHTML = "";
+
+    const itemByPrizeId = new Map();
+    (items || []).forEach((it) => {
+        const prizeId = it.prizeId || it.id;
+        itemByPrizeId.set(prizeId, it);
+    });
+
+    const entries = Object.values(COLLECTIONS || {}).map((col) => {
+        const required = col.requiredPrizeIds || [];
+        let ownedCount = 0;
+        const missingIds = [];
+
+        required.forEach((pid) => {
+            const it = itemByPrizeId.get(pid);
+            if (it && (it.count ?? 0) > 0) {
+                ownedCount++;
+            } else {
+                missingIds.push(pid);
+            }
+        });
+
+        const total = required.length || 0;
+        const completed = total > 0 && ownedCount === total;
+        const progress  = total > 0 ? ownedCount / total : 0;
+
+        return { col, required, ownedCount, total, missingIds, completed, progress };
+    });
+
+    // собранные коллекции — вверх
+    entries.sort((a, b) => {
+        if (a.completed !== b.completed) return a.completed ? -1 : 1;
+        if (b.progress !== a.progress)   return b.progress - a.progress;
+        return (a.col.name || "").localeCompare(b.col.name || "");
+    });
+
+    const list = document.createElement("div");
+    list.className = "collections-list";
+
+    entries.forEach((entry) => {
+        const { col, required, ownedCount, total, missingIds, completed } = entry;
+
+        const card = document.createElement("div");
+        card.className = "collection-card";
+        if (!completed) card.classList.add("collection-card--locked");
+
+        const header = document.createElement("div");
+        header.className = "collection-card-header";
+
+        const emojiWrap = document.createElement("div");
+        emojiWrap.className = "collection-emoji";
+        emojiWrap.textContent = col.emoji || "🎯";
+
+        const main = document.createElement("div");
+        main.className = "collection-main";
+
+        const nameEl = document.createElement("div");
+        nameEl.className = "collection-name";
+        nameEl.textContent = col.name || "Коллекция";
+
+        const bonusEl = document.createElement("div");
+        bonusEl.className = "collection-bonus";
+        bonusEl.textContent = describeCollectionBonus(col.bonus);
+
+        main.appendChild(nameEl);
+        main.appendChild(bonusEl);
+
+        const progressEl = document.createElement("div");
+        progressEl.className = "collection-progress";
+        progressEl.textContent = `${ownedCount} / ${total || required.length || 0}`;
+
+        header.appendChild(emojiWrap);
+        header.appendChild(main);
+        header.appendChild(progressEl);
+
+        card.appendChild(header);
+
+        // призы коллекции
+        const prizesRow = document.createElement("div");
+        prizesRow.className = "collection-prizes";
+
+        (required || []).forEach((pid) => {
+            const prizeCfg = PRIZES[pid] || {};
+            const owned = itemByPrizeId.has(pid);
+
+            const prizeEl = document.createElement("div");
+            prizeEl.className = "collection-prize";
+            if (!owned) prizeEl.classList.add("collection-prize--missing");
+
+            const iconWrap = document.createElement("div");
+            iconWrap.className = "collection-prize-icon";
+
+            // используем тот же рендер, что и в инвентаре
+            renderPrizeIcon(
+                iconWrap,
+                pid,
+                prizeCfg.emoji || "🎁"
+            );
+
+            const name = document.createElement("div");
+            name.className = "collection-prize-name";
+            name.textContent = prizeCfg.shortName || prizeCfg.name || pid;
+
+            prizeEl.appendChild(iconWrap);
+            prizeEl.appendChild(name);
+
+            prizesRow.appendChild(prizeEl);
+        });
+
+        card.appendChild(prizesRow);
+
+        list.appendChild(card);
+    });
+
+    collectionsRoot.appendChild(list);
 }
 
 // ==================== Инвентарь (СТАКИ) ====================
@@ -730,6 +883,9 @@ function renderInventory(items) {
         updateProfileCollectionValue(0, 0);
         renderStatsFromState();
 
+        // пустой список коллекций
+        renderCollectionsFromInventory([]);
+
         if (userRef) {
             updateDoc(userRef, {
                 collectionValue:   0,
@@ -740,6 +896,7 @@ function renderInventory(items) {
 
         return;
     }
+
 
     recomputeCollectionsAndBonuses(items);
 
@@ -760,6 +917,7 @@ function renderInventory(items) {
 
     updateProfileCollectionValue(totalValue, totalCount);
     renderStatsFromState();
+    renderCollectionsFromInventory(items);
 
     if (userRef) {
         let collectorRankTier = null;
@@ -1869,6 +2027,30 @@ if (inventoryEl) {
         openInventoryModal(item);
     });
 }
+function setInventoryTab(tab) {
+    const isAll = tab === "all";
+
+    if (inventoryTabAllBtn) {
+        inventoryTabAllBtn.classList.toggle("active", isAll);
+    }
+    if (inventoryTabCollectionsBtn) {
+        inventoryTabCollectionsBtn.classList.toggle("active", !isAll);
+    }
+    if (inventoryAllViewEl) {
+        inventoryAllViewEl.classList.toggle("hidden", !isAll);
+    }
+    if (inventoryCollectionsEl) {
+        inventoryCollectionsEl.classList.toggle("hidden", isAll);
+    }
+}
+
+if (inventoryTabAllBtn) {
+    inventoryTabAllBtn.addEventListener("click", () => setInventoryTab("all"));
+}
+if (inventoryTabCollectionsBtn) {
+    inventoryTabCollectionsBtn.addEventListener("click", () => setInventoryTab("collections"));
+}
+
 
 if (inventoryModalCloseBtn) {
     inventoryModalCloseBtn.addEventListener("click", () => {

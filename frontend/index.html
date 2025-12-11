@@ -102,9 +102,26 @@
 
         <!-- ИНВЕНТАРЬ -->
         <section id="pageInventory" class="page">
+            <!-- ИНВЕНТАРЬ -->
             <h2 class="section-title">👛 Инвентарь</h2>
-            <div id="inventory" class="inventory-grid"></div>
+
+            <!-- табы Все / Коллекции -->
+            <div class="inventory-tabs">
+                <button id="inventoryTabAll" class="inventory-tab active">Все</button>
+                <button id="inventoryTabCollections" class="inventory-tab">Коллекции</button>
+            </div>
+
+            <!-- режим: Все предметы -->
+            <div id="inventoryAll" class="inventory-view">
+                <div id="inventory"></div>
+            </div>
+
+            <!-- режим: Коллекции -->
+            <div id="inventoryCollections" class="inventory-view hidden">
+                <!-- сюда JS будет рендерить коллекции -->
+            </div>
         </section>
+
 
         <!-- ПРОФИЛЬ (отдельная страница, открывается из хедера) -->
         <section id="pageProfile" class="page">
