@@ -1725,8 +1725,8 @@ export const COLLECTIONS = {
             "golden_candy",
         ],
         bonus: {
-            type: "dailyRewardMultiplier",
-            value: 1.4, // x1.4 к ежедневной награде
+            type: "passiveIncome",
+            value: 25, // x1.4 к ежедневной награде (было)
         },
     },
 
