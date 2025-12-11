@@ -680,18 +680,19 @@ function recomputeCollectionsAndBonuses(items) {
     let passiveIncomeSum = 0;
 
     const itemByPrizeId = new Map();
-    items.forEach((it) => {
+    (items || []).forEach((it) => {
         const prizeId = it.prizeId || it.id;
         itemByPrizeId.set(prizeId, it);
     });
 
-    Object.values(COLLECTIONS).forEach((collection) => {
+    Object.values(COLLECTIONS || {}).forEach((collection) => {
         const required = collection.requiredPrizeIds || [];
-        const hasAll = required.every((prizeId) => {
-            const item = itemByPrizeId.get(prizeId);
+        if (!required.length) return;
+
+        const hasAll = required.every((pid) => {
+            const item = itemByPrizeId.get(pid);
             return item && (item.count ?? 0) > 0;
         });
-
         if (!hasAll) return;
 
         const bonus = collection.bonus;
@@ -706,12 +707,10 @@ function recomputeCollectionsAndBonuses(items) {
                 break;
             }
             case "sellBonus": {
-                // v = 0.25 → +25% к продаже
                 sellMult *= 1 + v;
                 break;
             }
             case "upgradeDiscount": {
-                // v = 0.25 → -25% от стоимости
                 const factor = Math.max(0, 1 - v);
                 upgradeDiscMult *= factor;
                 break;
@@ -1488,16 +1487,16 @@ function renderMachines() {
 
             const imgSrc = m.image || "public/assets/machine.png";
 
-            const baseChance   = m.winChance || 0;
-            const bonusChance  = machineWinBonusMap[m.id] || 0;
+            const baseChance  = m.winChance || 0;
+            const bonusChance = machineWinBonusMap[m.id] || 0;
 
             let effectiveChance = baseChance + bonusChance;
             if (effectiveChance > 0.95) effectiveChance = 0.95;
             if (effectiveChance < 0)    effectiveChance = 0;
 
-            const basePct   = Math.round(baseChance * 100);
-            const bonusPct  = Math.round(bonusChance * 100);
-            const effPct    = Math.round(effectiveChance * 100);
+            const basePct  = Math.round(baseChance * 100);
+            const bonusPct = Math.round(bonusChance * 100);
+            const effPct   = Math.round(effectiveChance * 100);
 
             let chanceText;
             if (bonusPct > 0) {
@@ -1507,15 +1506,14 @@ function renderMachines() {
             }
 
             card.innerHTML = `
-            <div class="machine-image">
-                <img src="${imgSrc}" alt="${m.name}">
-            </div>
-            <div class="machine-name">${m.name}</div>
-            <div class="machine-meta">${m.price} LM / игра • доступен с ${m.minLevel}-го уровня</div>
-            <div class="machine-meta">Шанс выигрыша: ${chanceText}</div>
-            <div class="machine-meta">Всего игр: ${totalSpins}${userPart}</div>
+                <div class="machine-image">
+                    <img src="${imgSrc}" alt="${m.name}">
+                </div>
+                <div class="machine-name">${m.name}</div>
+                <div class="machine-meta">${m.price} LM / игра • доступен с ${m.minLevel}-го уровня</div>
+                <div class="machine-meta">Шанс выигрыша: ${chanceText}</div>
+                <div class="machine-meta">Всего игр: ${totalSpins}${userPart}</div>
             `;
-
 
             grid.appendChild(card);
         });
@@ -1781,11 +1779,10 @@ async function spinMachine(machineId) {
 
     const roll = Math.random();
 
-    const baseChance   = machine.winChance || 0;
-    const bonusChance  = machineWinBonusMap[machine.id] || 0;
-    let effectiveChance = baseChance + bonusChance;
+    const baseChance  = machine.winChance || 0;
+    const bonusChance = machineWinBonusMap[machine.id] || 0;
 
-// ограничимся безопасным максимумом
+    let effectiveChance = baseChance + bonusChance;
     if (effectiveChance > 0.95) effectiveChance = 0.95;
     if (effectiveChance < 0)    effectiveChance = 0;
 

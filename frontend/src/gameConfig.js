@@ -1778,10 +1778,16 @@ export const COLLECTIONS = {
             "gold_cube",
             "golden_ticket",
             "golden_candy",
+            "nft_shark_029",
+            "nft_shark_35",
+            "nft_shark_20",
+            "nft_ebla_20",
+            "nft_ebla_049",
+
         ],
         bonus: {
             type: "passiveIncome",
-            value: 5000, // +5000 LM пассивного дохода (как решишь реализовать)
+            value: 500, // +5000 LM пассивного дохода (как решишь реализовать)
         },
     },
 };
