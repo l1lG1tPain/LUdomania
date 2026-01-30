@@ -2308,6 +2308,19 @@ if (loginBtn) {
     });
 }
 
+// После генерации code (в loginWithBrowser)
+const code = generateCode(6);
+// ... отправка на сервер ...
+
+// Показать код и кнопку редиректа
+const telegramLink = `t.me/твой_бот_username?start=${code}`;
+window.location.href = telegramLink;  // Авто-редирект
+
+// Или кнопка
+const redirectBtn = document.getElementById('redirectBtn');
+redirectBtn.href = telegramLink;
+redirectBtn.textContent = 'Открыть в Telegram и ввести код';
+
 // ==================== Инициализация Firebase-сессии ====================
 
 onAuthStateChanged(auth, async (user) => {
