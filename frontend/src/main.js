@@ -2261,6 +2261,46 @@ if (machineOverlayEl) {
     });
 }
 
+
+async function authInTelegram() {
+    const initData = window.Telegram.WebApp.initData;
+    try {
+        const resp = await fetch(`${API_BASE}/auth/telegram`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData })
+        });
+        const { token } = await resp.json();
+        if (token) {
+            await signInWithCustomToken(auth, token);
+        }
+    } catch (e) {
+        console.error("TG Auth error", e);
+    }
+}
+
+// Пример функции для браузера в main.js
+async function startBrowserAuth() {
+    // 1. Получаем код
+    const resp = await fetch(`${API_BASE}/auth/browser/start`, { method: 'POST' });
+    const { code } = await resp.json();
+
+    // 2. Открываем бота в новой вкладке (диплинк)
+    window.open(`https://t.me/${BOT_USERNAME}?start=${code}`, '_blank');
+
+    // 3. Поллинг (проверка, подтвердил ли юзер код в боте)
+    const pollInterval = setInterval(async () => {
+        const pollResp = await fetch(`${API_BASE}/auth/browser/poll?code=${code}`);
+        const result = await pollResp.json();
+
+        if (result.status === 'linked' && result.token) {
+            clearInterval(pollInterval);
+            await signInWithCustomToken(auth, result.token);
+            showToast("Успешный вход!");
+        }
+    }, 3000);
+}
+
 // ==================== Авторизация через Telegram ====================
 
 async function loginWithTelegram() {
@@ -2312,12 +2352,12 @@ if (loginBtn) {
 
 onAuthStateChanged(auth, async (user) => {
     if (!user) {
-        uid     = null;
-        userRef = null;
-        setActivePage("pageFarm");
-        if (loginBtn) {
+        if (isTelegramWebApp()) {
+            await authInTelegram(); // Авто-вход в Mini App
+        } else {
+            // В браузере просто показываем кнопку логина
             loginBtn.classList.remove("hidden");
-            loginBtn.disabled = false;
+            loginBtn.onclick = startBrowserAuth;
         }
         return;
     }
