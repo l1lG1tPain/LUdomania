@@ -304,10 +304,88 @@ function showToast(message) {
 }
 
 function isTelegramWebApp() {
-    if (!window.Telegram || !window.Telegram.WebApp) return false;
-    const initData = window.Telegram.WebApp.initData;
-    return typeof initData === "string" && initData.length > 0;
+    return Boolean(window.Telegram?.WebApp?.initData);
 }
+
+async function login() {
+    if (authInProgress) return;
+    authInProgress = true;
+
+    try {
+        if (isTelegramWebApp()) {
+            await loginWithTelegramMiniApp();
+        } else {
+            await loginWithBrowser();
+        }
+    } finally {
+        authInProgress = false;
+    }
+}
+
+async function loginWithTelegramMiniApp() {
+    try {
+        const initData = window.Telegram.WebApp.initData;
+
+        if (!initData) {
+            showToast("Нет данных Telegram");
+            return;
+        }
+
+        const res = await fetch(`${API_BASE}/auth/telegram`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ initData }),
+        });
+
+        if (!res.ok) {
+            throw new Error(await res.text());
+        }
+
+        const { token } = await res.json();
+        if (!token) throw new Error("No token");
+
+        await signInWithCustomToken(auth, token);
+    } catch (e) {
+        console.error(e);
+        showToast("Ошибка входа через Telegram");
+    }
+}
+
+async function loginWithBrowser() {
+    const code = generateCode(6);
+
+    // 1️⃣ Отправляем code на сервер
+    await fetch(`${API_BASE}/auth/code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+    });
+
+    // 2️⃣ Редирект в Telegram
+    const telegramLink = `https://t.me/ТВОЙ_БОТ_USERNAME?start=${code}`;
+    window.location.href = telegramLink;
+
+    // 3️⃣ Начинаем ждать подтверждение
+    pollAuthStatus(code);
+}
+
+async function pollAuthStatus(code) {
+    const interval = setInterval(async () => {
+        try {
+            const res = await fetch(`${API_BASE}/auth/status?code=${code}`);
+            if (!res.ok) return;
+
+            const data = await res.json();
+            if (!data.token) return;
+
+            clearInterval(interval);
+            await signInWithCustomToken(auth, data.token);
+        } catch (e) {
+            console.error(e);
+        }
+    }, 2000);
+}
+
 
 // ==================== Лигозависимый визуал ====================
 // --- классы лиг
@@ -2261,65 +2339,7 @@ if (machineOverlayEl) {
     });
 }
 
-// ==================== Авторизация через Telegram ====================
 
-async function loginWithTelegram() {
-    if (authInProgress) return;
-    authInProgress = true;
-
-    try {
-        if (!isTelegramWebApp()) {
-            showToast("Открой игру внутри Telegram Mini App");
-            return;
-        }
-
-        const initData = window.Telegram.WebApp.initData;
-        const res = await fetch(`${API_BASE}/auth/telegram`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ initData }),
-        });
-
-        if (!res.ok) {
-            console.error("telegram auth error", await res.text());
-            showToast("Ошибка авторизации через Telegram");
-            return;
-        }
-
-        const data  = await res.json();
-        const token = data.token;
-        if (!token) {
-            showToast("Не удалось получить токен авторизации");
-            return;
-        }
-
-        await signInWithCustomToken(auth, token);
-    } catch (e) {
-        console.error("loginWithTelegram error", e);
-        showToast("Ошибка авторизации, попробуй ещё раз");
-    } finally {
-        authInProgress = false;
-    }
-}
-
-if (loginBtn) {
-    loginBtn.addEventListener("click", () => {
-        loginWithTelegram();
-    });
-}
-
-// После генерации code (в loginWithBrowser)
-const code = generateCode(6);
-// ... отправка на сервер ...
-
-// Показать код и кнопку редиректа
-const telegramLink = `t.me/твой_бот_username?start=${code}`;
-window.location.href = telegramLink;  // Авто-редирект
-
-// Или кнопка
-const redirectBtn = document.getElementById('redirectBtn');
-redirectBtn.href = telegramLink;
-redirectBtn.textContent = 'Открыть в Telegram и ввести код';
 
 // ==================== Инициализация Firebase-сессии ====================
 
