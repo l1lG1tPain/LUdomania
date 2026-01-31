@@ -2349,9 +2349,8 @@ onAuthStateChanged(auth, async (user) => {
             loginBtn.disabled = false;
             loginBtn.innerText = "Войти через Telegram";
 
-            // ПРОВЕРКА: Mini App или Браузер
-            if (window.Telegram?.WebApp?.initData) {
-                // Если мы в ТГ — пытаемся залогиниться автоматически
+            // ПРОВЕРКА: Если мы в Mini App — пытаемся залогиниться сами
+            if (isTelegramWebApp()) {
                 const initData = window.Telegram.WebApp.initData;
                 try {
                     const resp = await fetch(`${API_BASE}/auth/telegram`, {
@@ -2362,32 +2361,35 @@ onAuthStateChanged(auth, async (user) => {
                     const { token } = await resp.json();
                     if (token) await signInWithCustomToken(auth, token);
                 } catch (e) {
-                    console.error("Auto-login failed", e);
+                    console.error("MiniApp Auto-login failed", e);
                 }
             } else {
-                // Если в БРАУЗЕРЕ — вешаем запуск авторизации на кнопку
+                // Если мы в ОБЫЧНОМ БРАУЗЕРЕ — привязываем функцию к кнопке
                 loginBtn.onclick = startBrowserAuth;
             }
         }
         return;
     }
 
-    // Если юзер залогинен:
+    // --- Код ниже выполняется, когда юзер УЖЕ ЗАЛОГИНИЛСЯ ---
     uid = user.uid;
-    userRef = doc(db, "users", uid); // Не забудь инициализировать userRef!
+    userRef = doc(db, "users", uid);
 
     if (loginBtn) {
         loginBtn.classList.add("hidden");
         loginBtn.disabled = true;
     }
 
+    // Подгружаем данные игрока
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user || null;
     try {
+        // Обязательно убедись, что эта функция у тебя импортирована или объявлена
         await ensureGameFields(uid, tgUser);
     } catch (e) {
         console.error("ensureGameFields error", e);
     }
 
+    // Запускаем все подписки
     subscribeToUser(uid);
     subscribeToInventory(uid);
     subscribeGlobalMachineStats();
