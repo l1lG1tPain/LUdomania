@@ -2349,47 +2349,31 @@ onAuthStateChanged(auth, async (user) => {
             loginBtn.disabled = false;
             loginBtn.innerText = "Войти через Telegram";
 
-            // ПРОВЕРКА: Если мы в Mini App — пытаемся залогиниться сами
+            // РЕШАЕМ: Бот или Браузер?
             if (isTelegramWebApp()) {
-                const initData = window.Telegram.WebApp.initData;
-                try {
-                    const resp = await fetch(`${API_BASE}/auth/telegram`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ initData })
-                    });
-                    const { token } = await resp.json();
-                    if (token) await signInWithCustomToken(auth, token);
-                } catch (e) {
-                    console.error("MiniApp Auto-login failed", e);
-                }
+                // Мы в Mini App — запускаем тихий вход
+                console.log("Mini App detected, starting auto-auth...");
+                await loginWithTelegram();
             } else {
-                // Если мы в ОБЫЧНОМ БРАУЗЕРЕ — привязываем функцию к кнопке
-                loginBtn.onclick = startBrowserAuth;
+                // Мы в обычном браузере — вешаем событие на клик
+                console.log("Browser detected, waiting for click...");
+                loginBtn.onclick = (e) => {
+                    e.preventDefault();
+                    startBrowserAuth();
+                };
             }
         }
         return;
     }
 
-    // --- Код ниже выполняется, когда юзер УЖЕ ЗАЛОГИНИЛСЯ ---
+    // Юзер залогинен
     uid = user.uid;
     userRef = doc(db, "users", uid);
+    if (loginBtn) loginBtn.classList.add("hidden");
 
-    if (loginBtn) {
-        loginBtn.classList.add("hidden");
-        loginBtn.disabled = true;
-    }
-
-    // Подгружаем данные игрока
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user || null;
-    try {
-        // Обязательно убедись, что эта функция у тебя импортирована или объявлена
-        await ensureGameFields(uid, tgUser);
-    } catch (e) {
-        console.error("ensureGameFields error", e);
-    }
+    await ensureGameFields(uid, tgUser);
 
-    // Запускаем все подписки
     subscribeToUser(uid);
     subscribeToInventory(uid);
     subscribeGlobalMachineStats();
