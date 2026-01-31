@@ -146,14 +146,6 @@ let pendingSellAmount      = null;
 let globalMachineStats = {};
 let userMachineStats   = {};
 
-const BOT_USERNAME = "LUdomania_app_bot";
-
-const API_BASE =
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1"
-        ? "http://localhost:3000"
-        : "https://ludomania.onrender.com";
-
 // порядок редкостей для группировки
 const RARITY_ORDER = {
     legendary: 0,
@@ -164,6 +156,42 @@ const RARITY_ORDER = {
     uncommon:  4,
     common:    5,
 };
+
+// В начале main.js
+const API_BASE = "http://161.97.99.137:3000";
+const BOT_USERNAME = "LUdomania_app_bot";
+
+// Функция для запуска процесса в браузере
+async function startBrowserAuth() {
+    try {
+        loginBtn.innerText = "Генерация кода...";
+        // 1. Пингуем твой сервер по внешнему IP
+        const resp = await fetch(`${API_BASE}/auth/browser/start`, { method: 'POST' });
+        const { code } = await resp.json();
+
+        // 2. Кидаем юзера в телегу (диплинк)
+        window.open(`https://t.me/${BOT_USERNAME}?start=${code}`, '_blank');
+
+        loginBtn.innerText = "Подтвердите в Telegram";
+
+        // 3. Опрос (поллинг)
+        const poll = setInterval(async () => {
+            try {
+                const pResp = await fetch(`${API_BASE}/auth/browser/poll?code=${code}`);
+                const data = await pResp.json();
+
+                if (data.status === 'linked' && data.token) {
+                    clearInterval(poll);
+                    await signInWithCustomToken(auth, data.token);
+                    loginBtn.classList.add("hidden");
+                }
+            } catch (e) { /* тихо ждем */ }
+        }, 3000);
+    } catch (err) {
+        console.error("Auth error:", err);
+        loginBtn.innerText = "Ошибка (проверь CORS)";
+    }
+}
 
 // ==================== Буфер кликов ====================
 
@@ -2352,17 +2380,41 @@ if (loginBtn) {
 
 onAuthStateChanged(auth, async (user) => {
     if (!user) {
-        if (isTelegramWebApp()) {
-            await authInTelegram(); // Авто-вход в Mini App
-        } else {
-            // В браузере просто показываем кнопку логина
+        uid = null;
+        userRef = null;
+        setActivePage("pageFarm");
+
+        if (loginBtn) {
             loginBtn.classList.remove("hidden");
-            loginBtn.onclick = startBrowserAuth;
+            loginBtn.disabled = false;
+            loginBtn.innerText = "Войти через Telegram";
+
+            // ПРОВЕРКА: Mini App или Браузер
+            if (window.Telegram?.WebApp?.initData) {
+                // Если мы в ТГ — пытаемся залогиниться автоматически
+                const initData = window.Telegram.WebApp.initData;
+                try {
+                    const resp = await fetch(`${API_BASE}/auth/telegram`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ initData })
+                    });
+                    const { token } = await resp.json();
+                    if (token) await signInWithCustomToken(auth, token);
+                } catch (e) {
+                    console.error("Auto-login failed", e);
+                }
+            } else {
+                // Если в БРАУЗЕРЕ — вешаем запуск авторизации на кнопку
+                loginBtn.onclick = startBrowserAuth;
+            }
         }
         return;
     }
 
+    // Если юзер залогинен:
     uid = user.uid;
+    userRef = doc(db, "users", uid); // Не забудь инициализировать userRef!
 
     if (loginBtn) {
         loginBtn.classList.add("hidden");
@@ -2380,7 +2432,6 @@ onAuthStateChanged(auth, async (user) => {
     subscribeToInventory(uid);
     subscribeGlobalMachineStats();
     subscribeUserMachineStats(uid);
-
     renderMachines();
 });
 
