@@ -35,15 +35,14 @@ function makeAkulkaId(telegramId) {
 const app = express();
 app.use(express.json());
 
-app.use(
-    cors({
-        origin: [
-            'http://localhost:5173',
-            'https://ludomania-app.vercel.app',
-        ],
-        methods: ['GET', 'POST', 'OPTIONS'],
-    })
-);
+app.use(cors({
+    origin: [
+        'https://ludomania-app.vercel.app', // Твой фронт на Vercel
+        'http://161.97.99.137',            // Твой IP (если заходишь по нему)
+        'http://localhost:3000'             // Для тестов локально
+    ],
+    credentials: true // Важно для передачи кук и заголовков
+}));
 
 // ==== Firebase Admin init ====
 let serviceAccount;
