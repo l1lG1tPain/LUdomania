@@ -1,9 +1,6 @@
 // src/games/dice.js
 const API_BASE = window.__API_BASE__ || "https://161-97-99-137.sslip.io";
 
-// Множители: угадал точно → x6, ±1 → x2, ±2 → x1.5, иначе проигрыш
-const PAYOUT_TABLE = { 0: 6, 1: 2, 2: 1.5 };
-
 export function initDice({ getBalance, getToken, onBalanceChange }) {
     const overlay  = document.getElementById("diceOverlay");
     const closeBtn = document.getElementById("diceClose");
@@ -17,7 +14,7 @@ export function initDice({ getBalance, getToken, onBalanceChange }) {
 
     if (!overlay) return;
 
-    let guess    = 3;
+    let guess     = 3;
     let isRolling = false;
 
     const DICE_FACES = ["⚀","⚁","⚂","⚃","⚄","⚅"];
@@ -33,17 +30,23 @@ export function initDice({ getBalance, getToken, onBalanceChange }) {
         if (isRolling) return;
 
         const bet = parseInt(betInput.value, 10);
-        if (!bet || bet <= 0) { resultEl.textContent = "Введи ставку!"; return; }
+        if (!bet || bet <= 0)   { resultEl.textContent = "Введи ставку!"; return; }
         if (bet > getBalance()) { resultEl.textContent = "Недостаточно LM!"; return; }
 
-        isRolling      = true;
+        isRolling        = true;
         rollBtn.disabled = true;
+        resultEl.textContent = "";
+        resultEl.className   = "dice-result";
 
-        // Анимация кубика
+        // Запускаем анимацию крутящегося кубика
         diceEl.classList.add("rolling");
-        let animInterval = setInterval(() => {
+        const animInterval = setInterval(() => {
             diceEl.textContent = DICE_FACES[Math.floor(Math.random() * 6)];
         }, 80);
+
+        // ── Fetch отдельно от анимации ──
+        let data = null;
+        let fetchError = false;
 
         try {
             const resp = await fetch(`${API_BASE}/game/dice`, {
@@ -54,31 +57,38 @@ export function initDice({ getBalance, getToken, onBalanceChange }) {
                 },
                 body: JSON.stringify({ bet, guess }),
             });
+            data = await resp.json();
+            if (!resp.ok) fetchError = true;
+        } catch (err) {
+            console.error("dice fetch error:", err);
+            fetchError = true;
+        }
 
-            const data = await resp.json();
+        // Ждём конца анимации
+        await new Promise(r => setTimeout(r, 900));
+        clearInterval(animInterval);
+        diceEl.classList.remove("rolling");
 
-            await new Promise(r => setTimeout(r, 900));
-            clearInterval(animInterval);
-            diceEl.classList.remove("rolling");
-            diceEl.textContent = DICE_FACES[data.rolled - 1];
+        if (fetchError || !data) {
+            diceEl.textContent   = "🎲";
+            resultEl.textContent = "Ошибка сервера 😢";
+            resultEl.className   = "dice-result lose";
+        } else {
+            diceEl.textContent = DICE_FACES[(data.rolled ?? 1) - 1];
 
             if (data.outcome === "win") {
-                resultEl.textContent = `🎲 Выпало ${data.rolled}! +${data.payout} LM (x${data.multiplier})`;
+                resultEl.textContent = `🎲 Выпало ${data.rolled}! +${data.payout} LM (×${data.multiplier})`;
                 resultEl.className   = "dice-result win";
             } else {
                 resultEl.textContent = `🎲 Выпало ${data.rolled}. -${bet} LM`;
                 resultEl.className   = "dice-result lose";
             }
 
-            onBalanceChange(data.newBalance);
-        } catch (err) {
-            clearInterval(animInterval);
-            resultEl.textContent = "Ошибка сервера";
-            console.error(err);
-        } finally {
-            isRolling        = false;
-            rollBtn.disabled = false;
+            if (data.newBalance != null) onBalanceChange(data.newBalance);
         }
+
+        isRolling        = false;
+        rollBtn.disabled = false;
     }
 
     rollBtn?.addEventListener("click", roll);
@@ -89,9 +99,10 @@ export function initDice({ getBalance, getToken, onBalanceChange }) {
     return {
         open: () => {
             overlay.classList.remove("hidden");
-            resultEl.textContent  = "";
-            diceEl.textContent    = "🎲";
-            diceEl.className      = "dice-display";
+            resultEl.textContent = "";
+            resultEl.className   = "dice-result";
+            diceEl.textContent   = "🎲";
+            diceEl.className     = "dice-display";
         },
     };
 }

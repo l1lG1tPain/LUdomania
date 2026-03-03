@@ -1875,7 +1875,7 @@ export const COLLECTIONS = {
         description: "Город спит. Мы зажигаем.",
         requiredPrizeIds: [
             "neon_cat", "neon_dog", "gold_cube", "platinum_cube",
-            "arcade_token", "pixel09_coin"
+            "arcade_token"
         ],
         bonus: { type: "machineWinBonus", machineId: "neon_grabber", percent: 35 },
     },

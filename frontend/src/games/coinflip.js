@@ -12,7 +12,7 @@ export function initCoinflip({ getBalance, getToken, onBalanceChange }) {
 
     if (!overlay) return;
 
-    let selectedSide = null; // "heads" | "tails"
+    let selectedSide = null;
     let isFlipping   = false;
 
     btnHeads.addEventListener("click", () => {
@@ -29,29 +29,23 @@ export function initCoinflip({ getBalance, getToken, onBalanceChange }) {
 
     async function flip() {
         if (isFlipping) return;
-        if (!selectedSide) {
-            resultEl.textContent = "Выбери орёл или решка!";
-            return;
-        }
+        if (!selectedSide) { resultEl.textContent = "Выбери орёл или решка!"; return; }
 
         const bet = parseInt(betInput.value, 10);
-        if (!bet || bet <= 0) {
-            resultEl.textContent = "Введи ставку!";
-            return;
-        }
-        if (bet > getBalance()) {
-            resultEl.textContent = "Недостаточно LM!";
-            return;
-        }
+        if (!bet || bet <= 0)    { resultEl.textContent = "Введи ставку!"; return; }
+        if (bet > getBalance())  { resultEl.textContent = "Недостаточно LM!"; return; }
 
         isFlipping = true;
         btnHeads.disabled = btnTails.disabled = true;
         resultEl.textContent = "";
+        resultEl.className   = "coinflip-result";
 
-        // Анимация монетки
-        coinEl.classList.remove("heads", "tails", "spin");
-        void coinEl.offsetWidth;
-        coinEl.classList.add("spin");
+        // Запускаем анимацию
+        coinEl.className = "coinflip-coin spin";
+
+        // ── Fetch отдельно от анимации ──
+        let data = null;
+        let fetchError = false;
 
         try {
             const resp = await fetch(`${API_BASE}/game/coinflip`, {
@@ -62,13 +56,22 @@ export function initCoinflip({ getBalance, getToken, onBalanceChange }) {
                 },
                 body: JSON.stringify({ bet, side: selectedSide }),
             });
+            data = await resp.json();
+            if (!resp.ok) fetchError = true;
+        } catch (err) {
+            console.error("coinflip fetch error:", err);
+            fetchError = true;
+        }
 
-            const data = await resp.json();
+        // Ждём конца анимации (1.2s)
+        await new Promise(r => setTimeout(r, 1200));
+        coinEl.classList.remove("spin");
 
-            // Ждём конца анимации (1.2s)
-            await new Promise(r => setTimeout(r, 1200));
-            coinEl.classList.remove("spin");
-            coinEl.classList.add(data.result); // "heads" или "tails"
+        if (fetchError || !data) {
+            resultEl.textContent = "Ошибка сервера 😢";
+            resultEl.className   = "coinflip-result lose";
+        } else {
+            coinEl.classList.add(data.result ?? "");
 
             if (data.outcome === "win") {
                 resultEl.textContent = `🎉 +${data.payout} LM!`;
@@ -78,27 +81,21 @@ export function initCoinflip({ getBalance, getToken, onBalanceChange }) {
                 resultEl.className   = "coinflip-result lose";
             }
 
-            onBalanceChange(data.newBalance);
-        } catch (err) {
-            resultEl.textContent = "Ошибка сервера";
-            console.error(err);
-        } finally {
-            isFlipping = false;
-            btnHeads.disabled = btnTails.disabled = false;
+            if (data.newBalance != null) onBalanceChange(data.newBalance);
         }
+
+        isFlipping = false;
+        btnHeads.disabled = btnTails.disabled = false;
     }
 
     document.getElementById("coinflipFlipBtn").addEventListener("click", flip);
+    closeBtn.addEventListener("click", () => overlay.classList.add("hidden"));
 
-    closeBtn.addEventListener("click", () => {
-        overlay.classList.add("hidden");
-    });
-
-    // Публичный метод открытия
     return {
         open: () => {
             overlay.classList.remove("hidden");
             resultEl.textContent = "";
+            resultEl.className   = "coinflip-result";
             coinEl.className     = "coinflip-coin";
             selectedSide         = null;
             btnHeads.classList.remove("selected");
