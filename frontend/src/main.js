@@ -158,7 +158,7 @@ const RARITY_ORDER = {
 };
 
 // В начале main.js
-const API_BASE = "http://161.97.99.137:3000";
+const API_BASE = "https://161-97-99-137.sslip.io";
 const BOT_USERNAME = "LUdomania_app_bot";
 
 // Функция для запуска процесса в браузере

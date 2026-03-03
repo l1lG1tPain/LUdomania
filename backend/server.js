@@ -37,12 +37,17 @@ app.use(express.json());
 
 app.use(cors({
     origin: [
-        'https://ludomania-app.vercel.app', // Твой фронт на Vercel
-        'http://161.97.99.137',            // Твой IP (если заходишь по нему)
-        'http://localhost:3000'             // Для тестов локально
+        'https://ludomania-app.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000',
     ],
-    credentials: true // Важно для передачи кук и заголовков
+    credentials: true,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Добавь сразу после
+app.options('*', cors());
 
 // ==== Firebase Admin init ====
 let serviceAccount;
