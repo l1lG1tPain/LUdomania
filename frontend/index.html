@@ -416,6 +416,63 @@
         </div>
     </nav>
 
+    <!-- ===== МОНЕТКА ===== -->
+    <div id="coinflipOverlay" class="game-overlay hidden">
+        <div class="game-modal">
+            <button id="coinflipClose" class="modal-close">✕</button>
+            <h2>🪙 Монетка</h2>
+            <div id="coinflipCoin" class="coinflip-coin">🪙</div>
+            <div class="game-controls">
+                <input id="coinflipBet" type="number" placeholder="Ставка LM" min="1" class="bet-input"/>
+                <div class="coinflip-sides">
+                    <button id="coinflipHeads" class="side-btn">🦅 Орёл</button>
+                    <button id="coinflipTails" class="side-btn">🌊 Решка</button>
+                </div>
+                <button id="coinflipFlipBtn" class="btn primary">Бросить!</button>
+            </div>
+            <div id="coinflipResult" class="coinflip-result"></div>
+        </div>
+    </div>
+
+    <!-- ===== МИНЫ ===== -->
+    <div id="minesOverlay" class="game-overlay hidden">
+        <div class="game-modal">
+            <button id="minesClose" class="modal-close">✕</button>
+            <h2>💣 Мины</h2>
+            <div class="game-controls">
+                <input id="minesBet" type="number" placeholder="Ставка LM" min="1" class="bet-input"/>
+                <label>Мин: <input id="minesMinesCount" type="number" value="3" min="1" max="24" class="bet-input small"/></label>
+                <div class="mines-info">Множитель: <span id="minesMultiplier">1.00x</span></div>
+            </div>
+            <div id="minesGrid" class="mines-grid"></div>
+            <div id="minesResult" class="mines-result"></div>
+            <button id="minesStartBtn" class="btn primary">Начать игру</button>
+            <button id="minesCashoutBtn" class="btn success hidden">💰 Забрать выигрыш</button>
+        </div>
+    </div>
+
+    <!-- ===== КОСТИ ===== -->
+    <div id="diceOverlay" class="game-overlay hidden">
+        <div class="game-modal">
+            <button id="diceClose" class="modal-close">✕</button>
+            <h2>🎲 Кости</h2>
+            <div id="diceDisplay" class="dice-display">🎲</div>
+            <div class="game-controls">
+                <input id="diceBet" type="number" placeholder="Ставка LM" min="1" class="bet-input"/>
+                <div class="dice-guess-row">
+                    <button id="diceGuessMinus" class="dice-adj">−</button>
+                    <span class="dice-guess-label">Ставлю на: <b id="diceGuess">3</b></span>
+                    <button id="diceGuessPlus"  class="dice-adj">+</button>
+                </div>
+                <div class="dice-payouts">
+                    Точно → <b>×6</b> &nbsp; ±1 → <b>×2</b> &nbsp; ±2 → <b>×1.5</b>
+                </div>
+                <button id="diceRollBtn" class="btn primary">Бросить кости!</button>
+            </div>
+            <div id="diceResult" class="dice-result"></div>
+        </div>
+    </div>
+
 
 </div>
 

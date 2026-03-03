@@ -1290,7 +1290,7 @@ img {
 .inventory-section-title {
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: #00fd53;
     margin: 4px 4px 8px;
     display: flex;
     align-items: center;
@@ -1865,3 +1865,100 @@ img {
     object-fit: cover;
     display: block;
 }
+
+
+/* ===== Общие стили оверлея игр ===== */
+.game-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+}
+.game-overlay.hidden { display: none; }
+.game-modal {
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 16px;
+    padding: 24px;
+    width: 90%; max-width: 400px;
+    text-align: center;
+    position: relative;
+}
+.modal-close {
+    position: absolute; top: 12px; right: 12px;
+    background: none; border: none; color: #aaa;
+    font-size: 20px; cursor: pointer;
+}
+.bet-input {
+    width: 100%; padding: 10px;
+    background: #111; border: 1px solid #444;
+    border-radius: 8px; color: #fff;
+    font-size: 16px; margin: 8px 0;
+}
+.bet-input.small { width: 70px; }
+
+/* ===== Монетка ===== */
+.coinflip-coin {
+    font-size: 72px; margin: 16px 0;
+    display: inline-block; transition: transform 0.1s;
+}
+.coinflip-coin.spin {
+    animation: coinSpin 1.2s ease-in-out;
+}
+@keyframes coinSpin {
+    0%   { transform: rotateY(0deg); }
+    100% { transform: rotateY(1080deg); }
+}
+.coinflip-sides { display: flex; gap: 12px; justify-content: center; margin: 8px 0; }
+.side-btn {
+    flex: 1; padding: 10px;
+    background: #222; border: 2px solid #444;
+    border-radius: 10px; color: #fff;
+    font-size: 15px; cursor: pointer;
+}
+.side-btn.selected { border-color: #f0c040; background: #2a2410; }
+.coinflip-result, .mines-result, .dice-result {
+    margin-top: 12px; font-size: 18px; font-weight: bold; min-height: 28px;
+}
+.coinflip-result.win, .mines-result.win, .dice-result.win { color: #4caf50; }
+.coinflip-result.lose, .mines-result.lose, .dice-result.lose { color: #f44336; }
+
+/* ===== Мины ===== */
+.mines-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px; margin: 16px 0;
+}
+.mines-cell {
+    aspect-ratio: 1; font-size: 20px;
+    background: #222; border: 1px solid #444;
+    border-radius: 8px; cursor: pointer;
+    transition: background 0.15s;
+}
+.mines-cell:hover:not(:disabled) { background: #333; }
+.mines-cell.revealed { background: #1b3a1b; border-color: #4caf50; cursor: default; }
+.mines-cell.mine { background: #3a1b1b; border-color: #f44336; cursor: default; }
+.mines-cell.loading { opacity: 0.5; cursor: wait; }
+.mines-info { color: #f0c040; font-size: 16px; margin: 4px 0; }
+.btn.success { background: #4caf50; }
+
+/* ===== Кости ===== */
+.dice-display {
+    font-size: 80px; margin: 16px 0; display: inline-block;
+}
+.dice-display.rolling { animation: diceRoll 0.9s linear; }
+@keyframes diceRoll {
+    0%,100% { transform: rotate(0deg); }
+    25%      { transform: rotate(15deg) scale(1.1); }
+    75%      { transform: rotate(-15deg) scale(0.9); }
+}
+.dice-guess-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 16px; margin: 8px 0;
+}
+.dice-adj {
+    width: 36px; height: 36px; font-size: 20px;
+    background: #333; border: 1px solid #555;
+    border-radius: 50%; color: #fff; cursor: pointer;
+}
+.dice-payouts { color: #aaa; font-size: 13px; margin-bottom: 8px; }

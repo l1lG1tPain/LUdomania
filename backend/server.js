@@ -652,6 +652,213 @@ app.post('/spin', async (req, res) => {
 });
 
 // ===================================================================
+// МИНИ-ИГРЫ
+// ===================================================================
+
+/** Вспомогалка: проверяет Bearer токен и возвращает uid */
+async function requireAuth(req, res) {
+    const header = req.headers.authorization || "";
+    const token  = header.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token) { res.status(401).json({ error: "Unauthorized" }); return null; }
+    try {
+        const decoded = await admin.auth().verifyIdToken(token);
+        return decoded.uid;
+    } catch {
+        res.status(401).json({ error: "Invalid token" });
+        return null;
+    }
+}
+
+// ── МОНЕТКА ──────────────────────────────────────────────────────────
+app.post("/game/coinflip", async (req, res) => {
+    const uid = await requireAuth(req, res);
+    if (!uid) return;
+
+    const { bet, side } = req.body;
+    if (!bet || !side || !["heads","tails"].includes(side))
+        return res.status(400).json({ error: "bet and side required" });
+
+    const userRef  = firestore.collection("users").doc(uid);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) return res.status(404).json({ error: "user not found" });
+
+    const balance = userSnap.data().balance ?? 0;
+    if (balance < bet) return res.status(400).json({ error: "Недостаточно LM" });
+
+    const result  = Math.random() < 0.5 ? "heads" : "tails";
+    const win     = result === side;
+    const payout  = win ? bet : 0;         // выиграл → ставка * 2 (возврат + прибыль)
+    const delta   = win ? bet : -bet;       // +bet или -bet
+
+    await userRef.update({
+        balance:    FieldValue.increment(delta),
+        totalEarned: win ? FieldValue.increment(bet) : FieldValue.increment(0),
+        totalSpent:  win ? FieldValue.increment(0)   : FieldValue.increment(bet),
+    });
+
+    const newSnap   = await userRef.get();
+    const newBalance = newSnap.data().balance;
+
+    res.json({ outcome: win ? "win" : "lose", result, payout: win ? bet * 2 : 0, newBalance });
+});
+
+// ── МИНЫ ─────────────────────────────────────────────────────────────
+const MINES_MULTIPLIERS = [
+    0, 1.05, 1.15, 1.30, 1.50, 1.75, 2.10, 2.55, 3.15, 3.95, 5.00,
+    6.40, 8.30, 10.9, 14.5, 19.5, 26.5, 36.5, 51.0, 73.0, 107,
+    161, 252, 420, 750, 1500,
+];
+
+// Старт игры в минах
+app.post("/game/mines/start", async (req, res) => {
+    const uid = await requireAuth(req, res);
+    if (!uid) return;
+
+    const { bet, mines } = req.body;
+    if (!bet || !mines || mines < 1 || mines > 24)
+        return res.status(400).json({ error: "Invalid bet or mines count" });
+
+    const userRef  = firestore.collection("users").doc(uid);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) return res.status(404).json({ error: "user not found" });
+
+    const balance = userSnap.data().balance ?? 0;
+    if (balance < bet) return res.status(400).json({ error: "Недостаточно LM" });
+
+    // Генерируем позиции мин
+    const positions = Array.from({ length: 25 }, (_, i) => i);
+    for (let i = positions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [positions[i], positions[j]] = [positions[j], positions[i]];
+    }
+    const minePositions = positions.slice(0, mines);
+
+    // Списываем ставку сразу
+    await userRef.update({ balance: FieldValue.increment(-bet) });
+    const newSnap    = await userRef.get();
+    const newBalance  = newSnap.data().balance;
+
+    // Сохраняем игру в Firestore
+    const gameRef = firestore.collection("mines_games").doc();
+    await gameRef.set({
+        uid,
+        bet,
+        mines,
+        minePositions,
+        revealed:  [],
+        status:    "active",
+        createdAt: FieldValue.serverTimestamp(),
+    });
+
+    res.json({ gameId: gameRef.id, newBalance });
+});
+
+// Открыть клетку
+app.post("/game/mines/reveal", async (req, res) => {
+    const uid = await requireAuth(req, res);
+    if (!uid) return;
+
+    const { gameId, cellIndex } = req.body;
+    if (gameId === undefined || cellIndex === undefined)
+        return res.status(400).json({ error: "gameId and cellIndex required" });
+
+    const gameRef  = firestore.collection("mines_games").doc(gameId);
+    const gameSnap = await gameRef.get();
+    if (!gameSnap.exists) return res.status(404).json({ error: "Game not found" });
+
+    const game = gameSnap.data();
+    if (game.uid !== uid)     return res.status(403).json({ error: "Forbidden" });
+    if (game.status !== "active") return res.status(400).json({ error: "Game already ended" });
+    if (game.revealed.includes(cellIndex)) return res.status(400).json({ error: "Already revealed" });
+
+    const isMine = game.minePositions.includes(cellIndex);
+
+    if (isMine) {
+        await gameRef.update({ status: "lost" });
+        return res.json({
+            isMine: true,
+            minePositions: game.minePositions,
+        });
+    }
+
+    const newRevealed = [...game.revealed, cellIndex];
+    await gameRef.update({ revealed: newRevealed });
+
+    res.json({ isMine: false, revealed: newRevealed.length });
+});
+
+// Забрать выигрыш
+app.post("/game/mines/cashout", async (req, res) => {
+    const uid = await requireAuth(req, res);
+    if (!uid) return;
+
+    const { gameId } = req.body;
+    const gameRef    = firestore.collection("mines_games").doc(gameId);
+    const gameSnap   = await gameRef.get();
+    if (!gameSnap.exists) return res.status(404).json({ error: "Game not found" });
+
+    const game = gameSnap.data();
+    if (game.uid !== uid)     return res.status(403).json({ error: "Forbidden" });
+    if (game.status !== "active") return res.status(400).json({ error: "Game already ended" });
+    if (game.revealed.length === 0) return res.status(400).json({ error: "Открой хотя бы одну клетку" });
+
+    const mult   = MINES_MULTIPLIERS[game.revealed.length] || 1;
+    const payout = Math.floor(game.bet * mult);
+
+    await gameRef.update({ status: "won" });
+
+    const userRef = firestore.collection("users").doc(uid);
+    await userRef.update({
+        balance:     FieldValue.increment(payout),
+        totalEarned: FieldValue.increment(payout - game.bet),
+    });
+
+    const newSnap    = await userRef.get();
+    const newBalance  = newSnap.data().balance;
+
+    res.json({ payout, multiplier: mult, newBalance });
+});
+
+// ── КОСТИ ────────────────────────────────────────────────────────────
+app.post("/game/dice", async (req, res) => {
+    const uid = await requireAuth(req, res);
+    if (!uid) return;
+
+    const { bet, guess } = req.body;
+    if (!bet || !guess || guess < 1 || guess > 6)
+        return res.status(400).json({ error: "bet and guess (1-6) required" });
+
+    const userRef  = firestore.collection("users").doc(uid);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) return res.status(404).json({ error: "user not found" });
+
+    const balance = userSnap.data().balance ?? 0;
+    if (balance < bet) return res.status(400).json({ error: "Недостаточно LM" });
+
+    const rolled = Math.floor(Math.random() * 6) + 1;
+    const diff   = Math.abs(rolled - guess);
+
+    // Таблица выплат: точно → x6, ±1 → x2, ±2 → x1.5, иначе проигрыш
+    const MULT = { 0: 6, 1: 2, 2: 1.5 };
+    const mult = MULT[diff] || 0;
+    const win  = mult > 0;
+
+    const payout = win ? Math.floor(bet * mult) : 0;
+    const delta  = win ? payout - bet : -bet;
+
+    await userRef.update({
+        balance:     FieldValue.increment(delta),
+        totalEarned: win ? FieldValue.increment(payout - bet) : FieldValue.increment(0),
+        totalSpent:  win ? FieldValue.increment(0) : FieldValue.increment(bet),
+    });
+
+    const newSnap    = await userRef.get();
+    const newBalance  = newSnap.data().balance;
+
+    res.json({ outcome: win ? "win" : "lose", rolled, guess, multiplier: mult, payout, newBalance });
+});
+
+// ===================================================================
 // health-check
 // ===================================================================
 app.get('/', (req, res) => {

@@ -42,6 +42,10 @@ import imgGold from "./assets/LudoMoney.png";
 import imgPlatinum from "./assets/LudoMoney_4.png";
 import imgDiamond from "./assets/LudoMoney.png";
 
+import { initCoinflip } from "./games/coinflip.js";
+import { initMines }    from "./games/mines.js";
+import { initDice }     from "./games/dice.js";
+
 // ==================== DOM-элементы ====================
 
 // Авторизация
@@ -119,6 +123,12 @@ const sellConfirmTextEl   = document.getElementById("sellConfirmText");
 const sellConfirmYesBtn   = document.getElementById("sellConfirmYes");
 const sellConfirmNoBtn    = document.getElementById("sellConfirmNo");
 
+// Кнопки открытия игр (добавь в HTML карточки игр)
+document.getElementById("openCoinflip")?.addEventListener("click", () => coinflip.open());
+document.getElementById("openMines")?.addEventListener("click",    () => mines.open());
+document.getElementById("openDice")?.addEventListener("click",     () => dice.open());
+
+
 
 // ==================== Состояние ====================
 
@@ -156,6 +166,18 @@ const RARITY_ORDER = {
     uncommon:  4,
     common:    5,
 };
+
+const getToken = () => auth.currentUser?.getIdToken();
+const getBalance = () => balance;
+const onBalanceChange = (newBal) => {
+    balance = newBal;
+    if (balanceEl) balanceEl.textContent = formatNumber(newBal);
+    if (headerBalanceEl) headerBalanceEl.textContent = formatNumber(newBal);
+};
+
+const coinflip = initCoinflip({ getBalance, getToken, onBalanceChange });
+const mines    = initMines({ getBalance, getToken, onBalanceChange });
+const dice     = initDice({ getBalance, getToken, onBalanceChange });
 
 // В начале main.js
 const API_BASE = "https://161-97-99-137.sslip.io";
