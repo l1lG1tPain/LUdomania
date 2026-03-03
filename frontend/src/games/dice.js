@@ -69,26 +69,28 @@ export function initDice({ getBalance, getToken, onBalanceChange }) {
         clearInterval(animInterval);
         diceEl.classList.remove("rolling");
 
-        if (fetchError || !data) {
-            diceEl.textContent   = "🎲";
-            resultEl.textContent = "Ошибка сервера 😢";
-            resultEl.className   = "dice-result lose";
-        } else {
-            diceEl.textContent = DICE_FACES[(data.rolled ?? 1) - 1];
-
-            if (data.outcome === "win") {
-                resultEl.textContent = `🎲 Выпало ${data.rolled}! +${data.payout} LM (×${data.multiplier})`;
-                resultEl.className   = "dice-result win";
-            } else {
-                resultEl.textContent = `🎲 Выпало ${data.rolled}. -${bet} LM`;
+        try {
+            if (fetchError || !data) {
+                diceEl.textContent   = "🎲";
+                resultEl.textContent = "Ошибка сервера 😢";
                 resultEl.className   = "dice-result lose";
+            } else {
+                diceEl.textContent = DICE_FACES[(data.rolled ?? 1) - 1];
+
+                if (data.outcome === "win") {
+                    resultEl.textContent = `🎲 Выпало ${data.rolled}! +${data.payout} LM (×${data.multiplier})`;
+                    resultEl.className   = "dice-result win";
+                } else {
+                    resultEl.textContent = `🎲 Выпало ${data.rolled}. -${bet} LM`;
+                    resultEl.className   = "dice-result lose";
+                }
+
+                if (data.newBalance != null) onBalanceChange(data.newBalance);
             }
-
-            if (data.newBalance != null) onBalanceChange(data.newBalance);
+        } finally {
+            isRolling        = false;
+            rollBtn.disabled = false;
         }
-
-        isRolling        = false;
-        rollBtn.disabled = false;
     }
 
     rollBtn?.addEventListener("click", roll);

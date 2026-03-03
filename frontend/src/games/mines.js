@@ -81,13 +81,13 @@ export function initMines({ getBalance, getToken, onBalanceChange }) {
             fetchError = true;
         }
 
-        startBtn.disabled = false;
-
         if (fetchError || !data) {
+            startBtn.disabled = false;
             setResult("Ошибка сервера 😢", "lose");
             return;
         }
 
+        startBtn.disabled = false;
         gameId     = data.gameId;
         revealed   = 0;
         gameActive = true;

@@ -67,25 +67,27 @@ export function initCoinflip({ getBalance, getToken, onBalanceChange }) {
         await new Promise(r => setTimeout(r, 1200));
         coinEl.classList.remove("spin");
 
-        if (fetchError || !data) {
-            resultEl.textContent = "Ошибка сервера 😢";
-            resultEl.className   = "coinflip-result lose";
-        } else {
-            coinEl.classList.add(data.result ?? "");
-
-            if (data.outcome === "win") {
-                resultEl.textContent = `🎉 +${data.payout} LM!`;
-                resultEl.className   = "coinflip-result win";
-            } else {
-                resultEl.textContent = `💸 -${bet} LM`;
+        try {
+            if (fetchError || !data) {
+                resultEl.textContent = "Ошибка сервера 😢";
                 resultEl.className   = "coinflip-result lose";
+            } else {
+                coinEl.classList.add(data.result ?? "");
+
+                if (data.outcome === "win") {
+                    resultEl.textContent = `🎉 +${data.payout} LM!`;
+                    resultEl.className   = "coinflip-result win";
+                } else {
+                    resultEl.textContent = `💸 -${bet} LM`;
+                    resultEl.className   = "coinflip-result lose";
+                }
+
+                if (data.newBalance != null) onBalanceChange(data.newBalance);
             }
-
-            if (data.newBalance != null) onBalanceChange(data.newBalance);
+        } finally {
+            isFlipping = false;
+            btnHeads.disabled = btnTails.disabled = false;
         }
-
-        isFlipping = false;
-        btnHeads.disabled = btnTails.disabled = false;
     }
 
     document.getElementById("coinflipFlipBtn").addEventListener("click", flip);
