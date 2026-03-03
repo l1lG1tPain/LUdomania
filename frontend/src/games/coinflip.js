@@ -32,18 +32,15 @@ export function initCoinflip({ getBalance, getToken, onBalanceChange }) {
         if (!selectedSide) { resultEl.textContent = "Выбери орёл или решка!"; return; }
 
         const bet = parseInt(betInput.value, 10);
-        if (!bet || bet <= 0)    { resultEl.textContent = "Введи ставку!"; return; }
-        if (bet > getBalance())  { resultEl.textContent = "Недостаточно LM!"; return; }
+        if (!bet || bet <= 0)   { resultEl.textContent = "Введи ставку!"; return; }
+        if (bet > getBalance()) { resultEl.textContent = "Недостаточно LM!"; return; }
 
         isFlipping = true;
         btnHeads.disabled = btnTails.disabled = true;
         resultEl.textContent = "";
         resultEl.className   = "coinflip-result";
+        coinEl.className     = "coinflip-coin spin";
 
-        // Запускаем анимацию
-        coinEl.className = "coinflip-coin spin";
-
-        // ── Fetch отдельно от анимации ──
         let data = null;
         let fetchError = false;
 
@@ -63,7 +60,7 @@ export function initCoinflip({ getBalance, getToken, onBalanceChange }) {
             fetchError = true;
         }
 
-        // Ждём конца анимации (1.2s)
+        // Ждём конца анимации
         await new Promise(r => setTimeout(r, 1200));
         coinEl.classList.remove("spin");
 
@@ -73,15 +70,13 @@ export function initCoinflip({ getBalance, getToken, onBalanceChange }) {
                 resultEl.className   = "coinflip-result lose";
             } else {
                 coinEl.classList.add(data.result ?? "");
-
                 if (data.outcome === "win") {
-                    resultEl.textContent = `🎉 +${data.payout} LM!`;
+                    resultEl.textContent = `🎉 +${data.payout} LM! (×1.95)`;
                     resultEl.className   = "coinflip-result win";
                 } else {
                     resultEl.textContent = `💸 -${bet} LM`;
                     resultEl.className   = "coinflip-result lose";
                 }
-
                 if (data.newBalance != null) onBalanceChange(data.newBalance);
             }
         } finally {

@@ -3,11 +3,11 @@ const API_BASE = window.__API_BASE__ || "https://161-97-99-137.sslip.io";
 
 const GRID_SIZE   = 25; // 5x5
 const MULTIPLIERS = [
-    0, 1.05, 1.15, 1.30, 1.50, 1.75,
-    2.10, 2.55, 3.15, 3.95, 5.00,
-    6.40, 8.30, 10.9, 14.5, 19.5,
-    26.5, 36.5, 51.0, 73.0, 107,
-    161, 252, 420, 750, 1500,
+    0, 1.00, 1.09, 1.24, 1.42, 1.66,
+    1.99, 2.42, 2.99, 3.75, 4.74,
+    6.08, 7.90, 10.3, 13.8, 18.5,
+    25.2, 34.7, 48.4, 69.3, 102,
+    153, 239, 399, 713, 1426,
 ];
 
 export function initMines({ getBalance, getToken, onBalanceChange }) {
@@ -134,8 +134,9 @@ export function initMines({ getBalance, getToken, onBalanceChange }) {
         cell.classList.remove("loading");
 
         if (fetchError || !data) {
-            // Разблокируем сетку и показываем ошибку, игра продолжается
-            gridEl.querySelectorAll(".mines-cell").forEach(c => c.disabled = false);
+            // Разблокируем сетку — игра продолжается
+            gridEl.querySelectorAll(".mines-cell:not(.revealed):not(.mine)")
+                .forEach(c => c.disabled = false);
             setResult("Ошибка соединения, попробуй ещё раз 😢", "lose");
             return;
         }
@@ -145,17 +146,14 @@ export function initMines({ getBalance, getToken, onBalanceChange }) {
             cell.classList.add("mine");
             gameActive = false;
 
-            // Показываем все мины
             if (data.minePositions) {
                 data.minePositions.forEach(pos => {
-                    const mineCell = gridEl.querySelector(`[data-idx="${pos}"]`);
-                    if (mineCell) { mineCell.textContent = "💣"; mineCell.classList.add("mine"); }
+                    const mc = gridEl.querySelector(`[data-idx="${pos}"]`);
+                    if (mc) { mc.textContent = "💣"; mc.classList.add("mine"); }
                 });
             }
 
-            // Блокируем все оставшиеся клетки
             gridEl.querySelectorAll(".mines-cell").forEach(c => c.disabled = true);
-
             setResult(`💥 Взорвался! -${bet} LM`, "lose");
             cashoutBtn.classList.add("hidden");
             startBtn.classList.remove("hidden");
@@ -169,7 +167,6 @@ export function initMines({ getBalance, getToken, onBalanceChange }) {
             const profit = Math.floor(bet * mult);
             setResult(`Открыто: ${revealed} | Заберёшь: ${profit} LM`);
 
-            // Разблокируем остальные клетки
             gridEl.querySelectorAll(".mines-cell:not(.revealed):not(.mine)")
                 .forEach(c => c.disabled = false);
 
@@ -206,27 +203,23 @@ export function initMines({ getBalance, getToken, onBalanceChange }) {
             fetchError = true;
         }
 
-        cashoutBtn.disabled = false;
-
-        if (fetchError || !data) {
-            setResult("Ошибка при получении выигрыша 😢", "lose");
-            // gameActive уже false — игра считается завершённой
+        try {
+            if (fetchError || !data) {
+                setResult("Ошибка при получении выигрыша 😢", "lose");
+            } else {
+                setResult(`🎉 +${data.payout} LM! (×${data.multiplier?.toFixed(2)})`, "win");
+                if (data.newBalance != null) onBalanceChange(data.newBalance);
+            }
+        } finally {
+            cashoutBtn.disabled = false;
             cashoutBtn.classList.add("hidden");
             startBtn.classList.remove("hidden");
-            return;
         }
-
-        setResult(`🎉 +${data.payout} LM! (×${data.multiplier?.toFixed(2)})`, "win");
-        cashoutBtn.classList.add("hidden");
-        startBtn.classList.remove("hidden");
-
-        if (data.newBalance != null) onBalanceChange(data.newBalance);
     }
 
     startBtn.addEventListener("click", startGame);
     cashoutBtn.addEventListener("click", cashout);
     closeBtn.addEventListener("click", () => {
-        // Если игра активна — предупреждаем
         if (gameActive) {
             if (!confirm("Уйти? Текущая ставка сгорит!")) return;
             gameActive = false;

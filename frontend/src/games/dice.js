@@ -38,13 +38,11 @@ export function initDice({ getBalance, getToken, onBalanceChange }) {
         resultEl.textContent = "";
         resultEl.className   = "dice-result";
 
-        // Запускаем анимацию крутящегося кубика
         diceEl.classList.add("rolling");
         const animInterval = setInterval(() => {
             diceEl.textContent = DICE_FACES[Math.floor(Math.random() * 6)];
         }, 80);
 
-        // ── Fetch отдельно от анимации ──
         let data = null;
         let fetchError = false;
 
@@ -64,7 +62,6 @@ export function initDice({ getBalance, getToken, onBalanceChange }) {
             fetchError = true;
         }
 
-        // Ждём конца анимации
         await new Promise(r => setTimeout(r, 900));
         clearInterval(animInterval);
         diceEl.classList.remove("rolling");
@@ -76,7 +73,6 @@ export function initDice({ getBalance, getToken, onBalanceChange }) {
                 resultEl.className   = "dice-result lose";
             } else {
                 diceEl.textContent = DICE_FACES[(data.rolled ?? 1) - 1];
-
                 if (data.outcome === "win") {
                     resultEl.textContent = `🎲 Выпало ${data.rolled}! +${data.payout} LM (×${data.multiplier})`;
                     resultEl.className   = "dice-result win";
@@ -84,7 +80,6 @@ export function initDice({ getBalance, getToken, onBalanceChange }) {
                     resultEl.textContent = `🎲 Выпало ${data.rolled}. -${bet} LM`;
                     resultEl.className   = "dice-result lose";
                 }
-
                 if (data.newBalance != null) onBalanceChange(data.newBalance);
             }
         } finally {

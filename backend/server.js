@@ -685,7 +685,7 @@ app.post("/game/coinflip", async (req, res) => {
     const balance = userSnap.data().balance ?? 0;
     if (balance < bet) return res.status(400).json({ error: "Недостаточно LM" });
 
-    const result  = Math.random() < 0.5 ? "heads" : "tails";
+    const result = Math.random() < 0.475 ? "heads" : "tails";
     const win     = result === side;
     const payout  = win ? bet : 0;         // выиграл → ставка * 2 (возврат + прибыль)
     const delta   = win ? bet : -bet;       // +bet или -bet
@@ -704,9 +704,11 @@ app.post("/game/coinflip", async (req, res) => {
 
 // ── МИНЫ ─────────────────────────────────────────────────────────────
 const MINES_MULTIPLIERS = [
-    0, 1.05, 1.15, 1.30, 1.50, 1.75, 2.10, 2.55, 3.15, 3.95, 5.00,
-    6.40, 8.30, 10.9, 14.5, 19.5, 26.5, 36.5, 51.0, 73.0, 107,
-    161, 252, 420, 750, 1500,
+    0, 1.00, 1.09, 1.24, 1.42, 1.66,
+    1.99, 2.42, 2.99, 3.75, 4.74,
+    6.08, 7.90, 10.3, 13.8, 18.5,
+    25.2, 34.7, 48.4, 69.3, 102,
+    153, 239, 399, 713, 1426,
 ];
 
 // Старт игры в минах
@@ -839,12 +841,12 @@ app.post("/game/dice", async (req, res) => {
     const diff   = Math.abs(rolled - guess);
 
     // Таблица выплат: точно → x6, ±1 → x2, ±2 → x1.5, иначе проигрыш
-    const MULT = { 0: 6, 1: 2, 2: 1.5 };
+    const MULT = { 0: 5, 1: 1.5, 2: 1.2 };
     const mult = MULT[diff] || 0;
     const win  = mult > 0;
 
-    const payout = win ? Math.floor(bet * mult) : 0;
-    const delta  = win ? payout - bet : -bet;
+    const payout = win ? Math.floor(bet * 1.95) : 0;
+    const delta  = win ? Math.floor(bet * 0.95) : -bet;
 
     await userRef.update({
         balance:     FieldValue.increment(delta),
