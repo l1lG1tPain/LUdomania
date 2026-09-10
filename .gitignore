@@ -11,3 +11,5 @@ backend/serviceAccountKey.json
 .idea
 
 Claude outputs/
+.vercel
+.env*
