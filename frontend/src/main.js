@@ -184,7 +184,7 @@ const mines    = initMines({ getBalance, getToken, onBalanceChange });
 const dice     = initDice({ getBalance, getToken, onBalanceChange });
 
 // В начале main.js
-const API_BASE = "https://161-97-99-137.sslip.io";
+const API_BASE = "https://ludomania-app.vercel.app";
 const BOT_USERNAME = "LUdomania_app_bot";
 
 // Функция для запуска процесса в браузере
@@ -2221,6 +2221,8 @@ if (bigClickArea) {
     const handleTap = (x, y) => {
         const gain = clickPower * clickMultiplier;
         spawnClickBubble(x, y, gain);
+        bigClickArea.classList.add("bounce");
+        setTimeout(() => bigClickArea.classList.remove("bounce"), 300);
         handleClick();
     };
 

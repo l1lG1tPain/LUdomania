@@ -1,5 +1,5 @@
 // src/games/dice.js
-const API_BASE = window.__API_BASE__ || "https://161-97-99-137.sslip.io";
+const API_BASE = window.__API_BASE__ || "https://ludomania-app.vercel.app";
 
 export function initDice({ getBalance, getToken, onBalanceChange }) {
     const overlay  = document.getElementById("diceOverlay");

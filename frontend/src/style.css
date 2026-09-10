@@ -361,6 +361,16 @@ h3 { font-size: 16px; }
     transform: scale(0.95) translate(2px, 2px);
 }
 
+@keyframes clickBounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.88); }
+    100% { transform: scale(1); }
+}
+
+.big-click.bounce {
+    animation: clickBounce 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
 /* ======== TOAST NOTIFICATIONS ======== */
 
 .toast-container {
@@ -704,7 +714,215 @@ h3 { font-size: 16px; }
     text-transform: uppercase;
 }
 
+
+/* ======== NEW INVENTORY GRID STYLES ======== */
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.inv-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    box-shadow: 4px 4px 0 var(--shadow-dark);
+    cursor: pointer;
+    transition: all 0.05s ease-out;
+}
+
+.inv-card:hover {
+    border-color: var(--accent-deep);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--shadow-dark);
+}
+
+.inv-emoji {
+    font-size: 40px;
+    line-height: 40px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    filter: drop-shadow(2px 2px 0 var(--shadow-accent));
+}
+
+.inv-info {
+    text-align: center;
+    width: 100%;
+}
+
+.inv-name {
+    font-size: 11px;
+    color: var(--light-text);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.inv-meta {
+    font-size: 10px;
+    color: var(--accent-light);
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.inv-value {
+    color: var(--accent-light);
+}
+
+.inv-progress {
+    font-size: 9px;
+    color: var(--muted-text);
+}
+
+.inv-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--border-color);
+    border: 1px solid var(--accent-light);
+    margin-bottom: 2px;
+    overflow: hidden;
+}
+
+.inv-progress-fill {
+    height: 100%;
+    background: var(--accent-light);
+}
+
+.inv-progress-text {
+    font-size: 8px;
+    color: var(--muted-text);
+}
+
+/* Mobile: 1 column */
+@media (max-width: 480px) {
+    .inventory-grid {
+        grid-template-columns: 1fr;
+    }
+}
 /* ======== INVENTORY MODAL ======== */
+
+/* ======== COLLECTIONS ======== */
+.collections-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.collection-card {
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    box-shadow: 4px 4px 0 var(--shadow-dark);
+    padding: 12px;
+    transition: all 0.05s ease-out;
+}
+
+.collection-card:hover {
+    border-color: var(--accent-deep);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--shadow-dark);
+}
+
+.collection-card--locked {
+    opacity: 0.7;
+}
+
+.collection-card-header {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.collection-emoji {
+    font-size: 32px;
+    text-align: center;
+}
+
+.collection-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.collection-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--light-text);
+    font-family: 'Press Start 2P', monospace;
+}
+
+.collection-bonus {
+    font-size: 9px;
+    color: var(--accent-light);
+}
+
+.collection-progress {
+    font-size: 10px;
+    color: var(--accent-light);
+    font-weight: 700;
+    text-align: right;
+}
+
+.collection-prizes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.collection-prize {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    background: rgba(147, 51, 234, 0.05);
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.05s ease-out;
+}
+
+.collection-prize:hover {
+    border-color: var(--accent-deep);
+    background: rgba(147, 51, 234, 0.15);
+}
+
+.collection-prize--missing {
+    opacity: 0.5;
+    filter: grayscale(100%);
+}
+
+.collection-prize-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    font-size: 28px;
+}
+
+.collection-prize-icon img {
+    max-width: 36px;
+    max-height: 36px;
+    object-fit: contain;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .collection-prizes {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
 
 .inventory-modal {
     position: fixed;
@@ -1112,9 +1330,10 @@ h3 { font-size: 16px; }
     gap: 8px;
 }
 
-.leaderboard-row {
+.leaderboard-row,
+.profile-leaderboard-row {
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
+    grid-template-columns: 2fr 1fr auto;
     gap: 12px;
     padding: 8px;
     background: var(--card-bg);
