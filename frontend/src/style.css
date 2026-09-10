@@ -1,64 +1,101 @@
-/* ======== ГЛОБАЛЬНЫЕ ФИКСЫ ======== */
+/* ======== PIXEL-ART LUDOMANIA STYLE GUIDE ======== */
+/* Retro Gaming Aesthetic + Glassmorphism + Cyberpunk Colors */
 
-/* красивый читаемый шрифт для лудомании — Rubik */
-@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+    /* Color Palette */
+    --dark-bg: #050508;
+    --light-text: #f4f1fa;
+    --accent-purple: #a855f7;      /* Main accent */
+    --accent-deep: #9333ea;        /* Ludomania color */
+    --accent-light: #c084fc;
+    --muted-text: #7d7694;
+    --border-color: #2b2040;
+    --card-bg: #0c0a12;
+    --glass-overlay: rgba(12, 10, 18, 0.9);
+    --shadow-dark: #000000;
+    --shadow-accent: #4a1d8a;
+}
 
 * {
-    font-family: 'Rubik', sans-serif;
     -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     outline: none;
+    box-sizing: border-box;
 }
 
 html, body {
     margin: 0;
     padding: 0;
-    background: #0b0b0b;
-    color: #fff;
+    background: var(--dark-bg);
+    color: var(--light-text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
     overflow-x: hidden;
+    line-height: 1.8;
 }
 
 img {
     pointer-events: none;
+    image-rendering: pixelated;
+    max-width: 100%;
 }
 
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Press Start 2P', monospace;
+    letter-spacing: 1px;
+    text-shadow: 5px 5px 0 var(--shadow-accent);
+    line-height: 1.35;
+    text-transform: uppercase;
+}
+
+h1 { font-size: clamp(26px, 4.4vw, 52px); }
+h2 { font-size: clamp(18px, 2.4vw, 28px); }
+h3 { font-size: 16px; }
+
 #app {
-    padding: 0 8px 80px; /* место под bottom-nav */
+    padding: 0 8px 80px;
     max-width: 480px;
     margin: 0 auto;
 }
 
-/* ======== ХЕДЕР ======== */
+/* ======== HEADER ======== */
 
 .app-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 8px;
-    margin-top: 4px;
-    border-radius: 16px;
-    background: radial-gradient(circle at top left, #2a2a2a 0%, #111 60%, #080808 100%);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    padding: 12px 16px;
+    margin-top: 8px;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    box-shadow: 8px 8px 0 var(--shadow-dark);
 }
 
-/* левая часть — аватар + имя */
+.app-header:hover {
+    border-color: var(--accent-deep);
+    transform: translate(-2px, -2px);
+    box-shadow: 10px 10px 0 var(--shadow-dark);
+}
+
 .profile-left {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
 }
 
 .profile-avatar {
     position: relative;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #181818;
+    width: 48px;
+    height: 48px;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    font-size: 24px;
     overflow: hidden;
 }
 
@@ -68,16 +105,14 @@ img {
     object-fit: cover;
 }
 
-/* зелёный индикатор */
 .online-dot {
-    width: 10px;
-    height: 10px;
-    background: #22ff55;
-    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    background: #00ff00;
     position: absolute;
-    bottom: -1px;
-    right: -1px;
-    border: 2px solid #111;
+    bottom: 0;
+    right: 0;
+    border: 3px solid var(--dark-bg);
 }
 
 .hidden {
@@ -85,681 +120,509 @@ img {
 }
 
 .profile-name {
-    font-weight: 600;
-    font-size: 15px;
+    font-family: 'Press Start 2P', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .profile-id {
-    font-size: 12px;
-    opacity: 0.7;
+    font-size: 10px;
+    color: var(--muted-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* правая часть — баланс и уровень в хедере */
-
 .profile-right {
-    text-align: right;
-    align-items: center;
-    font-size: 12px;
-    flex-wrap: nowrap;
     display: flex;
-    gap: 21px;
+    gap: 16px;
+    align-items: center;
+    text-align: right;
 }
 
 .header-balance {
-    font-weight: 600;
-    font-size: 16px;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 14px;
 }
 
 .header-balance span {
     color: #ffd52e;
+    text-shadow: 3px 3px 0 rgba(255, 213, 46, 0.3);
 }
 
 .header-balance img {
-    height: 25px;
+    height: 24px;
     width: auto;
+    border: 2px solid var(--border-color);
 }
 
 .header-level {
-    margin-top: 2px;
-    opacity: 0.8;
+    display: inline-block;
+    padding: 6px 12px;
+    background: var(--accent-deep);
+    border: 3px solid var(--dark-bg);
+    color: var(--light-text);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 4px 4px 0 var(--shadow-accent);
 }
 
-/* ======== АВТОРИЗАЦИЯ ======== */
+/* ======== AUTH ======== */
 
 .auth-block {
-    margin: 10px 4px;
+    /* margin: 16px 0; */
+    padding: 20px;
 }
 
-/* ======== СЕКЦИИ ======== */
+/* ======== PAGES ======== */
 
 .page {
     display: none;
-    padding: 5px 0 16px;
+    padding: 16px 0;
+    animation: fadeIn 0.3s ease-in-out;
 }
 
 .page.active {
     display: block;
 }
 
-/* ======== FARM ======== */
+
+/* ======== ANIMATIONS ======== */
+
+@keyframes slideInToast {
+    from {
+        opacity: 0;
+        transform: translateX(120px) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 0.7;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes floatBubble {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) translateY(-80px);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+@keyframes floatDamage {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-60px);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ======== FARM STATS ======== */
 
 .farm-stats {
-    margin-top: 8px;
-    margin-bottom: 10px;
-    padding: 10px 12px;
-    border-radius: 16px;
-    background: #121212;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    margin: 16px 0;
+    padding: 16px;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    box-shadow: 8px 8px 0 var(--shadow-dark);
+}
+
+.farm-stats:hover {
+    border-color: var(--accent-deep);
+    transform: translate(-2px, -2px);
+    box-shadow: 10px 10px 0 var(--shadow-dark);
 }
 
 .stat-row {
     display: flex;
     justify-content: space-between;
-    padding: 4px 0;
-    font-size: 14px;
+    padding: 8px 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.stat-row:last-child {
+    border-bottom: none;
 }
 
 .stat-row .value {
-    font-weight: 600;
+    font-weight: 700;
+    color: var(--accent-light);
 }
 
-/* прогресс-бар уровня */
+.stat-row .unit {
+    color: var(--muted-text);
+    font-size: 10px;
+}
+
+/* ======== LEVEL PROGRESS ======== */
 
 .level-progress-container {
-    margin-top: 8px;
-    height: 6px;
-    border-radius: 999px;
-    background: #1a1a1a;
+    margin-top: 12px;
+    height: 12px;
+    background: var(--border-color);
+    border: 3px solid var(--border-color);
     overflow: hidden;
 }
 
 .level-progress-bar {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #ffcc33, #ff7b39, #ff3b6a);
-    box-shadow: 0 0 10px rgba(255, 204, 51, 0.6);
+    background: linear-gradient(90deg, var(--accent-deep), var(--accent-purple), var(--accent-light));
+    box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.2);
     transition: width 0.2s ease-out;
 }
 
-/* большая зона клика */
+.level-hint {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--muted-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 
-.big-click-area img {
-    margin: 22px auto 12px;
+/* ======== BIG CLICK AREA ======== */
+
+.big-click-area {
+    display: flex;
+    justify-content: center;
+    margin: 24px auto;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    aspect-ratio: 1;
+    max-width: 350px;
+    align-items: center;
+}
+
+.big-click-area:hover {
+    border-color: var(--accent-deep);
+    transform: translate(-4px, -4px);
+    box-shadow: 16px 16px 0 var(--shadow-dark);
+}
+
+.big-click {
     width: 350px;
     height: 350px;
-    border-radius: 999px;
-    background: radial-gradient(circle, #282828 0%, #141414 65%, #050505 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 52px;
     cursor: pointer;
-    transition: transform 0.06s ease-out, box-shadow 0.06s ease-out;
+    transition: transform 0.05s ease-out;
+    filter: drop-shadow(4px 4px 0 var(--shadow-accent));
 }
 
-/* короткий "тап" по картинке */
-.big-click-area img:active {
-    transform: scale(0.8);
-    box-shadow: 0 0 5px rgba(255,200,30,0.25);
+.big-click:active {
+    transform: scale(0.95) translate(2px, 2px);
 }
 
-/* 🔥 пульс от JS — класс на картинке */
-.big-click-area img.pulsing {
-    transform: scale(0.9);
-    box-shadow: 0 0 20px rgba(255,200,30,0.4);
-}
+/* ======== TOAST NOTIFICATIONS ======== */
 
-/* можно вообще удалить или оставить про запас */
-.big-click-area.pulsing {
-    transform: scale(0.95);
-    transition: transform 0.08s ease-out;
-}
-
-
-/* ======== INVENTORY ======== */
-
-.inv-card {
-    background: #161616;
-    padding: 10px 6px;
-    border-radius: 14px;
-    text-align: center;
-    font-size: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-}
-
-.inv-emoji {
-    font-size: 32px;
-}
-
-.inv-name {
-    margin-top: 4px;
-    font-size: 13px;
-    font-weight: 500;
-}
-
-.inv-progress {
-    font-size: 11px;
-    opacity: 0.75;
-
-    height: auto;
-    border-radius: 999px;
-    background: #222;
-    overflow: hidden;
-    margin: 5px 0;
-}
-
-/* прогресс бар в инвентаре (коллекции) */
-.inv-progress-bar {
-    width: 100%;
-    height: auto;
-    border-radius: 999px;
-    background: #222;
-    overflow: hidden;
-    /*margin: 5px 0;*/
-}
-
-.inv-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #ffd54f, #ff9100);
-    border-radius: inherit;
-}
-
-/* ======== MINI-GAMES ======== */
-
-.machine-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-}
-
-.machine-card {
-    background: #161616;
-    padding: 10px;
-    border-radius: 14px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-}
-
-.machine-name {
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.machine-meta {
-    font-size: 12px;
-    opacity: 0.75;
-}
-
-/* ======== БОТОМ-НАВ ======== */
-
-.bottom-nav {
+.toast-container {
     position: fixed;
-    bottom: 0;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 300px;
+}
+
+.toast {
+    padding: 12px 16px;
+    border: 3px solid;
+    border-radius: 0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    animation: slideInToast 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 4px 4px 0 var(--shadow-dark);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+    font-weight: bold;
+}
+
+.toast.error {
+    background: rgba(255, 51, 51, 0.95);
+    border-color: #ff0000;
+    color: #ffffff;
+}
+
+.toast.success {
+    background: rgba(147, 51, 234, 0.95);
+    border-color: var(--accent-light);
+    color: #ffffff;
+}
+
+.toast.info {
+    background: rgba(100, 100, 100, 0.95);
+    border-color: #aaa;
+    color: #f4f1fa;
+}
+
+/* ======== LEVEL UP ANIMATION ======== */
+
+.level-up-overlay {
+    position: fixed;
+    top: 0;
     left: 0;
     width: 100%;
-    max-width: 480px;
-    margin: 0 auto;
-    right: 0;
-    height: 70px;
-    background: #050505;
-    border-top: 1px solid rgba(255,255,255,0.06);
-    display: flex;
-    justify-content: space-around;
-    align-items: stretch;
-    box-shadow: 0 -10px 20px rgba(0,0,0,0.7);
-    z-index: 50;
-}
-
-.nav-item {
-    flex: 1;
-    text-align: center;
-    font-size: 12px;
-    opacity: 0.6;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 4px;
-    cursor: pointer;
-}
-
-.nav-item span.nav-icon {
-    font-size: 24px;
-}
-
-.nav-item span.nav-label {
-    font-size: 11px;
-}
-
-.nav-item.active {
-    opacity: 1;
-    font-weight: 600;
-    background: radial-gradient(circle at top, rgba(255,213,46,0.12), transparent 60%);
-}
-
-/* ======== КНОПКИ ======== */
-
-.btn {
-    width: 100%;
-    padding: 12px;
-    border-radius: 14px;
-    font-size: 16px;
-    font-weight: bold;
-    background: #222;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    margin: 6px 0;
-}
-
-.btn.primary {
-    background: #ffd52e;
-    color: #000;
-    font-weight: 600;
-}
-
-.btn.primary:hover {
-    background: #4c3603;
-    color: #fff;
-}
-
-.btn.secondary {
-    background: #333;
-}
-
-/* ======== МОДАЛКИ / ТОСТЫ ======== */
-
-.modal-backdrop {
-    position: fixed;
-    z-index: 1000;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-}
-
-.modal {
-    position: fixed;
-    z-index: 1100;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 84%;
-    max-width: 360px;
-    background: #1a1a1a;
-    padding: 20px;
-    border-radius: 16px;
-    text-align: center;
-    box-shadow: 0 16px 40px rgba(0,0,0,0.6);
-}
-
-.modal-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 12px;
-}
-
-/* ======== ТОСТЕРЫ (обновлённые) ======== */
-.toast {
-    position: fixed;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 420px;
-    background: linear-gradient(135deg, #262626, #101010);
-    color: #fff;
-    padding: 12px 18px;
-    border-radius: 12px;
-    font-size: 13px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-    opacity: 0;
-    z-index: 3000;
-    animation: toast 2.2s forwards;
-}
-
-@keyframes toast {
-    0%   { opacity: 0; transform: translate(-50%, -10px); }
-    10%  { opacity: 1; transform: translate(-50%, 0); }
-    80%  { opacity: 1; transform: translate(-50%, 0); }
-    100% { opacity: 0; transform: translate(-50%, -10px); }
-}
-
-/* ======== ФУЛЛСКРИН АВТОМАТ ======== */
-
-.machine-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 2500;
-    background: rgba(0, 0, 0, 0.9);
-    display: none;
-    justify-content: center;
-    align-items: flex-end;
-    padding: 12px 8px 20px;
-}
-
-.machine-overlay.active {
-    display: flex;
-}
-
-.machine-shell {
-    width: 100%;
-    max-width: 430px;
-    background: #050505;
-    border-radius: 20px;
-    padding: 12px 12px 16px;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.7);
-}
-
-.machine-close {
-    border: none;
-    background: transparent;
-    color: #777;
-    font-size: 18px;
-    float: right;
-    cursor: pointer;
-}
-
-.machine-header-line {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 4px 0 10px;
-}
-
-.machine-title {
-    font-weight: 600;
-    font-size: 15px;
-}
-
-.machine-price {
-    font-size: 12px;
-    opacity: 0.7;
-}
-
-/* Витрина автомата */
-.machine-viewport {
-    position: relative;
-    height: 220px;
-    border-radius: 22px;
-    background:
-            radial-gradient(circle at 50% 15%, rgba(255,255,255,0.15) 0, transparent 55%),
-            radial-gradient(circle at 50% 80%, #222 0, #070707 60%);
-    overflow: hidden;
-    margin-bottom: 12px;
-}
-
-/* Коготь */
-.machine-claw {
-    position: absolute;
-    top: -70px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 34px;
-    height: 70px;
-    border-radius: 999px 999px 14px 14px;
-    background: linear-gradient(180deg, #f5f5f5, #c9c9c9 40%, #555 95%);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.6);
-    transition: transform 0.25s cubic-bezier(0.22, 0.9, 0.4, 1.1);
-}
-
-/* Коробки */
-.machine-boxes {
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 10px;
-}
-
-.machine-box {
-    width: 54px;
-    height: 54px;
-    border-radius: 14px;
-    background: linear-gradient(145deg, #ffb74d, #f57c00);
-    box-shadow:
-            0 0 0 2px rgba(0,0,0,0.25),
-            0 6px 14px rgba(0,0,0,0.7);
-    position: relative;
-}
-
-.machine-box::after {
-    content: "";
-    position: absolute;
-    inset: 18px 8px 5px;
-    border-radius: 10px;
-    background: rgba(0,0,0,0.15);
-}
-
-/* Анимация спуска/подъёма */
-/* Анимация спуска/подъёма — как будто коготь реально ловит коробку */
-.machine-overlay.spinning .machine-claw {
-    animation: claw-move 0.9s cubic-bezier(0.22, 0.9, 0.4, 1.1) forwards;
-}
-
-@keyframes claw-move {
-    0% {
-        transform: translate(-50%, -70px);
-    }
-    35% {
-        transform: translate(-50%, 120px);
-    }
-    50% {
-        transform: translate(-50%, 130px);
-    }
-    70% {
-        transform: translate(-50%, 80px);
-    }
-    100% {
-        transform: translate(-50%, -70px);
-    }
-}
-
-/* центральная коробка чуть подпрыгивает, как будто её зацепили */
-.machine-overlay.spinning .machine-box:nth-child(2) {
-    animation: box-hop 0.6s ease-out 0.28s forwards;
-}
-
-@keyframes box-hop {
-    0% {
-        transform: translateY(0) scale(1);
-        box-shadow:
-                0 0 0 2px rgba(0,0,0,0.25),
-                0 6px 14px rgba(0,0,0,0.7);
-    }
-    40% {
-        transform: translateY(-10px) scale(1.05);
-        box-shadow:
-                0 0 0 2px rgba(255,213,46,0.35),
-                0 10px 20px rgba(0,0,0,0.9);
-    }
-    100% {
-        transform: translateY(0) scale(1);
-        box-shadow:
-                0 0 0 2px rgba(0,0,0,0.25),
-                0 6px 14px rgba(0,0,0,0.7);
-    }
-}
-
-.machine-level-block {
-    margin-bottom: 18px;
-}
-
-.machine-level-title {
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    opacity: 0.7;
-    margin: 4px 2px 6px;
-}
-
-
-/* Победа / проигрыш */
-.machine-result {
-    text-align: center;
-    margin-bottom: 10px;
-}
-
-.machine-result-emoji {
-    font-size: 40px;
-}
-
-.machine-result-text {
-    font-size: 14px;
-    margin-top: 4px;
-    opacity: 0.9;
-}
-
-.machine-main-btn {
-    margin-bottom: 8px;
-}
-
-/* Слайдер призов */
-.machine-prize-strip {
-    display: flex;
-    overflow-x: auto;
-    gap: 10px;
-    padding: 6px 2px 4px;
-    scrollbar-width: none;
-}
-
-.machine-prize-strip::-webkit-scrollbar {
-    display: none;
-}
-
-.machine-prize-pill {
-    flex: 0 0 auto;
-    min-width: 190px;
-    padding: 8px 12px;
-    border-radius: 16px;
-    background: radial-gradient(circle at top left, #222 0%, #111 60%);
-    font-size: 11px;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
-    gap: 8px;
-    border: 1px solid rgba(255,255,255,0.09);
-    box-shadow: 0 8px 18px rgba(0,0,0,0.6);
+    justify-content: center;
+    z-index: 9998;
+    animation: fadeIn 0.3s ease-out;
 }
 
-.pill-emoji {
-    font-size: 24px;
+.level-up-box {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 48px;
+    color: var(--accent-light);
+    text-shadow: 2px 2px 0 var(--shadow-dark), 0 0 20px var(--accent-deep);
+    animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 30px var(--accent-deep);
 }
 
-.pill-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex: 1;
-}
+/* ======== CLICK BUBBLE ======== */
 
-.pill-name {
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.pill-meta {
-    font-size: 11px;
-    opacity: 0.85;
-}
-
-.pill-value {
-    font-size: 11px;
-    opacity: 0.9;
-}
-
-
-
-
-
-
-/* +N при клике */
 .click-bubble {
     position: fixed;
     pointer-events: none;
-    font-size: 14px;
-    font-weight: 700;
-    color: white; /* 👈 было #ffd52e */
-    text-shadow: 0 0 8px rgba(0, 0, 0, 0.9);
-    animation: click-bubble-move 0.4s ease-out forwards;
-    z-index: 999;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--accent-light);
+    text-shadow: 2px 2px 0 var(--shadow-dark), 0 0 8px var(--accent-purple);
+    animation: floatBubble 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
 }
 
+/* ======== BUTTONS ======== */
 
-
-@keyframes click-bubble-move {
-    0% {
-        opacity: 1;
-        transform: translate(-50%, 0);
-    }
-    100% {
-        opacity: 0;
-        transform: translate(-50%, -28px);
-    }
-}
-
-
-
-/* ===== Автоматы по уровням ===== */
-
-.machine-level-block {
-    width: 100%;
-    margin-bottom: 22px;
-}
-
-.machine-level-title {
-    font-size: 14px;
-    font-weight: 600;
-    opacity: 0.8;
-    margin: 10px 0 8px;
-    padding-left: 4px;
+.btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 1px;
+    padding: 12px 20px;
+    border: 3px solid;
+    cursor: pointer;
+    transition: all 0.05s ease-out;
+    display: inline-block;
+    text-align: center;
+    white-space: nowrap;
+    user-select: none;
 }
 
-/* контейнер для автоматов на уровне */
+.btn.primary {
+    background: var(--accent-deep);
+    color: var(--light-text);
+    border-color: var(--dark-bg);
+    box-shadow: 6px 6px 0 var(--shadow-accent);
+}
+
+.btn.primary:hover {
+    background: var(--accent-purple);
+    box-shadow: 3px 3px 0 var(--shadow-accent);
+    transform: translate(3px, 3px);
+}
+
+.btn.primary:active {
+    box-shadow: 1px 1px 0 var(--shadow-accent);
+    transform: translate(5px, 5px);
+}
+
+.btn.secondary {
+    background: transparent;
+    color: var(--light-text);
+    border-color: var(--border-color);
+    box-shadow: 6px 6px 0 var(--shadow-dark);
+}
+
+.btn.secondary:hover {
+    border-color: var(--accent-deep);
+    box-shadow: 3px 3px 0 var(--shadow-dark);
+    transform: translate(3px, 3px);
+}
+
+.btn.secondary:active {
+    box-shadow: 1px 1px 0 var(--shadow-dark);
+    transform: translate(5px, 5px);
+}
+
+.btn.success {
+    background: #00aa00;
+    color: var(--light-text);
+    border-color: var(--dark-bg);
+    box-shadow: 6px 6px 0 #005500;
+}
+
+.btn.danger {
+    background: #ff3333;
+    color: var(--light-text);
+    border-color: var(--dark-bg);
+    box-shadow: 6px 6px 0 #880000;
+}
+
+.btn.tertiary {
+    background: var(--card-bg);
+    color: var(--light-text);
+    border-color: var(--border-color);
+    box-shadow: 4px 4px 0 var(--shadow-dark);
+    padding: 8px 12px;
+}
+
+.btn.small {
+    padding: 6px 10px;
+    font-size: 9px;
+}
+
+/* ======== MINI GAMES ======== */
+
+.section-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    margin: 24px 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 4px 4px 0 var(--shadow-accent);
+}
+
+.mini-games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.mini-game-card {
+    padding: 16px;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    box-shadow: 8px 8px 0 var(--shadow-dark);
+    cursor: pointer;
+    transition: all 0.05s ease-out;
+    text-align: center;
+}
+
+.mini-game-card:hover {
+    border-color: var(--accent-deep);
+    transform: translate(-2px, -2px);
+    box-shadow: 10px 10px 0 var(--shadow-dark);
+}
+
+.mini-game-card:active {
+    transform: translate(2px, 2px);
+    box-shadow: 6px 6px 0 var(--shadow-dark);
+}
+
+.mini-game-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+    filter: drop-shadow(2px 2px 0 var(--shadow-accent));
+}
+
+.mini-game-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--light-text);
+    margin-bottom: 4px;
+}
+
+.mini-game-desc {
+    font-size: 9px;
+    color: var(--muted-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ======== MACHINES GRID ======== */
+
 .machine-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     width: 100%;
+
 }
 
-/* карточка автомата */
 .machine-card {
-    /* ❗ ВАЖНО: width НЕ УКАЗЫВАЕМ */
-    /*padding: 12px 10px;*/
-    border-radius: 16px;
-
-    background: #161616;
-    border: 1px solid rgba(255,255,255,0.06);
-
-    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+    padding: 12px;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    box-shadow: 8px 8px 0 var(--shadow-dark);
     cursor: pointer;
-
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: all 0.05s ease-out;
+    text-align: center;
+    /* max-width: 150px; */
+    padding: 12px;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    box-shadow: 8px 8px 0 var(--shadow-dark);
+    cursor: pointer;
+    transition: all 0.05s ease-out;
+    text-align: center;
 }
 
-.machine-card:active {
-    transform: scale(0.97);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+.machine-card:hover {
+    border-color: var(--accent-deep);
+    transform: translate(-2px, -2px);
+    box-shadow: 10px 10px 0 var(--shadow-dark);
 }
 
-/* название автомата */
-.machine-name {
-    font-size: 15px;
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-/* под-инфа */
-.machine-meta {
-    font-size: 12px;
-    opacity: 0.8;
-}
 .machine-image {
     width: 100%;
     margin-bottom: 8px;
@@ -767,1224 +630,1176 @@ img {
     overflow: hidden;
 }
 
-.machine-image img {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-
-
-/* Контейнер с автоматами — больше НЕ сетка, а вертикальный список уровней */
-#machines {
-    display: block !important;      /* ломаем старый flex/грид */
-}
-
-/* Каждый уровень — отдельный вертикальный блок на всю ширину */
 .machine-level-block {
-    display: block;
+        display: block;
     width: 100%;
     margin-bottom: 22px;
 }
 
-/* Небольшой отступ между уровнями */
-.machine-level-block + .machine-level-block {
-    margin-top: 8px;
-}
+/* ======== INVENTORY ======== */
 
-.machine-prize-pill .pill-meta-secondary {
-    font-size: 11px;
-    opacity: 0.8;
-}
-
-.level-hint {
-    margin-top: 6px;
-    font-size: 12px;
-    opacity: 0.85;
-    text-align: right;
-    color: #f5f5f5;
-}
-
-.level-hint .league-name {
-    font-weight: 600;
-}
-
-#machineStatsSummary, .profile-stats-grid {
-    padding: 10px;
-}
-.machine-stats-row, .profile-stat-card, .profile-hint {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.inv-sell-btn {
-    border-radius: 999px;
-    border: none;
-    padding: 3px 5px;
-}
-
-.machine-hint {
-    margin: 6px 0 4px;
-    font-size: 12px;
-    line-height: 1.4;
-    color: #b0bec5;
-    opacity: 0.9;
-}
-
-/* ======== ПРОФИЛЬ: главная карточка и рейтинг ======== */
-
-.profile-page-main-card {
-    margin-top: 8px;
-    margin-bottom: 14px;
-    padding: 10px;
-    border-radius: 20px;
-    background:
-            radial-gradient(circle at top left, #262626 0%, #111 55%, #050505 100%);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
-}
-
-.profile-page-header {
+.inventory-tabs {
     display: flex;
     gap: 12px;
+    margin-bottom: 16px;
+    border-bottom: 3px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.inventory-tab {
+    padding: 6px 12px;
+    background: transparent;
+    border: 2px solid var(--border-color);
+    color: var(--light-text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.05s ease-out;
+}
+
+.inventory-tab.active {
+    background: var(--accent-deep);
+    border-color: var(--accent-deep);
+    color: var(--light-text);
+}
+
+.inventory-tab:hover {
+    border-color: var(--accent-deep);
+}
+
+#inventory {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 12px;
+}
+
+.inventory-item {
+    padding: 8px;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    box-shadow: 4px 4px 0 var(--shadow-dark);
+    cursor: pointer;
+    transition: all 0.05s ease-out;
+    text-align: center;
+}
+
+.inventory-item:hover {
+    border-color: var(--accent-deep);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--shadow-dark);
+}
+
+.inventory-item-emoji {
+    font-size: 28px;
+    margin-bottom: 4px;
+    filter: drop-shadow(2px 2px 0 var(--shadow-accent));
+}
+
+.inventory-item-count {
+    font-size: 10px;
+    color: var(--accent-light);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* ======== INVENTORY MODAL ======== */
+
+.inventory-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9500;
+    background: rgba(5, 5, 8, 0.95);
+    display: flex;
     align-items: center;
-    margin-bottom: 10px;
+    justify-content: center;
+    padding: 16px;
 }
 
-.profile-avatar-big {
-    width: 64px;
-    height: 64px;
-    border-radius: 20px;
-    background: #181818;
-    overflow: hidden;
-    flex-shrink: 0;
-    box-shadow: 0 0 0 2px rgba(255,255,255,0.07);
+.inventory-modal.hidden {
+    display: none !important;
 }
 
-.profile-avatar-big img {
+.inventory-modal-dialog {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    max-width: 400px;
+    background: var(--card-bg);
+    border: 4px solid var(--accent-deep);
+    box-shadow: 16px 16px 0 var(--shadow-dark);
+    padding: 24px;
+    position: relative;
 }
 
-.profile-page-header-text {
+.inventory-modal-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    background: var(--accent-deep);
+    border: 3px solid var(--dark-bg);
+    color: var(--light-text);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 4px 4px 0 var(--shadow-accent);
+}
+
+.inventory-modal-close:hover {
+    background: var(--accent-light);
+}
+
+.inventory-modal-body {
+    display: flex;
+    gap: 16px;
+}
+
+.inventory-modal-emoji {
+    font-size: 64px;
+    filter: drop-shadow(4px 4px 0 var(--shadow-accent));
+}
+
+.inventory-modal-main {
+    flex: 1;
+}
+
+.inventory-modal-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-shadow: 3px 3px 0 var(--shadow-accent);
+}
+
+.inventory-modal-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.inventory-modal-rarity {
+    color: var(--accent-light);
+    font-weight: 700;
+}
+
+.inventory-modal-value {
+    color: #ffd52e;
+    font-weight: 700;
+}
+
+.inventory-modal-progress {
+    margin: 12px 0;
+}
+
+.inv-progress {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
+.inv-progress-bar {
+    height: 16px;
+    background: var(--border-color);
+    border: 2px solid var(--border-color);
+    overflow: hidden;
+}
+
+.inv-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent-deep), var(--accent-purple));
+}
+
+.inv-progress-text {
+    font-size: 9px;
+    color: var(--muted-text);
+    text-transform: uppercase;
+}
+
+.inventory-modal-sell-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 12px;
+    margin-bottom: 8px;
+    text-shadow: 2px 2px 0 var(--shadow-accent);
+}
+
+.inventory-modal-sell-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* ======== PROFILE PAGE ======== */
+
+.profile-page-main-card {
+    padding: 20px;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    box-shadow: 8px 8px 0 var(--shadow-dark);
+    margin-bottom: 20px;
+}
+
+.profile-page-header {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid var(--border-color);
+}
+
+.profile-avatar-big {
+    width: 80px;
+    height: 80px;
+    background: var(--border-color);
+    border: 3px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    flex-shrink: 0;
+    filter: drop-shadow(4px 4px 0 var(--shadow-accent));
+}
+
+.profile-page-header-text {
+    flex: 1;
+}
+
 .profile-name-big {
-    font-size: 18px;
-    font-weight: 600;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    text-shadow: 3px 3px 0 var(--shadow-accent);
 }
 
 .profile-header-badges {
     display: flex;
-    gap: 6px;
-    margin-top: 2px;
+    gap: 8px;
+    margin-top: 12px;
     flex-wrap: wrap;
 }
 
 .profile-lvl-badge {
-    padding: 3px 8px;
-    border-radius: 999px;
-    font-size: 12px;
-    background: rgba(255, 213, 46, 0.12);
-    border: 1px solid rgba(255, 213, 46, 0.35);
-    color: #ffd52e;
+    display: inline-block;
+    padding: 6px 10px;
+    background: var(--accent-deep);
+    border: 2px solid var(--dark-bg);
+    color: var(--light-text);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 3px 3px 0 var(--shadow-accent);
 }
 
 .profile-league-chip {
-    padding: 3px 8px;
-    border-radius: 999px;
-    font-size: 12px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: inline-block;
+    padding: 6px 10px;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    color: var(--accent-light);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 3px 3px 0 var(--shadow-dark);
 }
 
-/* прогресс лиги внутри карточки */
 .profile-league-progress {
-    margin-top: 8px;
+    margin-bottom: 20px;
 }
 
 .profile-league-progress-bar {
-    width: 100%;
-    height: 6px;
-    border-radius: 999px;
-    background: #1a1a1a;
+    height: 16px;
+    background: var(--border-color);
+    border: 3px solid var(--border-color);
     overflow: hidden;
+    margin-bottom: 8px;
 }
 
 .profile-league-progress-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #ffcc33, #ff7b39, #ff3b6a);
-    box-shadow: 0 0 10px rgba(255, 204, 51, 0.6);
-    transition: width 0.2s ease-out;
+    background: linear-gradient(90deg, var(--accent-deep), var(--accent-purple));
+    transition: width 0.3s ease-out;
 }
 
 .profile-league-progress-text {
-    margin-top: 4px;
-    font-size: 12px;
-    opacity: 0.85;
+    font-size: 10px;
+    color: var(--muted-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
-
-/* рейтинг игрока — 3 карточки в сетке */
 
 .profile-rating-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 12px;
-}
-
-@media (max-width: 380px) {
-    .profile-rating-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+    grid-template-columns: 1fr;
+    gap: 16px;
 }
 
 .profile-rating-card {
-    padding: 8px 4px 9px;
-    border-radius: 14px;
-    background: #151515;
-    border: 1px solid rgba(255,255,255,0.06);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.5);
-    font-size: 11px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    padding: 16px;
+    background: rgba(168, 85, 247, 0.05);
+    border: 3px solid var(--border-color);
+    box-shadow: 6px 6px 0 var(--shadow-dark);
 }
 
 .rating-label {
-    opacity: 0.75;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted-text);
+    margin-bottom: 8px;
+    text-shadow: 2px 2px 0 rgba(74, 29, 138, 0.3);
 }
 
 .rating-main {
     display: flex;
     align-items: baseline;
     gap: 4px;
+    margin-bottom: 8px;
 }
 
 .rating-main-big {
-    font-size: 14px;
-    font-weight: 600;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent-light);
+    text-shadow: 3px 3px 0 var(--shadow-accent);
 }
 
 .rating-unit {
-    font-size: 11px;
-    opacity: 0.8;
-}
-
-.rating-chip {
-    padding: 2px 6px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.06);
-    font-size: 11px;
+    color: var(--muted-text);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .rating-sub {
-    font-size: 11px;
-    opacity: 0.8;
+    font-size: 9px;
+    color: var(--muted-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
 }
 
-/* Доп. оформление секций профиля */
+.rating-chip {
+    display: inline-block;
+    padding: 4px 8px;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    color: var(--accent-light);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
 
 .profile-subtitle {
-    margin: 10px 2px 6px;
-    font-size: 14px;
-    font-weight: 600;
-    opacity: 0.9;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 24px 0 16px 0;
+    text-shadow: 3px 3px 0 var(--shadow-accent);
 }
 
 .profile-stats-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    padding: 8px 0 4px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
 }
 
 .profile-stat-card {
-    padding: 8px 9px;
-    border-radius: 14px;
-    background: #121212;
-    border: 1px solid rgba(255,255,255,0.06);
-    font-size: 11px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 3px;
+    padding: 12px;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    box-shadow: 4px 4px 0 var(--shadow-dark);
 }
 
 .profile-stat-card .label {
-    opacity: 0.7;
+    font-size: 9px;
+    color: var(--muted-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
 }
 
 .profile-stat-card .value {
-    font-size: 13px;
-    font-weight: 600;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: var(--accent-light);
+    text-shadow: 2px 2px 0 var(--shadow-accent);
 }
 
 .profile-hint {
-    margin-top: 4px;
-    font-size: 11px;
-    opacity: 0.7;
+    font-size: 9px;
+    color: var(--muted-text);
+    background: rgba(147, 51, 234, 0.05);
+    border: 2px solid var(--border-color);
+    padding: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.4;
+    margin: 16px 0;
 }
 
-/* 🏅 Подсветка карточки профиля по рангу */
-.profile-page-main-card {
-    transition: box-shadow 0.25s ease, transform 0.2s ease,
-    background 0.35s ease, border-color 0.3s ease;
-}
-
-/* tier 1 — новичок: спокойный серо-синий */
-.profile-page-main-card[data-rank-tier="1"] {
-    border: 1px solid rgba(148, 163, 184, 0.6);
-    background: radial-gradient(circle at top left, #1f2933 0%, #020617 55%);
-}
-
-/* tier 2 — любитель: мягкий фиолетовый */
-.profile-page-main-card[data-rank-tier="2"] {
-    border: 1px solid rgba(129, 140, 248, 0.8);
-    background: radial-gradient(circle at top left, #312e81 0%, #020617 55%);
-}
-
-/* tier 3 — фармер: зелёный намёк на кеш */
-.profile-page-main-card[data-rank-tier="3"] {
-    border: 1px solid rgba(34, 197, 94, 0.8);
-    background: radial-gradient(circle at top left, #064e3b 0%, #020617 55%);
-}
-
-/* tier 4 — аналитик: бирюза */
-.profile-page-main-card[data-rank-tier="4"] {
-    border: 1px solid rgba(45, 212, 191, 0.9);
-    background: radial-gradient(circle at top left, #0f766e 0%, #020617 60%);
-}
-
-/* tier 5 — хайроллер: золотистый неон */
-.profile-page-main-card[data-rank-tier="5"] {
-    border: 1px solid rgba(253, 224, 71, 0.9);
-    background: radial-gradient(circle at top left, #854d0e 0%, #020617 60%);
-}
-
-/* tier 6 — легенда: сиренево-розовый */
-.profile-page-main-card[data-rank-tier="6"] {
-    border: 1px solid rgba(244, 114, 182, 0.95);
-    background: radial-gradient(circle at top left, #9d174d 0%, #020617 60%);
-}
-
-/* tier 7 — 🦈 мегалудоман: жёсткий неоновый микс */
-.profile-page-main-card[data-rank-tier="7"] {
-    border: 1px solid rgba(56, 189, 248, 1);
-    box-shadow: 0 0 24px rgba(56, 189, 248, 0.55);
-    background:
-            radial-gradient(circle at 0% 0%, #22c55e 0%, transparent 55%),
-            radial-gradient(circle at 100% 0%, #38bdf8 0%, transparent 55%),
-            radial-gradient(circle at 50% 100%, #a855f7 0%, transparent 55%),
-            #020617;
-    transform: translateY(-1px);
-}
-
-/* Текст ранга в карточке */
-.rank-title-text {
-    font-weight: 600;
-    font-size: 14px;
-    letter-spacing: 0.02em;
-}
-
-/* ===== Рейтинг игроков (под винрейтом) ===== */
-
-.profile-ranking-list {
-    margin-top: 8px;
-    padding: 8px 10px;
-    border-radius: 14px;
-    background: #111827;
-    border: 1px solid rgba(148, 163, 184, 0.35);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.profile-ranking-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 11px;
-}
-
-.profile-ranking-label {
-    opacity: 0.75;
-}
-
-.profile-ranking-value {
-    font-weight: 600;
-    font-size: 12px;
-}
-
-.profile-ranking-place {
-    font-weight: 600;
-    font-size: 12px;
-    opacity: 0.9;
-}
-
-
-/* ===== Новый глобальный рейтинг игроков (табами) ===== */
-
-.profile-leaderboard {
-    margin-top: 8px;
-    padding: 8px 10px 10px;
-    border-radius: 14px;
-    background: #111827;
-    border: 1px solid rgba(148, 163, 184, 0.35);
-}
+/* ======== LEADERBOARD ======== */
 
 .profile-leaderboard-tabs {
     display: flex;
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
 }
 
 .leaderboard-tab {
-    flex: 1;
-    border: none;
-    outline: none;
-    padding: 4px 6px;
-    border-radius: 999px;
-    font-size: 11px;
-    background: #020617;
-    color: #e5e7eb;
-    opacity: 0.8;
+    padding: 6px 10px;
+    background: transparent;
+    border: 2px solid var(--border-color);
+    color: var(--light-text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     cursor: pointer;
-    transition: background 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
-    white-space: nowrap;
+    transition: all 0.05s ease-out;
 }
 
 .leaderboard-tab.active {
-    background: linear-gradient(90deg, #4f46e5, #06b6d4);
-    color: #f9fafb;
-    opacity: 1;
-    transform: translateY(-1px);
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    background: var(--accent-deep);
+    border-color: var(--accent-deep);
 }
 
-.leaderboard-tab:active {
-    transform: scale(0.97);
+.leaderboard-tab:hover {
+    border-color: var(--accent-deep);
 }
 
 .profile-leaderboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 2px 4px;
-    font-size: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 12px;
+    padding: 8px;
+    background: var(--border-color);
+    border: 2px solid var(--border-color);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    opacity: 0.55;
-}
-
-.profile-leaderboard-header .pl-col-name {
-    flex: 1.2;
-}
-
-.profile-leaderboard-header .pl-col-metric {
-    flex: 1;
-    text-align: center;
-}
-
-.profile-leaderboard-header .pl-col-place {
-    width: 32px;
-    text-align: right;
+    letter-spacing: 0.5px;
+    color: var(--muted-text);
+    margin-bottom: 8px;
 }
 
 .profile-leaderboard-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    max-height: 220px;
-    overflow-y: auto;
-    padding-right: 2px;
-}
-
-.profile-leaderboard-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: 8px;
-    padding: 4px 6px;
-    border-radius: 10px;
-    background: rgba(15, 23, 42, 0.9);
-    border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.leaderboard-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 12px;
+    padding: 8px;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
     font-size: 11px;
+    align-items: center;
+    transition: all 0.05s ease-out;
 }
 
-.profile-leaderboard-row.me {
-    border-color: #facc15;
-    box-shadow: 0 0 12px rgba(250, 204, 21, 0.4);
-    background: radial-gradient(circle at top left, rgba(250, 204, 21, 0.16), #020617);
+.leaderboard-row:hover {
+    border-color: var(--accent-deep);
+    background: rgba(147, 51, 234, 0.1);
 }
 
-.profile-leaderboard-row .pl-name {
-    flex: 1.2;
-    font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.pl-name {
+    color: var(--light-text);
+    font-weight: 600;
 }
 
-.profile-leaderboard-row .pl-metric {
-    flex: 1;
+.pl-metric {
+    color: var(--accent-light);
+    font-weight: 700;
+}
+
+.pl-place {
     text-align: center;
-    opacity: 0.9;
+    color: var(--muted-text);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
 }
 
-.profile-leaderboard-row .pl-place {
-    width: 32px;
-    text-align: right;
-    font-weight: 600;
-}
+/* ======== GAME OVERLAYS ======== */
 
-
-.prize-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 8px;
-}
-
-.prize-icon-emoji {
-    font-size: 1.6rem;
-}
-
-.prize-icon-img {
-    width: 100%;
-    height: 70px;
-    border-radius: 10px;
-    object-fit: cover;
-}
-.prize-icon-img-nft {
-    box-shadow: 0 0 12px rgba(0, 255, 255, 0.6);
-    background: radial-gradient(circle at 30% 30%, rgba(0,255,255,0.3), transparent 60%);
-}
-.inv-emoji,
-.pill-emoji,
-#machineResultEmoji {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* ============================== */
-/* 👛 Инвентарь — группы по редкости */
-/* ============================== */
-
-/* корневой контейнер инвентаря — просто колонка */
-#inventory {
-    display: block;
-}
-
-/* отдельный блок под каждую редкость */
-.inventory-section {
-    margin-bottom: 32px;
-}
-
-/* заголовок редкости */
-.inventory-section-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #00fd53;
-    margin: 4px 4px 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.inventory-section-title .rarity-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-}
-
-/* сетка предметов: 3 карточки в ряд через flex */
-.inventory-grid {
-    display: flex !important;
-    flex-wrap: wrap;
-    gap: 10px;
-    width: 100%;
-}
-
-/* карточка: всё по вертикали */
-.inv-card {
-    cursor: pointer;
-    padding: 10px 6px;
-    border-radius: 16px;
-    background: #161616;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-
-    /* 3 карточки в ряд */
-    flex: 0 0 calc(30% - 8px);
-    max-width: calc(30% - 8px);
-
-    min-height: 104px;
-    transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
-}
-
-.inv-card:active {
-    transform: scale(0.96);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
-}
-
-/* большая картинка / эмодзи */
-.inv-emoji {
-    width: auto;
-    min-height: 101px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.3rem;
-    overflow: hidden;
-    margin-bottom: 6px;
-}
-
-.inv-emoji img.prize-icon-img,
-.inv-emoji .prize-icon-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* текстовая часть */
-.inv-info {
-    width: 100%;
-}
-
-.inv-name {
-    margin: 0 2px 4px;
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.inv-meta {
-    font-size: 11px;
-    font-weight: 600;
-    opacity: 0.85;
-    margin-bottom: 4px;
-}
-
-.inv-value {
-    font-size: 11px;
-    font-weight: 600;
-}
-
-/* прогресс бар в карточке */
-.inv-progress {
-    width: 100%;
-}
-
-.inv-progress-bar {
-    width: 100%;
-    height: 6px;
-    border-radius: 999px;
-    background: #222;
-    overflow: hidden;
-}
-
-.inv-progress-fill {
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, #ffd54f, #ff9100);
-    width: 0%;
-    transition: width 0.2s ease-out;
-}
-
-.inv-progress-text {
-    /*margin-top: 2px;*/
-    font-size: 12px;
-    opacity: 0.7;
-    padding: 3px 10px !important;
-    text-align: center;
-}
-
-.inv-rarity-title {
-    font-size: 18px;
-    font-weight: bold;
-    padding: 5px;
-}
-
-/* ============================== */
-/* 👛 Модалка предмета инвентаря */
-/* ============================== */
-
-.inventory-modal {
+.game-overlay {
     position: fixed;
     inset: 0;
-    z-index: 110;
+    z-index: 9500;
+    background: rgba(5, 5, 8, 0.95);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at top, rgba(24, 32, 56, 0.94), rgba(2, 6, 18, 0.98));
+    padding: 16px;
 }
 
-.inventory-modal.hidden {
-    display: none;
-}
-
-.inventory-modal-dialog {
-    width: min(400px, 80vw);
-    margin: 0 auto;
-    max-width: 460px;
-    background: #000;
-    border-radius: 20px;
-    padding: 20px 18px 18px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 20px 60px #000000;
-    position: relative;
-}
-
-.inventory-modal-body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-}
-
-.inventory-modal-close {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    border: none;
-    background: transparent;
-    color: #fff;
-    font-size: 1rem;
-    cursor: pointer;
-    opacity: 0.7;
-}
-
-.inventory-modal-close:hover {
-    opacity: 1;
-}
-
-/* большая картинка в модалке */
-.inventory-modal-emoji {
-    width: auto;
-    height: 350px;
-    border-radius: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 7rem;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, .06);
-}
-
-.inventory-modal-emoji img.prize-icon-img,
-.inventory-modal-emoji .prize-icon-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.inventory-modal-main {
-    width: 100%;
-}
-
-.inventory-modal-name {
-    font-size: 1rem;
-    font-weight: 700;
-    margin-bottom: 4px;
-    text-align: center;
-}
-
-.inventory-modal-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
-}
-
-.inventory-modal-rarity {
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.inventory-modal-value {
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.inventory-modal-progress {
-    margin-bottom: 12px;
-}
-
-/* прогресс внутри модалки переиспользует те же классы */
-.inventory-modal-sell-title {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    opacity: 0.75;
-    margin-bottom: 6px;
-    text-align: center;
-}
-
-.inventory-modal-sell-buttons {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-}
-
-.btn.small {
-    padding: 4px 10px;
-    font-size: 0.8rem;
-}
-
-/* ============================== */
-/* ❓ Модалка подтверждения продажи */
-/* ============================== */
-
-.inventory-confirm .inventory-modal-dialog {
-    text-align: center;
-}
-
-.inventory-confirm-text {
-    font-size: 0.9rem;
-    margin-bottom: 12px;
-}
-
-.inventory-confirm-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-
-.btn.danger {
-    background: #dc2626;
-    color: #fff;
-}
-
-.btn.danger:hover {
-    background: #ef4444;
-}
-
-/* ============================== */
-/* 👛 Инвентарь — табы и коллекции */
-/* ============================== */
-
-.inventory-tabs {
-    display: flex;
-    gap: 6px;
-    margin: 0 8px 12px;
-    padding: 3px;
-    background: #050505;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.inventory-tab {
-    flex: 1;
-    border: none;
-    background: transparent;
-    color: #9ca3af;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 6px 8px;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: background 0.15s ease-out, color 0.15s ease-out;
-}
-
-.inventory-tab.active {
-    background: #facc15;
-    color: #111827;
-}
-
-/* контейнеры режимов */
-.inventory-view.hidden {
+.game-overlay.hidden {
     display: none !important;
 }
 
-/* список коллекций */
-.collections-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 0 8px 12px;
-}
-
-/* карточка коллекции */
-.collection-card {
-    padding: 10px 10px 8px;
-    border-radius: 16px;
-    background: #111827;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-/* «закрытая» коллекция */
-.collection-card--locked {
-    opacity: 0.6;
-    background: #020617;
-    border-color: rgba(148, 163, 184, 0.15);
-}
-
-/* хедер коллекции */
-.collection-card-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.collection-emoji {
-    width: 60px;
-    height: 60px;
-    border-radius: 14px;
-    background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 40px;
-    flex-shrink: 0;
-    overflow: hidden;
-}
-
-.collection-main {
-    flex: 1;
-    min-width: 0;
-}
-
-.collection-name {
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 2px;
-}
-
-.collection-bonus {
-    font-size: 11px;
-    opacity: 0.85;
-}
-
-.collection-progress {
-    font-size: 11px;
-    font-weight: 600;
-    text-align: right;
-    white-space: nowrap;
-}
-
-/* призы внутри коллекции */
-.collection-prizes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 4px;
-}
-
-.collection-prize {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    width: 66px;
-}
-
-.collection-prize-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    background: #020617;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    font-size: 18px;
-}
-
-.collection-prize-icon img.prize-icon-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.collection-prize-name {
-    font-size: 9px;
-    text-align: center;
-    opacity: 0.9;
-}
-
-/* отсутствующие призы делаем более «серенькими» */
-.collection-prize--missing .collection-prize-icon {
-    filter: grayscale(1);
-    opacity: 0.5;
-}
-
-.collection-prize--missing .collection-prize-name {
-    opacity: 0.5;
-}
-
-
-
-/* === Лигозависимые цвета прогресса (уровень / лига) === */
-
-/* бронза — оставляем как базовый стиль */
-.level-progress-bar.league-bronze,
-.profile-league-progress-fill.league-bronze {
-    background: linear-gradient(90deg, #f97316 0%, #fb923c 40%, #facc15 100%);
-}
-
-/* серебро → фиолетовый */
-.level-progress-bar.league-silver,
-.profile-league-progress-fill.league-silver {
-    background: linear-gradient(90deg, #e5e7eb 0%, #c4b5fd 40%, #a855f7 100%);
-}
-
-/* золото */
-.level-progress-bar.league-gold,
-.profile-league-progress-fill.league-gold {
-    background: linear-gradient(90deg, #facc15 0%, #f97316 40%, #ea580c 100%);
-}
-
-/* платина */
-.level-progress-bar.league-platinum,
-.profile-league-progress-fill.league-platinum {
-    background: linear-gradient(90deg, #e0f2fe 0%, #38bdf8 40%, #6366f1 100%);
-}
-
-/* алмаз */
-.level-progress-bar.league-diamond,
-.profile-league-progress-fill.league-diamond {
-    background: linear-gradient(90deg, #22d3ee 0%, #4ade80 35%, #a855f7 100%);
-}
-
-.big-click-area img.league-bronze {
-    box-shadow: 0 0 22px #ffb73b55, 0 0 10px #ffc81e22 inset;
-}
-
-.big-click-area img.league-silver {
-    box-shadow: 0 0 22px #c4c4c455, 0 0 10px #bbbbff33 inset;
-}
-
-.big-click-area img.league-gold {
-    box-shadow: 0 0 26px #ffcc3355, 0 0 14px #ffd84b44 inset;
-}
-
-.big-click-area img.league-platinum {
-    box-shadow: 0 0 28px #9fdcff55, 0 0 14px #71bbff33 inset;
-}
-
-.big-click-area img.league-diamond {
-    box-shadow: 0 0 32px #7effff66, 0 0 16px #72e3c955 inset;
-}
-
-.profile-lvl-badge.league-bronze {
-    background: #ffd52e1f;
-    border: 1px solid rgba(255, 213, 46, .35);
-    color: #ffd52e;
-}
-.profile-lvl-badge.league-silver {
-    background: #c9c9c91a;
-    border: 1px solid rgba(210, 210, 210, .35);
-    color: #e5e7eb;
-}
-.profile-lvl-badge.league-gold {
-    background: #ffec501f;
-    border: 1px solid rgba(255, 212, 77, .55);
-    color: #ffdc5d;
-}
-.profile-lvl-badge.league-platinum {
-    background: #d0f4ff1f;
-    border: 1px solid rgba(168, 220, 255, .45);
-    color: #b4e3ff;
-}
-.profile-lvl-badge.league-diamond {
-    background: #a8fdf41e;
-    border: 1px solid rgba(98, 246, 221, .60);
-    color: #94fff1;
-}
-
-.profile-league-chip.league-bronze {
-    background: #ffffff0a;
-    border: 1px solid rgba(255, 213, 46, .35);
-    color: #ffd52e;
-}
-.profile-league-chip.league-silver {
-    background: #ffffff0a;
-    border: 1px solid rgba(216, 216, 216, .32);
-    color: #e8e9ef;
-}
-.profile-league-chip.league-gold {
-    background: #ffffff0a;
-    border: 1px solid rgba(255, 219, 94, .55);
-    color: #ffdb58;
-}
-.profile-league-chip.league-platinum {
-    background: #ffffff09;
-    border: 1px solid rgba(169, 220, 255, .55);
-    color: #b8e7ff;
-}
-.profile-league-chip.league-diamond {
-    background: #ffffff09;
-    border: 1px solid rgba(115, 255, 236, .60);
-    color: #7dfff1;
-}
-
-.profile-lvl-badge,
-.profile-league-chip,
-.level-progress-bar,
-.big-click-area img,
-.profile-league-progress-fill{
-    transition: background .25s ease, border-color .25s ease, color .25s ease;
-}
-
-/* контейнер под иконку в списке призов */
-.machine-prize-pill .pill-emoji {
-    flex: 0 0 70px;       /* фикс ширины во флексе */
-    width: auto;
-    height: 70px;
-    border-radius: 12px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* картинка внутри — растянуть на весь контейнер */
-.machine-prize-pill .pill-emoji .prize-icon-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-
-/* ===== Общие стили оверлея игр ===== */
-.game-overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.85);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 1000;
-}
-.game-overlay.hidden { display: none; }
 .game-modal {
-    background: #1a1a2e;
-    border: 1px solid #333;
-    border-radius: 16px;
+    width: 100%;
+    max-width: 400px;
+    background: var(--card-bg);
+    border: 4px solid var(--accent-deep);
+    box-shadow: 16px 16px 0 var(--shadow-dark);
     padding: 24px;
-    width: 90%; max-width: 400px;
-    text-align: center;
     position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
 }
+
+.game-modal h2 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 0 16px 0;
+    text-shadow: 4px 4px 0 var(--shadow-accent);
+}
+
 .modal-close {
-    position: absolute; top: 12px; right: 12px;
-    background: none; border: none; color: #aaa;
-    font-size: 20px; cursor: pointer;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    background: var(--accent-deep);
+    border: 3px solid var(--dark-bg);
+    color: var(--light-text);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 4px 4px 0 var(--shadow-accent);
 }
+
+.modal-close:hover {
+    background: var(--accent-light);
+}
+
+.game-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
 .bet-input {
-    width: 100%; padding: 10px;
-    background: #111; border: 1px solid #444;
-    border-radius: 8px; color: #fff;
-    font-size: 16px; margin: 8px 0;
+    padding: 8px 12px;
+    background: var(--border-color);
+    border: 3px solid var(--border-color);
+    color: var(--light-text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
 }
-.bet-input.small { width: 70px; }
 
-/* ===== Монетка ===== */
+.bet-input:focus {
+    border-color: var(--accent-deep);
+    background: rgba(147, 51, 234, 0.1);
+}
+
+.bet-input.small {
+    width: 60px;
+    padding: 4px 6px;
+    font-size: 10px;
+}
+
+/* ===== COINFLIP ===== */
+
 .coinflip-coin {
-    font-size: 72px; margin: 16px 0;
-    display: inline-block; transition: transform 0.1s;
+    font-size: 80px;
+    text-align: center;
+    margin: 20px 0;
+    filter: drop-shadow(6px 6px 0 var(--shadow-accent));
+    animation: coinflip-spin 0.6s ease-in-out;
 }
-.coinflip-coin.spin {
-    animation: coinSpin 1.2s ease-in-out;
-}
-@keyframes coinSpin {
-    0%   { transform: rotateY(0deg); }
-    100% { transform: rotateY(1080deg); }
-}
-.coinflip-sides { display: flex; gap: 12px; justify-content: center; margin: 8px 0; }
-.side-btn {
-    flex: 1; padding: 10px;
-    background: #222; border: 2px solid #444;
-    border-radius: 10px; color: #fff;
-    font-size: 15px; cursor: pointer;
-}
-.side-btn.selected { border-color: #f0c040; background: #2a2410; }
-.coinflip-result, .mines-result, .dice-result {
-    margin-top: 12px; font-size: 18px; font-weight: bold; min-height: 28px;
-}
-.coinflip-result.win, .mines-result.win, .dice-result.win { color: #4caf50; }
-.coinflip-result.lose, .mines-result.lose, .dice-result.lose { color: #f44336; }
 
-/* ===== Мины ===== */
+@keyframes coinflip-spin {
+    0% { transform: rotateY(0deg); }
+    50% { transform: rotateY(180deg); }
+    100% { transform: rotateY(360deg); }
+}
+
+.coinflip-sides {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.side-btn {
+    padding: 12px;
+    background: var(--border-color);
+    border: 3px solid var(--border-color);
+    color: var(--light-text);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.05s ease-out;
+}
+
+.side-btn:hover {
+    background: var(--accent-deep);
+    border-color: var(--accent-deep);
+    box-shadow: 4px 4px 0 var(--shadow-accent);
+}
+
+.coinflip-result {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(147, 51, 234, 0.1);
+    border: 2px solid var(--accent-deep);
+    text-align: center;
+    font-size: 14px;
+    color: var(--accent-light);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* ===== MINES ===== */
+
+.mines-info {
+    padding: 8px;
+    background: var(--border-color);
+    border: 2px solid var(--border-color);
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--light-text);
+}
+
+.mines-info span {
+    color: var(--accent-light);
+    font-weight: 700;
+}
+
 .mines-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 6px; margin: 16px 0;
+    gap: 8px;
+    margin: 16px 0;
 }
-.mines-cell {
-    aspect-ratio: 1; font-size: 20px;
-    background: #222; border: 1px solid #444;
-    border-radius: 8px; cursor: pointer;
-    transition: background 0.15s;
-}
-.mines-cell:hover:not(:disabled) { background: #333; }
-.mines-cell.revealed { background: #1b3a1b; border-color: #4caf50; cursor: default; }
-.mines-cell.mine { background: #3a1b1b; border-color: #f44336; cursor: default; }
-.mines-cell.loading { opacity: 0.5; cursor: wait; }
-.mines-info { color: #f0c040; font-size: 16px; margin: 4px 0; }
-.btn.success { background: #4caf50; }
 
-/* ===== Кости ===== */
-.dice-display {
-    font-size: 80px; margin: 16px 0; display: inline-block;
-}
-.dice-display.rolling { animation: diceRoll 0.9s linear; }
-@keyframes diceRoll {
-    0%,100% { transform: rotate(0deg); }
-    25%      { transform: rotate(15deg) scale(1.1); }
-    75%      { transform: rotate(-15deg) scale(0.9); }
-}
-.dice-guess-row {
-    display: flex; align-items: center; justify-content: center;
-    gap: 16px; margin: 8px 0;
-}
-.dice-adj {
-    width: 36px; height: 36px; font-size: 20px;
-    background: #333; border: 1px solid #555;
-    border-radius: 50%; color: #fff; cursor: pointer;
-}
-.dice-payouts { color: #aaa; font-size: 13px; margin-bottom: 8px; }
-
-.mini-games-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    padding: 10px;
-}
-.mini-game-card {
-    background: #1a1a2e;
-    border: 1px solid #333;
-    border-radius: 14px;
-    padding: 16px 8px;
-    text-align: center;
+.mine-cell {
+    aspect-ratio: 1;
+    background: var(--border-color);
+    border: 3px solid var(--border-color);
     cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s;
-    active-scale: 0.95;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: all 0.05s ease-out;
 }
-.mini-game-card:active {
-    transform: scale(0.95);
+
+.mine-cell:hover:not(.revealed) {
+    background: var(--accent-deep);
+    border-color: var(--accent-deep);
 }
-.mini-game-card:hover {
-    border-color: #f0c040;
+
+.mine-cell.revealed {
+    background: rgba(147, 51, 234, 0.2);
+    border-color: var(--accent-deep);
+    cursor: default;
 }
-.mini-game-icon { font-size: 36px; margin-bottom: 6px; }
-.mini-game-name { font-size: 14px; font-weight: bold; color: #fff; }
-.mini-game-desc { font-size: 11px; color: #888; margin-top: 4px; }
+
+.mines-result {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(147, 51, 234, 0.1);
+    border: 2px solid var(--accent-deep);
+    text-align: center;
+    font-size: 14px;
+    color: var(--accent-light);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* ===== DICE ===== */
+
+.dice-display {
+    font-size: 100px;
+    text-align: center;
+    margin: 20px 0;
+    filter: drop-shadow(6px 6px 0 var(--shadow-accent));
+}
+
+.dice-guess-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: var(--border-color);
+    border: 3px solid var(--border-color);
+}
+
+.dice-adj {
+    width: 40px;
+    height: 40px;
+    background: var(--accent-deep);
+    border: 3px solid var(--dark-bg);
+    color: var(--light-text);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 3px 3px 0 var(--shadow-accent);
+}
+
+.dice-adj:hover {
+    background: var(--accent-light);
+}
+
+.dice-guess-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--light-text);
+}
+
+.dice-payouts {
+    padding: 8px;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--muted-text);
+}
+
+.dice-payouts b {
+    color: var(--accent-light);
+    font-weight: 700;
+}
+
+.dice-result {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(147, 51, 234, 0.1);
+    border: 2px solid var(--accent-deep);
+    text-align: center;
+    font-size: 14px;
+    color: var(--accent-light);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* ======== MACHINE OVERLAY ======== */
+
+.machine-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9500;
+    background: rgba(5, 5, 8, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.machine-overlay.hidden {
+    display: none !important;
+}
+
+.machine-shell {
+    width: 100%;
+    max-width: 400px;
+    background: var(--card-bg);
+    border: 4px solid var(--accent-deep);
+    box-shadow: 16px 16px 0 var(--shadow-dark);
+    padding: 20px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.machine-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    background: var(--accent-deep);
+    border: 3px solid var(--dark-bg);
+    color: var(--light-text);
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 4px 4px 0 var(--shadow-accent);
+}
+
+.machine-header-line {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid var(--border-color);
+}
+
+.machine-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 3px 3px 0 var(--shadow-accent);
+}
+
+.machine-price {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #ffd52e;
+}
+
+.machine-price span {
+    font-weight: 700;
+}
+
+.machine-viewport {
+    background: var(--border-color);
+    border: 4px solid var(--border-color);
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.machine-boxes {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.machine-box {
+    width: 60px;
+    height: 100px;
+    background: var(--card-bg);
+    border: 3px solid var(--accent-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    box-shadow: inset 2px 2px 0 rgba(0,0,0,0.5);
+}
+
+.machine-claw {
+    display: none;
+}
+
+.machine-result {
+    text-align: center;
+    padding: 16px;
+    background: rgba(147, 51, 234, 0.1);
+    border: 3px solid var(--accent-deep);
+    margin-bottom: 16px;
+}
+
+.machine-result.hidden {
+    display: none !important;
+}
+
+.machine-result-emoji {
+    font-size: 48px;
+    margin-bottom: 8px;
+    filter: drop-shadow(4px 4px 0 var(--shadow-accent));
+}
+
+.machine-result-text {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent-light);
+}
+
+.machine-main-btn {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.machine-prize-strip {
+    background: var(--border-color);
+    border: 3px solid var(--border-color);
+    padding: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    min-height: 50px;
+    align-items: center;
+}
+
+.machine-hint {
+    font-size: 9px;
+    color: var(--muted-text);
+    background: rgba(147, 51, 234, 0.05);
+    border: 2px solid var(--border-color);
+    padding: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.4;
+    margin-bottom: 16px;
+}
+
+.machine-stats-summary {
+    background: var(--border-color);
+    border: 3px solid var(--border-color);
+    padding: 12px;
+    font-size: 10px;
+    color: var(--light-text);
+    text-transform: uppercase;
+}
+
+/* ======== BOTTOM NAVIGATION ======== */
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: var(--card-bg);
+    border-top: 4px solid var(--accent-deep);
+    box-shadow: 0 -8px 16px var(--shadow-dark);
+    z-index: 1000;
+    padding: 8px 0;
+}
+
+.nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.05s ease-out;
+    color: var(--muted-text);
+}
+
+.nav-item.active {
+    color: var(--accent-deep);
+}
+
+.nav-item:hover {
+    color: var(--accent-light);
+}
+
+.nav-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+    filter: drop-shadow(2px 2px 0 rgba(147, 51, 234, 0.3));
+}
+
+.nav-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ======== ANIMATIONS ======== */
+
+@keyframes blinkCursor {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+}
+
+@keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+/* ======== RESPONSIVE ======== */
+
+@media (max-width: 768px) {
+    #app {
+        padding: 0 8px 90px;
+    }
+
+    .app-header {
+        flex-wrap: wrap;
+        padding: 10px 12px;
+    }
+
+    .profile-stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .profile-page-header {
+        flex-direction: column;
+    }
+
+    .profile-avatar-big {
+        width: 60px;
+        height: 60px;
+        font-size: 32px;
+    }
+}
+
+@media (max-width: 640px) {
+    body {
+        font-size: 12px;
+    }
+
+    h1 { font-size: clamp(18px, 3vw, 32px); }
+    h2 { font-size: clamp(14px, 2vw, 20px); }
+
+    #app {
+        padding: 0 6px 100px;
+    }
+
+    .btn {
+        padding: 10px 16px;
+        font-size: 9px;
+    }
+
+    .mini-games-grid {
+        grid-template-columns: repeat(3,1fr);
+        gap: 12px;
+    }
+
+    .machine-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .profile-stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        font-size: 11px;
+    }
+
+    h1 { font-size: clamp(14px, 2.5vw, 24px); }
+    h2 { font-size: clamp(12px, 1.8vw, 18px); }
+
+    #app {
+        padding: 0 4px 100px;
+    }
+
+    .app-header {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .profile-right {
+        gap: 8px;
+    }
+
+    .header-balance {
+        font-size: 12px;
+    }
+
+    .header-level {
+        padding: 4px 8px;
+        font-size: 8px;
+    }
+
+    .btn {
+        padding: 8px 12px;
+        font-size: 8px;
+    }
+
+    .btn.small {
+        padding: 4px 8px;
+        font-size: 7px;
+    }
+
+    .machine-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .section-title {
+        font-size: 12px;
+        margin: 16px 0 12px 0;
+    }
+
+    .game-modal {
+        max-width: 95vw;
+    }
+
+    .machine-shell {
+        max-width: 95vw;
+    }
+
+    .inventory-modal-dialog {
+        max-width: 95vw;
+    }
+
+    .inventory-item {
+        padding: 6px;
+    }
+
+    .profile-rating-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ======== SCROLLBAR ======== */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--border-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--accent-deep);
+    border: 2px solid var(--border-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-light);
+}

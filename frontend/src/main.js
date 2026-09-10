@@ -1,7 +1,11 @@
 // frontend/src/main.js
 
+// 🧪 Поддержка локального тестирования
+import './local-dev.js';
+
 import { auth, db } from "./firebase.js";
 import { signInWithCustomToken, onAuthStateChanged } from "firebase/auth";
+import { isMockAuthed, getMockUser } from './local-dev.js';
 import {
     doc,
     getDoc,
@@ -345,12 +349,56 @@ function getMaxClickPower(level) {
     return 1 + (level + 1) * 3;
 }
 
-function showToast(message) {
-    const toast = document.createElement("div");
-    toast.className = "toast";
+function showToast(message, type = 'info') {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
     toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2600);
+    container.appendChild(toast);
+    
+    const toasts = container.querySelectorAll('.toast');
+    if (toasts.length > 3) {
+        const oldToast = toasts[0];
+        oldToast.style.opacity = '0';
+        setTimeout(() => oldToast.remove(), 300);
+    }
+    
+    // Автоматическое удаление через 4 секунды
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 4000);
+}
+
+// Level Up уведомление
+function showLevelUp(newLevel) {
+    const overlay = document.createElement('div');
+    overlay.className = 'level-up-overlay';
+    overlay.innerHTML = `
+        <div class="level-up-box">
+            <h2>🎉 LEVEL UP!</h2>
+            <div class="level-number">${newLevel}</div>
+            <p>Новый уровень достигнут!</p>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    
+    // Удаляем через 2 секунды
+    setTimeout(() => {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 300);
+    }, 2000);
+    
+    // Звук уведомления (если захочешь потом добавить)
+    console.log('🎉 Level Up!', newLevel);
 }
 
 function isTelegramWebApp() {
@@ -555,6 +603,9 @@ function onLevelChange(oldLevel, newLevel, levelState) {
     }
 
     currentLevel = newLevel;
+    
+    // Показываем Level Up анимацию
+    showLevelUp(newLevel);
 
     const newlyUnlocked = MACHINES.filter((m) => {
         const min = m.minLevel ?? 0;
@@ -2359,8 +2410,67 @@ if (loginBtn) {
 }
 
 // ==================== Инициализация Firebase-сессии ====================
+// ==================== Mock авторизация для локального тестирования ====================
 
-onAuthStateChanged(auth, async (user) => {
+if (isMockAuthed()) {
+    console.log('🧪 Mock auth detected in localStorage');
+    const mockUser = getMockUser();
+    console.log('🧪 Mock user:', mockUser);
+    
+    // Создаём fake Firebase user для обхода API ошибок
+    const fakeFirebaseUser = {
+        uid: mockUser.id.toString(),
+        email: mockUser.username + '@mock.test',
+        displayName: mockUser.first_name + ' ' + mockUser.last_name,
+        isAnonymous: false,
+        metadata: {
+            creationTime: new Date().toISOString(),
+            lastSignInTime: new Date().toISOString()
+        },
+        getIdToken: async () => 'mock-token-' + mockUser.id,
+        reload: async () => {},
+        toJSON: () => ({ uid: mockUser.id.toString() }),
+        // Firebase internal methods
+        _stopProactiveRefresh: () => {},
+        _refresh: async () => {},
+        _updateProfile: async () => {},
+        delete: async () => {},
+        getDisplayName: () => mockUser.first_name + ' ' + mockUser.last_name,
+        getEmail: () => mockUser.username + '@mock.test',
+        getPhoneNumber: () => null,
+        getPhotoURL: () => null,
+        getProviderData: () => [],
+        refreshToken: '',
+        stsTokenManager: {
+            accessToken: 'mock-token-' + mockUser.id,
+            expirationTime: Date.now() + 3600000,
+            refreshToken: 'mock-refresh-' + mockUser.id
+        },
+        // Additional Firebase methods
+        _getTokenExpirationTime: () => Date.now() + 3600000,
+        _getTokenExpirationTimeSeconds: () => Math.floor(Date.now() / 1000) + 3600
+    };
+    
+    // Перехватываем auth.currentUser
+    if (auth && typeof auth === 'object') {
+        try {
+            Object.defineProperty(auth, 'currentUser', {
+                get() { return fakeFirebaseUser; },
+                set(val) { /* ignore */ },
+                configurable: true
+            });
+            console.log('✅ Mock user injected into auth');
+        } catch(e) {
+            console.warn('Could not override auth.currentUser:', e);
+        }
+    }
+}
+
+
+// ==================== Инициализация Firebase-сессии ====================
+
+// Функция для обработки авторизации
+async function handleAuthStateChange(user) {
     if (!user) {
         uid = null;
         userRef = null;
@@ -2401,7 +2511,39 @@ onAuthStateChanged(auth, async (user) => {
     subscribeGlobalMachineStats();
     subscribeUserMachineStats(uid);
     renderMachines();
-});
+}
+
+// Проверяем mock авторизацию для локального тестирования
+if (isMockAuthed()) {
+    console.log('🧪 Mock auth detected in localStorage');
+    const mockUser = getMockUser();
+    console.log('🧪 Mock user:', mockUser);
+    
+    // Создаём fake Firebase user
+    const fakeFirebaseUser = {
+        uid: mockUser.id.toString(),
+        email: mockUser.username + '@mock.test',
+        displayName: mockUser.first_name + ' ' + mockUser.last_name,
+        isAnonymous: false,
+        metadata: {
+            creationTime: new Date().toISOString(),
+            lastSignInTime: new Date().toISOString()
+        },
+        getIdToken: async () => 'mock-token-' + mockUser.id,
+        reload: async () => {},
+        toJSON: () => ({ uid: mockUser.id.toString() })
+    };
+    
+    // Вызываем обработчик авторизации с mock юзером
+    console.log('✅ Calling handleAuthStateChange with mock user');
+    handleAuthStateChange(fakeFirebaseUser).catch(err => {
+        console.error('Error in mock auth flow:', err);
+    });
+} else {
+    // Используем настоящий Firebase onAuthStateChanged
+    onAuthStateChanged(auth, handleAuthStateChange);
+}
+
 
 // ==================== Флаш буфера при уходе ====================
 

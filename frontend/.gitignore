@@ -22,3 +22,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Documentation files
+CODE_REVIEW_READY.md
+QUICK_TEST_CHECKLIST.md
+FINAL_SUMMARY.md
+DEPLOYMENT_READY.md
+
+# Temporary files
+insert_machine_styles.txt
+src/main-1.js
+src/main-mock-patch.txt
+src/local-dev.js
+
+# Claude outputs
+../Claude\ outputs/

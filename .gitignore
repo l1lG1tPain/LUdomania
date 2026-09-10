@@ -9,3 +9,5 @@ backend/serviceAccountKey.json
 # OS/IDE
 .DS_Store
 .idea
+
+Claude outputs/
