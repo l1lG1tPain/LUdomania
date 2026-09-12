@@ -1,105 +1,120 @@
-// src/games/dice.js
-const API_BASE = window.__API_BASE__ || "https://ludomania-app.vercel.app";
+// src/games/dice.js — ОБНОВЛЕННАЯ ВЕРСИЯ
+// Теперь использует Firestore вместо Express API
 
 export function initDice({ getBalance, getToken, onBalanceChange }) {
-    const overlay  = document.getElementById("diceOverlay");
-    const closeBtn = document.getElementById("diceClose");
-    const betInput = document.getElementById("diceBet");
-    const guessEl  = document.getElementById("diceGuess");
-    const minusBtn = document.getElementById("diceGuessMinus");
-    const plusBtn  = document.getElementById("diceGuessPlus");
-    const rollBtn  = document.getElementById("diceRollBtn");
-    const resultEl = document.getElementById("diceResult");
-    const diceEl   = document.getElementById("diceDisplay");
+    const overlay     = document.getElementById("diceOverlay");
+    const closeBtn    = document.getElementById("diceClose");
+    const betInput    = document.getElementById("diceBet");
+    const rollBtnName = "diceRollBtn";
+    const resultEl    = document.getElementById("diceResult");
+    const diceEl      = document.getElementById("diceFace");
 
     if (!overlay) return;
 
-    let guess     = 3;
-    let isRolling = false;
+    let selectedNumber = null;
+    let isRolling      = false;
 
-    const DICE_FACES = ["⚀","⚁","⚂","⚃","⚄","⚅"];
-
-    function updateGuess() {
-        if (guessEl) guessEl.textContent = guess;
+    // Создаем кнопки выбора чисел (1-6)
+    for (let i = 1; i <= 6; i++) {
+        const btn = document.getElementById(`diceNumber${i}`);
+        if (btn) {
+            btn.addEventListener("click", () => {
+                selectedNumber = i;
+                // Добавляем визуальное выделение
+                for (let j = 1; j <= 6; j++) {
+                    const b = document.getElementById(`diceNumber${j}`);
+                    if (b) b.classList.toggle("selected", j === i);
+                }
+            });
+        }
     }
-
-    minusBtn?.addEventListener("click", () => { if (guess > 1) { guess--; updateGuess(); } });
-    plusBtn?.addEventListener("click",  () => { if (guess < 6) { guess++; updateGuess(); } });
 
     async function roll() {
         if (isRolling) return;
+        if (!selectedNumber) { resultEl.textContent = "Выбери число 1-6!"; return; }
 
         const bet = parseInt(betInput.value, 10);
         if (!bet || bet <= 0)   { resultEl.textContent = "Введи ставку!"; return; }
         if (bet > getBalance()) { resultEl.textContent = "Недостаточно LM!"; return; }
 
-        isRolling        = true;
-        rollBtn.disabled = true;
+        isRolling = true;
+        document.getElementById(rollBtnName).disabled = true;
         resultEl.textContent = "";
         resultEl.className   = "dice-result";
-
-        diceEl.classList.add("rolling");
-        const animInterval = setInterval(() => {
-            diceEl.textContent = DICE_FACES[Math.floor(Math.random() * 6)];
-        }, 80);
+        
+        // Анимация кубика
+        if (diceEl) {
+            diceEl.classList.add("rolling");
+        }
 
         let data = null;
         let fetchError = false;
 
         try {
-            const resp = await fetch(`${API_BASE}/game/dice`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${await getToken()}`,
-                },
-                body: JSON.stringify({ bet, guess }),
-            });
-            data = await resp.json();
-            if (!resp.ok) fetchError = true;
+            // ✅ НОВОЕ: вызываем функцию из main-1.js вместо fetch
+            const playDice = window.gamesFunctions?.playDice;
+            if (!playDice) {
+                throw new Error("playDice function not available");
+            }
+
+            data = await playDice(bet, selectedNumber);
+            
+            if (data.outcome === "no-auth" || data.outcome === "error" || data.outcome === "no-money") {
+                fetchError = true;
+            }
         } catch (err) {
-            console.error("dice fetch error:", err);
+            console.error("dice error:", err);
             fetchError = true;
         }
 
-        await new Promise(r => setTimeout(r, 900));
-        clearInterval(animInterval);
-        diceEl.classList.remove("rolling");
+        // Ждём конца анимации
+        await new Promise(r => setTimeout(r, 1000));
+        if (diceEl) diceEl.classList.remove("rolling");
 
         try {
             if (fetchError || !data) {
-                diceEl.textContent   = "🎲";
-                resultEl.textContent = "Ошибка сервера 😢";
+                resultEl.textContent = "Ошибка 😢";
                 resultEl.className   = "dice-result lose";
             } else {
-                diceEl.textContent = DICE_FACES[(data.rolled ?? 1) - 1];
+                // Показываем выпавшее число
+                if (diceEl) {
+                    diceEl.textContent = data.roll;
+                    diceEl.classList.add(data.outcome === "win" ? "win" : "lose");
+                }
+
                 if (data.outcome === "win") {
-                    resultEl.textContent = `🎲 Выпало ${data.rolled}! +${data.payout} LM (×${data.multiplier})`;
+                    resultEl.textContent = `🎉 +${data.payout} LM! (×5)`;
                     resultEl.className   = "dice-result win";
                 } else {
-                    resultEl.textContent = `🎲 Выпало ${data.rolled}. -${bet} LM`;
+                    resultEl.textContent = `💸 -${bet} LM`;
                     resultEl.className   = "dice-result lose";
                 }
                 if (data.newBalance != null) onBalanceChange(data.newBalance);
             }
         } finally {
-            isRolling        = false;
-            rollBtn.disabled = false;
+            isRolling = false;
+            document.getElementById(rollBtnName).disabled = false;
         }
     }
 
-    rollBtn?.addEventListener("click", roll);
-    closeBtn?.addEventListener("click", () => overlay.classList.add("hidden"));
-
-    updateGuess();
+    document.getElementById(rollBtnName).addEventListener("click", roll);
+    closeBtn.addEventListener("click", () => overlay.classList.add("hidden"));
 
     return {
         open: () => {
             overlay.classList.remove("hidden");
             resultEl.textContent = "";
             resultEl.className   = "dice-result";
-            diceEl.textContent   = "🎲";
-            diceEl.className     = "dice-display";
+            if (diceEl) {
+                diceEl.textContent = "?";
+                diceEl.classList.remove("win", "lose", "rolling");
+            }
+            selectedNumber = null;
+            // Убираем выделение со всех кнопок
+            for (let i = 1; i <= 6; i++) {
+                const btn = document.getElementById(`diceNumber${i}`);
+                if (btn) btn.classList.remove("selected");
+            }
         },
     };
 }

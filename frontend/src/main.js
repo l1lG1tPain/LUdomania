@@ -2573,4 +2573,319 @@ if (window.Telegram?.WebApp) {
 
 setActivePage("pageFarm");
 renderStatsFromState();
+
+// ==================== МИНИ-ИГРЫ ФУНКЦИИ ====================
+
+async function playCoinflip(bet, side) {
+    if (!uid || !userRef) {
+        showToast("Сначала авторизуйся через Telegram");
+        return { outcome: "no-auth" };
+    }
+
+    if (!bet || bet <= 0 || !["heads", "tails"].includes(side)) {
+        showToast("Неверные параметры ставки");
+        return { outcome: "error" };
+    }
+
+    let newBalance = balance;
+
+    try {
+        const txResult = await runTransaction(db, async (tx) => {
+            const snap = await tx.get(userRef);
+            if (!snap.exists()) {
+                throw new Error("user-not-found");
+            }
+
+            const data = snap.data() || {};
+            const currentBalance = data.balance ?? 0;
+
+            if (currentBalance < bet) {
+                throw new Error("no-money");
+            }
+
+            const updatedBalance = currentBalance - bet;
+            tx.update(userRef, {
+                balance: updatedBalance,
+                totalSpent: increment(bet),
+            });
+
+            return updatedBalance;
+        });
+
+        newBalance = txResult;
+    } catch (e) {
+        if (e.message === "no-money") {
+            showToast("Недостаточно ЛудоМани для этой ставки 🪙");
+            return { outcome: "no-money" };
+        }
+        if (e.message === "user-not-found") {
+            showToast("Профиль не найден");
+            return { outcome: "error" };
+        }
+        console.error("coinflip tx error:", e);
+        showToast("Ошибка списания");
+        return { outcome: "error" };
+    }
+
+    const result = Math.random() < 0.475 ? "heads" : "tails";
+    const win = result === side;
+    const payout = win ? bet * 2 : 0;
+    const delta = win ? bet : -bet;
+
+    balance = Math.round(newBalance + delta);
+    if (balance < 0) balance = 0;
+    renderStatsFromState();
+
+    try {
+        await setDoc(
+            doc(db, "users", uid, "gamesStats", "coinflip"),
+            {
+                totalGames: increment(1),
+                wins: win ? increment(1) : increment(0),
+                totalBet: increment(bet),
+                totalEarned: win ? increment(bet) : increment(0),
+                lastPlayedAt: serverTimestamp(),
+            },
+            { merge: true }
+        );
+
+        await updateDoc(userRef, {
+            balance: increment(delta),
+            totalEarned: win ? increment(bet) : increment(0),
+        });
+    } catch (e) {
+        console.error("coinflip stats error:", e);
+    }
+
+    return {
+        outcome: win ? "win" : "lose",
+        result,
+        payout,
+        newBalance: balance,
+    };
+}
+
+// ============================================================================
+// 🎲 DICE
+// ============================================================================
+
+async function playDice(bet, prediction) {
+    if (!uid || !userRef) {
+        showToast("Сначала авторизуйся через Telegram");
+        return { outcome: "no-auth" };
+    }
+
+    if (!bet || bet <= 0 || ![1, 2, 3, 4, 5, 6].includes(prediction)) {
+        showToast("Неверные параметры");
+        return { outcome: "error" };
+    }
+
+    let newBalance = balance;
+
+    try {
+        const txResult = await runTransaction(db, async (tx) => {
+            const snap = await tx.get(userRef);
+            if (!snap.exists()) {
+                throw new Error("user-not-found");
+            }
+
+            const data = snap.data() || {};
+            const currentBalance = data.balance ?? 0;
+
+            if (currentBalance < bet) {
+                throw new Error("no-money");
+            }
+
+            const updatedBalance = currentBalance - bet;
+            tx.update(userRef, {
+                balance: updatedBalance,
+                totalSpent: increment(bet),
+            });
+
+            return updatedBalance;
+        });
+
+        newBalance = txResult;
+    } catch (e) {
+        if (e.message === "no-money") {
+            showToast("Недостаточно ЛудоМани для этой ставки 🪙");
+            return { outcome: "no-money" };
+        }
+        if (e.message === "user-not-found") {
+            showToast("Профиль не найден");
+            return { outcome: "error" };
+        }
+        console.error("dice tx error:", e);
+        showToast("Ошибка списания");
+        return { outcome: "error" };
+    }
+
+    const roll = Math.floor(Math.random() * 6) + 1;
+    const win = roll === prediction;
+    const payout = win ? bet * 5 : 0;
+    const delta = win ? bet * 5 : -bet;
+
+    balance = Math.round(newBalance + delta);
+    if (balance < 0) balance = 0;
+    renderStatsFromState();
+
+    try {
+        await setDoc(
+            doc(db, "users", uid, "gamesStats", "dice"),
+            {
+                totalGames: increment(1),
+                wins: win ? increment(1) : increment(0),
+                totalBet: increment(bet),
+                totalEarned: win ? increment(payout) : increment(0),
+                lastPlayedAt: serverTimestamp(),
+            },
+            { merge: true }
+        );
+
+        await updateDoc(userRef, {
+            balance: increment(delta),
+            totalEarned: win ? increment(payout) : increment(0),
+        });
+    } catch (e) {
+        console.error("dice stats error:", e);
+    }
+
+    return {
+        outcome: win ? "win" : "lose",
+        roll,
+        prediction,
+        payout,
+        newBalance: balance,
+    };
+}
+
+// ============================================================================
+// 💣 MINES
+// ============================================================================
+
+const MINES_MULTIPLIERS = [
+    0, 1.00, 1.09, 1.24, 1.42, 1.66,
+    1.99, 2.42, 2.99, 3.75, 4.74,
+    6.08, 7.90, 10.3, 13.8, 18.5,
+    25.2, 34.7, 48.4, 69.3, 102,
+    153, 239, 399, 713, 1426,
+];
+
+async function playMines(bet, numMines, targetReveals) {
+    if (!uid || !userRef) {
+        showToast("Сначала авторизуйся через Telegram");
+        return { outcome: "no-auth" };
+    }
+
+    if (!bet || bet <= 0 || numMines < 1 || numMines > 24 || targetReveals < 0 || targetReveals > 25) {
+        showToast("Неверные параметры");
+        return { outcome: "error" };
+    }
+
+    let newBalance = balance;
+
+    try {
+        const txResult = await runTransaction(db, async (tx) => {
+            const snap = await tx.get(userRef);
+            if (!snap.exists()) {
+                throw new Error("user-not-found");
+            }
+
+            const data = snap.data() || {};
+            const currentBalance = data.balance ?? 0;
+
+            if (currentBalance < bet) {
+                throw new Error("no-money");
+            }
+
+            const updatedBalance = currentBalance - bet;
+            tx.update(userRef, {
+                balance: updatedBalance,
+                totalSpent: increment(bet),
+            });
+
+            return updatedBalance;
+        });
+
+        newBalance = txResult;
+    } catch (e) {
+        if (e.message === "no-money") {
+            showToast("Недостаточно ЛудоМани для этой ставки 🪙");
+            return { outcome: "no-money" };
+        }
+        if (e.message === "user-not-found") {
+            showToast("Профиль не найден");
+            return { outcome: "error" };
+        }
+        console.error("mines tx error:", e);
+        showToast("Ошибка списания");
+        return { outcome: "error" };
+    }
+
+    const positions = Array.from({ length: 25 }, (_, i) => i);
+    for (let i = positions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [positions[i], positions[j]] = [positions[j], positions[i]];
+    }
+    const minePositions = positions.slice(0, numMines);
+
+    const safePositions = positions.slice(numMines);
+    const revealed = safePositions.slice(0, Math.min(targetReveals, 25 - numMines));
+
+    const hitMine = revealed.some(idx => minePositions.includes(idx));
+
+    const multiplier = MINES_MULTIPLIERS[revealed.length] || 1;
+    let delta = 0;
+    let outcome = "lose";
+
+    if (!hitMine && revealed.length > 0) {
+        delta = Math.floor(bet * multiplier) - bet;
+        outcome = "win";
+    } else if (hitMine) {
+        delta = -bet;
+        outcome = "lose";
+    }
+
+    balance = Math.round(newBalance + delta);
+    if (balance < 0) balance = 0;
+    renderStatsFromState();
+
+    try {
+        await setDoc(
+            doc(db, "users", uid, "gamesStats", "mines"),
+            {
+                totalGames: increment(1),
+                wins: outcome === "win" ? increment(1) : increment(0),
+                totalBet: increment(bet),
+                totalEarned: outcome === "win" ? increment(delta) : increment(0),
+                lastPlayedAt: serverTimestamp(),
+            },
+            { merge: true }
+        );
+
+        await updateDoc(userRef, {
+            balance: increment(delta),
+            totalEarned: outcome === "win" ? increment(delta) : increment(0),
+        });
+    } catch (e) {
+        console.error("mines stats error:", e);
+    }
+
+    return {
+        outcome,
+        revealed,
+        minePositions,
+        multiplier,
+        payout: delta > 0 ? bet + delta : 0,
+        newBalance: balance,
+    };
+}
+
+// Экспортируем для использования в игровых модулях
+window.gamesFunctions = {
+    playCoinflip,
+    playDice,
+    playMines,
+};
+
 renderMachines();

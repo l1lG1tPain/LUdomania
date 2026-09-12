@@ -1,5 +1,5 @@
-// src/games/coinflip.js
-const API_BASE = window.__API_BASE__ || "https://ludomania-app.vercel.app";
+// src/games/coinflip.js — ОБНОВЛЕННАЯ ВЕРСИЯ
+// Теперь использует Firestore вместо Express API
 
 export function initCoinflip({ getBalance, getToken, onBalanceChange }) {
     const overlay  = document.getElementById("coinflipOverlay");
@@ -45,18 +45,19 @@ export function initCoinflip({ getBalance, getToken, onBalanceChange }) {
         let fetchError = false;
 
         try {
-            const resp = await fetch(`${API_BASE}/game/coinflip`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${await getToken()}`,
-                },
-                body: JSON.stringify({ bet, side: selectedSide }),
-            });
-            data = await resp.json();
-            if (!resp.ok) fetchError = true;
+            // ✅ НОВОЕ: вызываем функцию из main-1.js вместо fetch
+            const playCoinflip = window.gamesFunctions?.playCoinflip;
+            if (!playCoinflip) {
+                throw new Error("playCoinflip function not available");
+            }
+
+            data = await playCoinflip(bet, selectedSide);
+            
+            if (data.outcome === "no-auth" || data.outcome === "error" || data.outcome === "no-money") {
+                fetchError = true;
+            }
         } catch (err) {
-            console.error("coinflip fetch error:", err);
+            console.error("coinflip error:", err);
             fetchError = true;
         }
 
@@ -66,7 +67,7 @@ export function initCoinflip({ getBalance, getToken, onBalanceChange }) {
 
         try {
             if (fetchError || !data) {
-                resultEl.textContent = "Ошибка сервера 😢";
+                resultEl.textContent = "Ошибка 😢";
                 resultEl.className   = "coinflip-result lose";
             } else {
                 coinEl.classList.add(data.result ?? "");
