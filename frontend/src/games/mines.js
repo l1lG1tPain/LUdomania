@@ -1,5 +1,4 @@
-// src/games/mines.js — ИСПРАВЛЕННАЯ ВЕРСИЯ
-// Теперь ячейки закрытые и правильно сбрасываются
+// src/games/mines.js — ИСПРАВЛЕННАЯ ВЕРСИЯ с ФИНАЛИЗАЦИЕЙ
 
 const GRID_SIZE = 25; // 5x5
 
@@ -26,7 +25,7 @@ export function initMines({ getBalance, getToken, onBalanceChange }) {
             const cell = document.createElement("button");
             cell.className   = "mines-cell";
             cell.dataset.idx = i;
-            cell.textContent = "🔒"; // ✅ Закрытая ячейка
+            cell.textContent = "🔒";
             cell.disabled    = false;
             cell.addEventListener("click", () => revealCell(i));
             gridEl.appendChild(cell);
@@ -50,9 +49,24 @@ export function initMines({ getBalance, getToken, onBalanceChange }) {
         resultEl.className   = `mines-result${type ? " " + type : ""}`;
     }
 
+    function resetGame() {
+        gameActive = false;
+        currentGameData = null;
+        revealedCount = 0;
+        resultEl.textContent = "";
+        resultEl.className = "mines-result";
+        gridEl.innerHTML = "";
+        startBtn.classList.remove("hidden");
+        startBtn.disabled = false;
+        cashoutBtn.classList.add("hidden");
+        updateMultiplier(0);
+    }
+
     let revealedCount = 0;
 
     async function startGame() {
+        resetGame();
+        
         const bet = parseInt(betInput.value, 10);
         minesNum = parseInt(minesCount.value, 10);
 
@@ -122,16 +136,24 @@ export function initMines({ getBalance, getToken, onBalanceChange }) {
                 }
             });
 
-            // Блокируем остальные ячейки
             gridEl.querySelectorAll(".mines-cell").forEach(c => c.disabled = true);
 
-            setResult(`💣 Попали на мину! -${parseInt(betInput.value)} LM`, "lose");
+            const bet = parseInt(betInput.value, 10);
+            setResult(`💣 Попали на мину! -${bet} LM`, "lose");
+            
+            // ✅ ФИНАЛИЗИРУЕМ БЕЗ ВЫИГРЫША
+            const finalizeMines = window.gamesFunctions?.finalizeMines;
+            if (finalizeMines) {
+                await finalizeMines(bet, currentGameData.minePositions, []);
+                // Обновляем UI после финализации
+                onBalanceChange(getBalance());
+            }
 
             startBtn.classList.remove("hidden");
             cashoutBtn.classList.add("hidden");
         } else {
             // ✨ Безопасная ячейка
-            cell.textContent = "LM"; // Или использовать картинку
+            cell.textContent = "LM";
             revealedCount++;
             updateMultiplier(revealedCount);
         }
@@ -156,9 +178,27 @@ export function initMines({ getBalance, getToken, onBalanceChange }) {
 
         setResult(`🎉 Вывели ${payout} LM! (×${multiplier.toFixed(2)})`, "win");
         
-        // ✅ Обновляем баланс
-        if (currentGameData.newBalance != null) {
-            onBalanceChange(currentGameData.newBalance);
+        // ✅ ФИНАЛИЗИРУЕМ С ВЫИГРЫШЕМ
+        const finalizeMines = window.gamesFunctions?.finalizeMines;
+        if (finalizeMines) {
+            // Создаём массив открытых безопасных ячеек
+            const revealedSafeCells = [];
+            for (let i = 0; i < revealedCount; i++) {
+                // Находим первые N безопасных ячеек
+                let count = 0;
+                for (let j = 0; j < 25; j++) {
+                    if (!currentGameData.minePositions.includes(j)) {
+                        revealedSafeCells.push(j);
+                        count++;
+                        if (count === revealedCount) break;
+                    }
+                }
+                break;
+            }
+            
+            await finalizeMines(bet, currentGameData.minePositions, revealedSafeCells);
+            // Обновляем UI после финализации
+            onBalanceChange(getBalance());
         }
 
         startBtn.classList.remove("hidden");
@@ -169,28 +209,13 @@ export function initMines({ getBalance, getToken, onBalanceChange }) {
     cashoutBtn.addEventListener("click", cashout);
     closeBtn.addEventListener("click", () => {
         overlay.classList.add("hidden");
-        // ✅ Сброс состояния при закрытии
-        gameActive = false;
-        currentGameData = null;
-        revealedCount = 0;
-        resultEl.textContent = "";
-        resultEl.className = "mines-result";
-        gridEl.innerHTML = "";
-        updateMultiplier(0);
+        resetGame();
     });
 
     return {
         open: () => {
             overlay.classList.remove("hidden");
-            resultEl.textContent = "";
-            resultEl.className   = "mines-result";
-            gridEl.innerHTML = "";
-            revealedCount = 0;
-            gameActive = false;
-            currentGameData = null;
-            startBtn.classList.remove("hidden");
-            cashoutBtn.classList.add("hidden");
-            updateMultiplier(0);
+            resetGame();
         },
     };
 }

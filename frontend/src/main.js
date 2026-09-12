@@ -175,8 +175,8 @@ const getToken = () => auth.currentUser?.getIdToken();
 const getBalance = () => balance;
 const onBalanceChange = (newBal) => {
     balance = newBal;
-    if (balanceEl) balanceEl.textContent = formatNumber(newBal);
-    if (headerBalanceEl) headerBalanceEl.textContent = formatNumber(newBal);
+    if (balanceEl) balanceEl.textContent = Math.round(newBal);
+    if (headerBalanceEl) headerBalanceEl.textContent = formatLM(newBal);
 };
 
 const coinflip = initCoinflip({ getBalance, getToken, onBalanceChange });
@@ -554,7 +554,7 @@ function renderStatsFromState(levelStateOverride) {
     const ls     = levelStateOverride || calculateLevelState(totalClicks);
     const league = getLeagueForLevel(ls.level);
 
-    if (balanceEl)        balanceEl.textContent       = formatLM(balance);
+    if (balanceEl)        balanceEl.textContent       = Math.round(balance);
     if (clickPowerEl)     clickPowerEl.textContent    = clickPower;
     if (totalClicksEl)    totalClicksEl.textContent   = totalClicks;
     if (playerLevelEl)    playerLevelEl.textContent   = ls.level;
@@ -2576,6 +2576,10 @@ renderStatsFromState();
 
 // ==================== МИНИ-ИГРЫ ФУНКЦИИ ====================
 
+// ============================================================================
+// ИСПРАВЛЕННЫЕ ВЕРСИИ ФУНКЦИЙ С ПРАВИЛЬНЫМ РАСЧЁТОМ DELTA
+// ============================================================================
+
 async function playCoinflip(bet, side) {
     if (!uid || !userRef) {
         showToast("Сначала авторизуйся через Telegram");
@@ -2627,10 +2631,11 @@ async function playCoinflip(bet, side) {
         return { outcome: "error" };
     }
 
+    // Генерируем результат
     const result = Math.random() < 0.475 ? "heads" : "tails";
     const win = result === side;
-    const payout = win ? bet * 2 : 0;
-    const delta = win ? bet : -bet;
+    const payout = win ? bet : 0;
+    const delta = win ? bet : 0; // ✅ ИСПРАВЛЕНО: только выигрыш, ставка уже списана
 
     balance = Math.round(newBalance + delta);
     if (balance < 0) balance = 0;
@@ -2649,6 +2654,7 @@ async function playCoinflip(bet, side) {
             { merge: true }
         );
 
+        // Обновляем баланс
         await updateDoc(userRef, {
             balance: increment(delta),
             totalEarned: win ? increment(bet) : increment(0),
@@ -2664,10 +2670,6 @@ async function playCoinflip(bet, side) {
         newBalance: balance,
     };
 }
-
-// ============================================================================
-// 🎲 DICE
-// ============================================================================
 
 async function playDice(bet, prediction) {
     if (!uid || !userRef) {
@@ -2720,10 +2722,11 @@ async function playDice(bet, prediction) {
         return { outcome: "error" };
     }
 
+    // Генерируем результат кубика
     const roll = Math.floor(Math.random() * 6) + 1;
     const win = roll === prediction;
     const payout = win ? bet * 5 : 0;
-    const delta = win ? bet * 5 : -bet;
+    const delta = win ? bet * 5 : 0; // ✅ ИСПРАВЛЕНО: только выигрыш, ставка уже списана
 
     balance = Math.round(newBalance + delta);
     if (balance < 0) balance = 0;
@@ -2742,6 +2745,7 @@ async function playDice(bet, prediction) {
             { merge: true }
         );
 
+        // Обновляем баланс
         await updateDoc(userRef, {
             balance: increment(delta),
             totalEarned: win ? increment(payout) : increment(0),
@@ -2758,11 +2762,6 @@ async function playDice(bet, prediction) {
         newBalance: balance,
     };
 }
-
-// ============================================================================
-// 💣 MINES
-// ============================================================================
-
 const MINES_MULTIPLIERS = [
     0, 1.00, 1.09, 1.24, 1.42, 1.66,
     1.99, 2.42, 2.99, 3.75, 4.74,
@@ -2882,10 +2881,79 @@ async function playMines(bet, numMines, targetReveals) {
 }
 
 // Экспортируем для использования в игровых модулях
+
+
+// Финализация Mines - зачисление выигрыша
+async function finalizeMines(bet, minePositions, revealed) {
+    if (!uid || !userRef) {
+        return { outcome: "error" };
+    }
+
+    // Проверяем попадание на мину
+    const hitMine = revealed.some(idx => minePositions.includes(idx));
+    
+    const MULTIPLIERS = [
+        0, 1.00, 1.09, 1.24, 1.42, 1.66,
+        1.99, 2.42, 2.99, 3.75, 4.74,
+        6.08, 7.90, 10.3, 13.8, 18.5,
+        25.2, 34.7, 48.4, 69.3, 102,
+        153, 239, 399, 713, 1426,
+    ];
+    
+    const multiplier = MULTIPLIERS[revealed.length] || 1;
+    let delta = 0;
+    let outcome = "lose";
+
+    if (!hitMine && revealed.length > 0) {
+        // Выигрыш: зачисляем выигрыш (ставка уже списана)
+        delta = Math.floor(bet * multiplier);
+        outcome = "win";
+    } else {
+        // Потеря: ставка уже списана, delta = 0
+        delta = 0;
+        outcome = "lose";
+    }
+
+    // Обновляем локальный баланс
+    balance = Math.round(balance + delta);
+    if (balance < 0) balance = 0;
+    renderStatsFromState();
+
+    try {
+        // Обновляем баланс в Firestore
+        await updateDoc(userRef, {
+            balance: increment(delta),
+            totalEarned: outcome === "win" ? increment(delta) : increment(0),
+        });
+
+        // Записываем статистику
+        await setDoc(
+            doc(db, "users", uid, "gamesStats", "mines"),
+            {
+                totalGames: increment(1),
+                wins: outcome === "win" ? increment(1) : increment(0),
+                totalBet: increment(bet),
+                totalEarned: outcome === "win" ? increment(delta) : increment(0),
+                lastPlayedAt: serverTimestamp(),
+            },
+            { merge: true }
+        );
+    } catch (e) {
+        console.error("mines finalize error:", e);
+    }
+
+    return {
+        outcome,
+        delta,
+        newBalance: balance,
+    };
+}
+
 window.gamesFunctions = {
     playCoinflip,
     playDice,
     playMines,
+    finalizeMines,
 };
 
 renderMachines();
